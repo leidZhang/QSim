@@ -12,7 +12,7 @@ from qvl.basic_shape import QLabsBasicShape
 
 from .constants import ACC_X_OFFSET, ACC_Y_OFFSET
 
-class ACCMapBuilder: 
+class ACCMapBuilder:
     """
     The Builder class responsible for building the map for the ACC2024 competition
 
@@ -28,7 +28,7 @@ class ACCMapBuilder:
     - build_traffic_light: Builds the traffic lights of the map
     - build_car: Builds the car for the map
     """
-    
+
     def __init__(self, qlab: QuanserInteractiveLabs) -> None:
         """
         Initializes the ACCMapBuilder object
@@ -39,7 +39,7 @@ class ACCMapBuilder:
         self.qlab: QuanserInteractiveLabs = qlab
         self.scale: float = [0.1, 0.1, 0.1]
 
-    def build_walls(self) -> None: 
+    def build_walls(self) -> None:
         """
         Builds the walls of the map
         """
@@ -63,11 +63,11 @@ class ACCMapBuilder:
     def build_floor(self) -> None:
         """
         Builds the floor of the map
-        """ 
+        """
         flooring: QLabsFlooring = QLabsFlooring(self.qlab)
         flooring.spawn(location=[ACC_X_OFFSET, ACC_Y_OFFSET, 0.0], rotation=[0, 0, -math.pi/2])
 
-    def build_stop_sign(self) -> None: 
+    def build_stop_sign(self) -> None:
         """
         Builds the stop signs of the map
         """
@@ -91,7 +91,7 @@ class ACCMapBuilder:
         spline.spawn_degrees([2.05 + ACC_X_OFFSET, -1.5 + ACC_Y_OFFSET, 0.01], [0, 0, 0], [0.27, 0.02, 0.001], False)
         spline.spawn_degrees([-2.075 + ACC_X_OFFSET, ACC_Y_OFFSET, 0.01], [0, 0, 0], [0.27, 0.02, 0.001], False)
 
-    def build_traffic_light(self) -> list: 
+    def build_traffic_light(self) -> list:
         """
         Builds the traffic lights of the map
         """
@@ -103,7 +103,7 @@ class ACCMapBuilder:
                                               scale=[.1, .1, .1], configuration=0, waitForConfirmation=True)
         traffic_lights[1].set_state(QLabsTrafficLight.STATE_RED)
         return traffic_lights
-    
+
     def build_car(self, position: list) -> tuple:
         """
         Spawn the qcar at the specified position of the map
@@ -113,13 +113,29 @@ class ACCMapBuilder:
 
         Returns:
         - tuple: The car, position, and orientation of the car
-        """ 
+        """
         car: QLabsQCar = QLabsQCar(self.qlab)
         basic_shape: QLabsBasicShape = QLabsBasicShape(self.qlab)
         car_position: list = [position[0], position[1], 0.0]
         car_orientation: list = [0, 0, position[2]]
 
-        car.spawn_id(actorNumber=0, location=car_position, rotation=car_orientation, scale=[.1, .1, .1], configuration=0, waitForConfirmation=True)
-        basic_shape.spawn_id_and_parent_with_relative_transform(actorNumber=102, location=[1.15, 0, 1.8], rotation=[0, 0, 0], scale=[.65, .65, .1], configuration=basic_shape.SHAPE_SPHERE, parentClassID=car.ID_QCAR, parentActorNumber=2, parentComponent=1,  waitForConfirmation=True)
+        car.spawn_id(
+            actorNumber=0,
+            location=car_position,
+            rotation=car_orientation,
+            scale=[.1, .1, .1],
+            configuration=0,
+            waitForConfirmation=True
+        )
+
+        basic_shape.spawn_id_and_parent_with_relative_transform(
+            actorNumber=102, location=[1.15, 0, 1.8],
+            rotation=[0, 0, 0], scale=[.65, .65, .1],
+            configuration=basic_shape.SHAPE_SPHERE,
+            parentClassID=car.ID_QCAR,
+            parentActorNumber=2,
+            parentComponent=1,
+            waitForConfirmation=True
+        )
         basic_shape.set_material_properties(color=[0.4,0,0], roughness=0.4, metallic=True, waitForConfirmation=True)
         return (car, car_position, car_orientation)

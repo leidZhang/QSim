@@ -74,16 +74,28 @@ class QLabSimulator:
         self.actors['car'][0].possess(qcar_view)
         # set the regions for the stop signs and traffic lights
         self.regions['stop_signs'] = np.stack([
-            np.array([[2.1 + ACC_X_OFFSET - (0.25 / 2), 1.15 + ACC_Y_OFFSET - (0.45 / 2)],
-                      [2.1 + ACC_X_OFFSET + (0.25 / 2), 1.15 + ACC_Y_OFFSET + (0.45 / 2)]], dtype=np.float32),
-            np.array([[-0.95 + ACC_X_OFFSET - (0.45 / 2), 2.75 + ACC_Y_OFFSET - (0.25 / 2)],
-                      [-0.95 + ACC_X_OFFSET + (0.45 / 2), 2.75 + ACC_Y_OFFSET + (0.25 / 2)]], dtype=np.float32)
+            np.array([
+                [2.1 + ACC_X_OFFSET - (0.25 / 2), 1.15 + ACC_Y_OFFSET - (0.45 / 2)],
+                [2.1 + ACC_X_OFFSET + (0.25 / 2), 1.15 + ACC_Y_OFFSET + (0.45 / 2)]],
+                dtype=np.float32
+            ),
+            np.array([
+                [-0.95 + ACC_X_OFFSET - (0.45 / 2), 2.75 + ACC_Y_OFFSET - (0.25 / 2)],
+                [-0.95 + ACC_X_OFFSET + (0.45 / 2), 2.75 + ACC_Y_OFFSET + (0.25 / 2)]],
+                dtype=np.float32
+            )
         ])
         self.regions['traffic_lights'] = np.stack([
-            np.array([[-2.075 + ACC_X_OFFSET - (0.45 / 2), 0.35 + ACC_Y_OFFSET - (0.25 / 2)],
-                      [-2.075 + ACC_X_OFFSET + (0.45 / 2), 0.35 + ACC_Y_OFFSET + (0.25 / 2)]], dtype=np.float32),
-            np.array([[2.1 + ACC_X_OFFSET - (0.25 / 2), -1.85 + ACC_Y_OFFSET - (0.45 / 2)],
-                      [2.1 + ACC_X_OFFSET + (0.25 / 2), -1.85 + ACC_Y_OFFSET + (0.45 / 2)]], dtype=np.float32)
+            np.array([
+                [-2.075 + ACC_X_OFFSET - (0.45 / 2), 0.35 + ACC_Y_OFFSET - (0.25 / 2)],
+                [-2.075 + ACC_X_OFFSET + (0.45 / 2), 0.35 + ACC_Y_OFFSET + (0.25 / 2)]],
+                dtype=np.float32
+            ),
+            np.array([
+                [2.1 + ACC_X_OFFSET - (0.25 / 2), -1.85 + ACC_Y_OFFSET - (0.45 / 2)],
+                [2.1 + ACC_X_OFFSET + (0.25 / 2), -1.85 + ACC_Y_OFFSET + (0.45 / 2)]],
+                dtype=np.float32
+            )
         ])
         time.sleep(2) # cool down time for the car to spawn
         self.init_actor_states()
@@ -106,7 +118,14 @@ class QLabSimulator:
         # spawn a new car
         location = self.actors['car'][1]
         orientation = self.actors['car'][2]
-        car.spawn_id(actorNumber=0, location=location, rotation=orientation, scale=[.1, .1, .1], configuration=0, waitForConfirmation=True)
+        car.spawn_id(
+            actorNumber=0,
+            location=location,
+            rotation=orientation,
+            scale=[.1, .1, .1],
+            configuration=0,
+            waitForConfirmation=True
+        )
         car.possess(qcar_view)
         QLabsRealTime().start_real_time_model(rtmodels.QCAR_STUDIO)
         time.sleep(3) # wait for the state to change
