@@ -1,1 +1,2 @@
 QCAR_ACTOR_ID: int = 160
+MAX_EP_STEPS: int = 800

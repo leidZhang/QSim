@@ -1,7 +1,7 @@
 import time
 
-from typing import List, Dict
 import numpy as np
+from typing import List, Dict
 
 from roadmap import ACCDirector
 from qvl.qlabs import QuanserInteractiveLabs
@@ -15,7 +15,8 @@ from roadmap.constants import ACC_X_OFFSET, ACC_Y_OFFSET
 from .constants import QCAR_ACTOR_ID
 from .monitor import Monitor
 
-class QLabSimulator: 
+
+class QLabSimulator:
     """
     The QLabSimulator class responsible for simulations in the Quanser Interactive Labs environment
 
@@ -33,8 +34,8 @@ class QLabSimulator:
     - get_actor_state: Gets the state of the actor
     - set_waypoint_sequence: Sets the waypoint sequence for the simulation
     """
-    
-    def __init__(self, dt:float = 0.05) -> None:
+
+    def __init__(self, dt:float = 0.05, privileged: bool = False) -> None:
         """
         Initializes the QLabSimulator object
 
@@ -44,7 +45,7 @@ class QLabSimulator:
         self.dt: float = dt
         self.qlabs: QuanserInteractiveLabs = QuanserInteractiveLabs()
         self.qlabs.open("localhost")
-        self.actors: Dict[str, QLabsActor] = None
+        self.actors: Dict[str, QLabsActor] = {}
         self.monitors: Dict[str, Monitor] = {
             'car': Monitor(QCAR_ACTOR_ID, 0, dt=self.dt),
         }
@@ -52,8 +53,15 @@ class QLabSimulator:
             'stop_signs': None,
             'traffic_lights': None
         }
-    
-    def render_map(self, qcar_pos: list, qcar_view: int = 7) -> None: 
+
+    def init_actor_states(self) -> None:
+        """
+        Initialize the monitor state for each actors
+        """
+        for _, monitor in self.monitors.items():
+            monitor.get_position()
+
+    def render_map(self, qcar_pos: list, qcar_view: int = 7) -> None:
         """
         Renders the map for the simulation
 
@@ -78,8 +86,9 @@ class QLabSimulator:
                       [2.1 + ACC_X_OFFSET + (0.25 / 2), -1.85 + ACC_Y_OFFSET + (0.45 / 2)]], dtype=np.float32)
         ])
         time.sleep(2) # cool down time for the car to spawn
+        self.init_actor_states()
 
-    def reset_map(self, qcar_view: int = 7) -> None: 
+    def reset_map(self, qcar_view: int = 7) -> None:
         """
         Resets the actors in the map
 
@@ -88,7 +97,7 @@ class QLabSimulator:
         """
         QLabsRealTime().terminate_all_real_time_models()
         # delete the old car
-        car: QLabsQCar = self.actors['car'][0] 
+        car: QLabsQCar = self.actors['car'][0]
         car.destroy()
         # reset traffic light states
         traffic_lights: List[QLabsTrafficLight] = self.actors['traffic_lights']
@@ -100,10 +109,10 @@ class QLabSimulator:
         car.spawn_id(actorNumber=0, location=location, rotation=orientation, scale=[.1, .1, .1], configuration=0, waitForConfirmation=True)
         car.possess(qcar_view)
         QLabsRealTime().start_real_time_model(rtmodels.QCAR_STUDIO)
-        # wait for the state to change
-        time.sleep(3)
+        time.sleep(3) # wait for the state to change
+        self.init_actor_states()
 
-    def set_waypoint_sequence(self, waypoints: np.ndarray) -> None: 
+    def set_waypoint_sequence(self, waypoints: np.ndarray) -> None:
         """
         Set the waypoint sequence for the simulation
 
@@ -121,8 +130,3 @@ class QLabSimulator:
         """
         self.monitors[actor_name].get_state(self.qlabs)
         return self.monitors[actor_name].state
-    
-
-    
-    
-    

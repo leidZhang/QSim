@@ -6,9 +6,9 @@ from qvl.actor import QLabsActor
 from qvl.qlabs import QuanserInteractiveLabs
 from qvl.qlabs import CommModularContainer
 
-class Monitor: 
+class Monitor:
     def __init__(self, class_id: int, actor_number: int, dt: float = 0.05) -> None:
-        self.dt = dt 
+        self.dt = dt
         self.class_id: int = class_id
         self.actor_number: int = actor_number
         self.state: np.array = np.zeros(6)
@@ -25,11 +25,9 @@ class Monitor:
             raise Exception("Failed to send container")
         c = qlabs.wait_for_container(self.class_id, self.actor_number, QLabsActor.FCN_RESPONSE_WORLD_TRANSFORM)
         x, y, _, _, _, yaw, _, _, _, = struct.unpack(">fffffffff", c.payload[0:36])
+        self.state = np.array([x, y, yaw, 0, 0, 0])
 
-        state = np.array([x, y, yaw, 0, 0, 0])
-        return state
-    
-    def cal_motion(self, state: np.ndarray) -> None: 
+    def cal_motion(self, state: np.ndarray) -> None:
         x: float = state[0]
         y: float = state[1]
         yaw: float = state[2]
@@ -43,8 +41,7 @@ class Monitor:
         # calc acceleration
         a = (v - self.state[3]) / self.dt
         self.state = np.array([x, y, yaw, v, w, a])
-        return state
-    
+
     def get_state(self, qlabs: QuanserInteractiveLabs) -> None:
-        state: np.ndarray = self.get_position(qlabs)
-        self.cal_motion(state)
+        self.get_position(qlabs)
+        self.cal_motion(self.state)
