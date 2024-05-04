@@ -29,11 +29,12 @@ class Generator:
         set_tracking_uri(self.mlruns_dir)
         configure_logging(prefix='[GENERATOR]', info_color=LogColorFormatter.GREEN)
 
-    def prepare_training_session(self, run_id: str) -> None:
+    def prepare_training_session(self, run_id: str, resume: bool) -> None:
         steps, episodes = 0, 0
-
-        if run_id != '':
-            self.policy = TD3Agent(self.env, self.train_repository)
+        print(f"Resume status: {resume}")
+        if resume:
+            train_repo: str = self.train_repository.artifact_uris
+            self.policy = TD3Agent(self.env, train_repo)
             status: bool = load_checkpoint(self.policy, self.mlruns_dir, run_id, map_location='cpu')
             logging.info(f"Generator model checkpoint load status: {status}")
             _, steps, episodes = self.train_repository.count_steps()
@@ -43,7 +44,9 @@ class Generator:
         self.last_load_time = time.perf_counter()
         return steps, episodes
 
-    def load_policy(self, is_prefill_policy: bool, saved_data: int) -> None:
+    def load_policy(self, is_prefill_policy: bool, run_id: str, saved_data: int) -> None:
+        print(f"Loading policy with run_id: {run_id}")
+        print(f"Prefill status: {is_prefill_policy}")
         if is_prefill_policy and saved_data >= C.prefill:
             logging.info("Prefill Complete, switching to main policy")
             train_repo: str = self.train_repository.artifact_uris
@@ -51,9 +54,9 @@ class Generator:
             is_prefill_policy = False
 
         if not is_prefill_policy and self.last_load_time > 30:
-            model_step = load_checkpoint(self.policy, self.mlruns_dir)
+            model_step = load_checkpoint(self.policy, self.mlruns_dir, run_id)
             while model_step is None:
-                model_step = load_checkpoint(self.policy, self.mlruns_dir)
+                model_step = load_checkpoint(self.policy, self.mlruns_dir, run_id)
                 logging.debug('Generator model checkpoint not found, waiting...')
                 time.sleep(10)
             logging.info(f'Generator loaded model checkpoint {model_step}')
@@ -132,14 +135,15 @@ class Generator:
 
         return accumulator
 
-    def __call__(self, run_id: str) -> tuple:
-        datas = []
-        steps, episodes = self.prepare_training_session(run_id=run_id)
+    def execute(self, run_id: str, resume: bool) -> tuple:
+        print(f"Starting generator with run_id: {run_id}")
+        steps, episodes = self.prepare_training_session(run_id=run_id, resume=resume)
         _, saved_data, _ = self.train_repository.count_steps()
-        is_prefill_policy: bool = run_id == ''
+        is_prefill_policy: bool = resume
 
+        datas = []
         for _ in range(self.episode_num):
-            self.load_policy(is_prefill_policy, saved_data)
+            self.load_policy(is_prefill_policy, run_id, saved_data)
 
             episode_steps: int = 0
             if isinstance(self.policy, NetworkPolicy):

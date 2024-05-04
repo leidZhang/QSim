@@ -1,0 +1,83 @@
+import os
+import logging
+from multiprocessing import Process
+
+import mlflow
+from typing import List
+
+from td3.generator import Generator
+from core.utils.tools import mlflow_init, configure_logging
+
+def check_process(processes: List[Process]) -> None: 
+    for process in processes:
+        # skip the process if it is still running
+        if process.is_alive():
+            continue
+        # remove the process if it is not running
+        if process.exitcode == 0:
+            processes.remove(process)
+            logging.info(f"Process {process.pid} exited with code {process.exitcode}")
+        else: 
+            raise Exception(f"Process {process.pid} exited with code {process.exitcode}")
+
+def start_generator(
+        run_id: str,
+        mlruns_dir: str, 
+        train_repo: str, 
+        eval_repo: str, 
+        resume: bool = False,
+        privileged: bool = True
+    ) -> None: 
+    print("Creating generator instance...")
+    generator: Generator = Generator(
+        mlruns_dir=mlruns_dir,
+        train_repo=train_repo,
+        eval_repo=eval_repo,
+        privileged=privileged
+    )
+    print("Preparing collection session...")
+    generator.execute(run_id=run_id, resume=resume)
+
+def start_system(resume_run_id: str = '') -> None: 
+    # setup mlflow directory
+    root_directory: str = os.getcwd()
+    mlflow_directory: str = os.path.join(root_directory, 'mlruns')
+    mlflow_directory = 'file:///' + mlflow_directory.replace('\\', '/')
+
+    # configure logging
+    configure_logging("[launcher]")
+    # starting from existing checkpoint or not
+    designated_run_id: str = None
+    resume: bool = False
+    if resume_run_id != '': # resume from existing checkpoint
+        designated_run_id = resume_run_id
+        resume = True
+    else: # start from new checkpoint
+        mlrun = mlflow_init(mlflow_directory)
+        designated_run_id = mlrun.info.run_id
+
+    print(f"Started MLFlow Run: {designated_run_id}")
+    # start generator process
+    artifact_uri: str = mlflow_directory + f'/0/{designated_run_id}/artifacts'
+    train_repo: str = f'{artifact_uri}/episodes_train/0'
+    eval_repo: str = f'{artifact_uri}/episodes_eval/0'
+    logging.info(f"Started New MLFlow Run: {artifact_uri}")
+    generator_process: Process = Process(
+        target=start_generator, 
+        daemon=True,
+        kwargs=dict(
+            mlruns_dir=mlflow_directory,
+            run_id=designated_run_id,
+            train_repo=train_repo,
+            eval_repo=eval_repo,
+            resume=resume,
+            privileged=True
+        )
+    )
+    print("Starting generator process...")
+    generator_process.start()
+    generator_process.join()
+    # processes.append(generator_process)
+
+if __name__ == '__main__':
+    start_system(resume_run_id='')

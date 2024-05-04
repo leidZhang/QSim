@@ -10,7 +10,6 @@ import numpy as np
 from pathlib import Path
 from typing import Dict, List
 from mlflow.store.artifact.artifact_repo import ArtifactRepository
-import core.constants as C
 
 class LogColorFormatter(logging.Formatter):
     GREY = '\033[90m'
@@ -69,7 +68,7 @@ def configure_logging(prefix='[%(name)s]', level=logging.DEBUG, info_color=None)
     for logname in ['absl', 'minerl']:
         logging.getLogger(logname).setLevel(logging.INFO)
 
-def mlflow_init(mlruns_dir=C.dir):
+def mlflow_init(mlruns_dir):
     run_name = os.environ.get("MLFLOW_RUN_NAME")
     resume_id = os.environ.get("MLFLOW_RESUME_ID")
     uri = os.environ.get("MLFLOW_TRACKING_URI", mlruns_dir)

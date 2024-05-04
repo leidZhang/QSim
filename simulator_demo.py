@@ -9,7 +9,7 @@ if __name__ == "__main__":
     qlabs = QuanserInteractiveLabs()
     node_id: int = 24
     x_pos, y_pose, angle = roadmap.nodes[node_id].pose
-    waypoint_sequence = roadmap.generate_path([10, 14, 20, 22, 10])
+    waypoint_sequence = roadmap.generate_path([10, 4, 14, 20, 22, 10])
 
     simulator: QLabEnvironment = QLabEnvironment(dt=0.05, privileged=True)
     simulator.setup(initial_state=[x_pos, y_pose, angle], sequence=waypoint_sequence)
@@ -19,7 +19,7 @@ if __name__ == "__main__":
     for episode in range(1, num_episodes+1):
         observation, reward, done, info = simulator.reset()
         while not done: 
-            action, _ = policy(observation)
-            observation, reward, done, info = simulator.step(action)
-            print(f"steps: {simulator.episode_steps}, reward: {reward}, done: {done}, info: {info}")
+            action, metrics = policy(observation)
+            observation, reward, done, info = simulator.step(action, metrics)
+            print(f"action: {action}, step_reward: {reward}, done: {done}")
         print(f"Episode {episode} completed")
