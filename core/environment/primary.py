@@ -2,7 +2,6 @@ import time
 from typing import Union
 from multiprocessing import Queue
 
-import cv2
 from gym import Env
 import numpy as np
 from pal.products.qcar import QCar
@@ -12,9 +11,9 @@ from core.sensor import VirtualCSICamera
 from .constants import MAX_LOOKAHEAD_INDICES, GOAL_THRESHOLD
 
 
-class QLabEnvironment(Env): 
+class QLabEnvironment(Env):
     def __init__(self, dt: float = 0.05, action_size: int = 2, privileged: bool = False) -> None:
-        self.front_csi: VirtualCSICamera = None
+        # self.front_csi: VirtualCSICamera = None
         self.simulator: QLabSimulator = QLabSimulator(dt)
         self.action_size: int = action_size
         self.privileged: bool = privileged
@@ -29,7 +28,7 @@ class QLabEnvironment(Env):
         self.waypoint_sequence: np.ndarray = sequence
         self.goal: np.ndarray = self.waypoint_sequence[-1]
 
-    def execute_action(self, action: list) -> None: 
+    def execute_action(self, action: list) -> None:
         self.car.read_write_std(action[0], action[1])
         time.sleep(self.simulator.dt)
         self.last_action_time: float = time.perf_counter()
@@ -44,12 +43,12 @@ class QLabEnvironment(Env):
         ])
         return orig, yaw, rot
 
-    def step(self, action: Union[np.ndarray, Queue]) -> tuple:
+    def step(self, action: Union[np.ndarray, Queue], metrics: np.ndarray) -> tuple:
         """
         Step the simulation forward
 
         Parameters:
-        - action: dict: The action to take
+        - action: Union[np.ndarray, Queue]: The action to take
 
         Returns:
         - tuple: The observation, reward, done, and info
@@ -62,10 +61,10 @@ class QLabEnvironment(Env):
 
         # get action from queue if action is a queue
         if type(action) != np.ndarray and not action.empty():
-            action: list = action.get()
+            action: np.ndarray = action.get()
         # execute action and get image
         self.execute_action(action)
-        front_image: np.ndarray = self.front_csi.await_image()
+        # front_image: np.ndarray = self.front_csi.await_image()
 
         if self.privileged:
             # get ground truth state
@@ -90,14 +89,14 @@ class QLabEnvironment(Env):
 
         observation['state'] = ego_state
         observation['waypoints'] = np.matmul(self.next_waypoints[:MAX_LOOKAHEAD_INDICES] - orig, rot) if self.privileged else None
-        observation["image"] = cv2.resize(front_image[:, :, :3], (160, 120))
+        # observation["image"] = cv2.resize(front_image[:, :, :3], (160, 120))
 
         if self.privileged and norm_dist[dist_ix] >= 0.25:
             done = True
             reward -= 30.0 # penalty for not reaching the waypoint
         if self.privileged and (np.linalg.norm(self.goal - ego_state[:2]) < GOAL_THRESHOLD and len(self.next_waypoints) < 201):
             done = True
-        if done: 
+        if done:
             self.execute_action([0, 0]) # stop the car
 
         self.episode_steps += 1
@@ -111,10 +110,10 @@ class QLabEnvironment(Env):
         - np.ndarray: The observation
         """
         self.simulator.reset_map()
-        
+
         self.car: QCar = QCar()
-        self.front_csi: VirtualCSICamera = VirtualCSICamera()
-        front_image: np.ndarray = self.front_csi.await_image()
+        # self.front_csi: VirtualCSICamera = VirtualCSICamera()
+        # front_image: np.ndarray = self.front_csi.await_image()
         # reset episode start time
         self.episode_start_time = time.time()
         # initialize result variables
@@ -135,7 +134,7 @@ class QLabEnvironment(Env):
         ego_state = self.simulator.get_actor_state('car')
         observation['state'] = ego_state
         observation['waypoints'] = np.matmul(self.next_waypoints[:MAX_LOOKAHEAD_INDICES] - orig, rot) if self.privileged else None
-        observation["image"] = cv2.resize(front_image[:, :, :3], (160, 120))
+        # observation["image"] = cv2.resize(front_image[:, :, :3], (160, 120))
 
         self.prev_dist = np.inf # set previous distance to infinity
         return observation, reward, done, info

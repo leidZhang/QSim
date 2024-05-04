@@ -1,1 +1,1 @@
-from .environment import QLabEnvironment
+from .primary import QLabEnvironment

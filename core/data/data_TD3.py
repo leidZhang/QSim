@@ -1,4 +1,5 @@
 import time
+import logging
 import numpy as np
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
@@ -72,13 +73,13 @@ class MlflowEpisodeRepository(EpisodeRepository):
                     ))
 
         return files
-    
+
     def count_steps(self):
         files = self.list_files()
         steps = sum(f.steps for f in files)
         episodes = (max(f.episode_to for f in files) + 1) if files else 0
         return len(files), steps, episodes
-    
+
     def build_episode_name(self, episode_from, episode, reward, steps, chunk_seq=None):
         if chunk_seq is None:
             return f'ep{episode_from:06}_{episode:06}-r{reward:.0f}-{steps:04}.npz'
@@ -102,7 +103,7 @@ class MlflowEpisodeRepository(EpisodeRepository):
             steps = fname.split('-')[-1]
             steps = int(steps) if steps.isnumeric() else 0
             return (0, 0, steps)
-        
+
     def __repr__(self) -> str:
         return f'{self.artifact_uris}'
 
@@ -157,11 +158,11 @@ class MlflowDataRepository(DataRepository):
                     ))
 
         return files
-    
+
     def count_data(self):
         files = self.list_files()
         return len(files)
-    
+
     def build_episode_name(self, episode_from, episode, reward, steps, chunk_seq=None):
         if chunk_seq is None:
             return f'ep{episode_from:06}_{episode:06}-r{reward:.0f}-{steps:04}.npz'
@@ -185,7 +186,7 @@ class MlflowDataRepository(DataRepository):
             steps = fname.split('-')[-1]
             steps = int(steps) if steps.isnumeric() else 0
             return (0, 0, steps)
-        
+
     def __repr__(self) -> str:
         return f'{self.artifact_uris}'
 
@@ -204,9 +205,9 @@ class OfflineDataset(Dataset):
     def __len__(self):
         return self.repository.count_data()
 
-    def __getitem__(self, idx): 
+    def __getitem__(self, idx):
         try:
-            data = self.files[idx].load_data()     
+            data = self.files[idx].load_data()
         except Exception as e:
             print("Error loading file!")
             print(e)
@@ -315,7 +316,7 @@ class QLabsDataset(IterableDataset):
             return
 
         #File must start with reset and have 0 reward
-        data["reset"][0] = True 
+        data["reset"][0] = True
         data["reward"][0] = 0.0
 
         i = 0
@@ -325,7 +326,7 @@ class QLabsDataset(IterableDataset):
             is_partial = batch["reward"].shape[0] < l
             i += l
             l = batch_length
-            
+
             yield batch, is_partial
 
     #keep iterating files and randomly selecting one
@@ -501,4 +502,3 @@ class SequenceRolloutBuffer:
                 'next_states': np.array([]),
                 'dones': np.array([])
             }
-
