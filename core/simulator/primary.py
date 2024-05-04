@@ -71,6 +71,7 @@ class QLabSimulator:
         """
         director: ACCDirector = ACCDirector(self.qlabs)
         self.actors = director.build_map(qcar_pos)
+        print("Init",self.actors)
         self.actors['car'][0].possess(qcar_view)
         # set the regions for the stop signs and traffic lights
         self.regions['stop_signs'] = np.stack([
@@ -109,6 +110,7 @@ class QLabSimulator:
         """
         QLabsRealTime().terminate_all_real_time_models()
         # delete the old car
+        print(self.actors)
         car: QLabsQCar = self.actors['car'][0]
         car.destroy()
         # reset traffic light states

@@ -18,21 +18,29 @@ from .exceptions import InsufficientDataException, StopTrainingException
 
 
 class Trainer: 
-    def __init__(self, mlruns_dir: str, run_id: str, device: str = "cuda:0", prefill_steps: int = 0) -> None:
+    def __init__(
+        self,
+        mlruns_dir: str,
+        run_id: str,
+        qcar_pos: list,
+        waypoints: np.ndarray,
+        device: str = "cuda:0",
+        prefill_steps: int = 0
+    ) -> None:
         self.mlruns_dir: str = mlruns_dir
         self.run_id: str = run_id
         self.device: str = device
         self.prefill_steps: int = prefill_steps
-        base_env: QLabEnvironment = QLabEnvironment(dt=0.05, privileged=True) 
-        self.env: CollectionWrapper = CollectionWrapper(ActionRewardResetWrapper(base_env))
+        base_env: QLabEnvironment = QLabEnvironment(dt=0.05, privileged=True)
+        self.env: CollectionWrapper = CollectionWrapper(ActionRewardResetWrapper(base_env, qcar_pos, waypoints))
     
     def setup_mlflow(self) -> tuple: 
         configure_logging(prefix="[TRAIN]")
         # connect to the running mlflow instance
         os.environ["MLFLOW_RUN_ID"] = self.run_id
-        mlrun = mlflow_init()
+        mlrun = mlflow_init(self.mlruns_dir)
         # initialize mlflow
-        self.mlflow.set_tracking_uri(self.mlruns_dir)
+        mlflow.set_tracking_uri(self.mlruns_dir)
         # initialize data directory
         input_dir = self.mlruns_dir + f'/0/{self.run_id}/artifacts/episodes_train/0'
         eval_dir = self.mlruns_dir + f'/0/{self.run_id}/artifacts/episodes_eval/0'

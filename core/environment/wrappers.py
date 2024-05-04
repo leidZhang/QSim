@@ -8,8 +8,9 @@ from .primary import QLabEnvironment
 
 
 class ActionRewardResetWrapper(Wrapper):
-    def __init__(self, env: QLabEnvironment) -> None:
+    def __init__(self, env: QLabEnvironment, qcar_pos: list, waypoints) -> None:
         super().__init__(env)
+        self.env.setup(qcar_pos, waypoints)
         self.action_size: int = env.action_size
 
     def step(self, action: Union[np.ndarray, Queue], metrics: np.ndarray) -> tuple:

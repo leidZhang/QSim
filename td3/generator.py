@@ -19,11 +19,19 @@ from . import constants as C
 
 
 class Generator:
-    def __init__(self, mlruns_dir: str, train_repo: str, eval_repo: str, privileged: bool = True) -> None:
+    def __init__(
+        self,
+        mlruns_dir: str,
+        train_repo: str,
+        eval_repo: str,
+        qcar_pos: list,
+        waypoints: np.ndarray,
+        privileged: bool = True
+    ) -> None:
         self.episode_num: int = 10000
         self.mlruns_dir: str = mlruns_dir
         base_env: QLabEnvironment = QLabEnvironment(dt=0.05, privileged=privileged)
-        self.env: CollectionWrapper = CollectionWrapper(ActionRewardResetWrapper(base_env))
+        self.env: CollectionWrapper = CollectionWrapper(ActionRewardResetWrapper(base_env, qcar_pos, waypoints))
         self.train_repository: MlflowEpisodeRepository = MlflowEpisodeRepository(train_repo)
         self.eval_repository: MlflowEpisodeRepository = MlflowEpisodeRepository(eval_repo)
         set_tracking_uri(self.mlruns_dir)
@@ -41,18 +49,18 @@ class Generator:
         else:
             self.policy = PurePursuitPolicy(max_lookahead_distance=0.5)
 
-        self.last_load_time = time.perf_counter()
+        self.last_load_time = 0
         return steps, episodes
 
     def load_policy(self, is_prefill_policy: bool, run_id: str, saved_data: int) -> None:
         print(f"Loading policy with run_id: {run_id}")
-        print(f"Prefill status: {is_prefill_policy}")
         if is_prefill_policy and saved_data >= C.prefill:
             logging.info("Prefill Complete, switching to main policy")
             train_repo: str = self.train_repository.artifact_uris
             self.policy = TD3Agent(self.env, train_repo)
             is_prefill_policy = False
 
+        print(f"Last load time {self.last_load_time}")
         if not is_prefill_policy and self.last_load_time > 30:
             model_step = load_checkpoint(self.policy, self.mlruns_dir, run_id)
             while model_step is None:
@@ -143,7 +151,7 @@ class Generator:
 
         datas = []
         for _ in range(self.episode_num):
-            self.load_policy(is_prefill_policy, run_id, saved_data)
+            self.load_policy(is_prefill_policy, run_id, saved_data) # problem here
 
             episode_steps: int = 0
             if isinstance(self.policy, NetworkPolicy):
