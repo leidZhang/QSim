@@ -29,7 +29,7 @@ class Generator:
         set_tracking_uri(self.mlruns_dir)
         configure_logging(prefix='[GENERATOR]', info_color=LogColorFormatter.GREEN)
 
-    def prepare_training_session(self, run_id: str, resume: bool) -> None:
+    def prepare_session(self, run_id: str, resume: bool) -> None:
         steps, episodes = 0, 0
         print(f"Resume status: {resume}")
         if resume:
@@ -137,7 +137,7 @@ class Generator:
 
     def execute(self, run_id: str, resume: bool) -> tuple:
         print(f"Starting generator with run_id: {run_id}")
-        steps, episodes = self.prepare_training_session(run_id=run_id, resume=resume)
+        steps, episodes = self.prepare_session(run_id=run_id, resume=resume)
         _, saved_data, _ = self.train_repository.count_steps()
         is_prefill_policy: bool = resume
 

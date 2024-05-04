@@ -1,4 +1,5 @@
 import os
+import time
 import logging
 from multiprocessing import Process
 
@@ -6,6 +7,9 @@ import mlflow
 from typing import List
 
 from td3.generator import Generator
+from td3.trainer import Trainer
+from td3.constants import PREFILL, MAX_TRAINING_STEPS
+from td3.exceptions import InsufficientDataException, StopTrainingException
 from core.utils.tools import mlflow_init, configure_logging
 
 def check_process(processes: List[Process]) -> None: 
@@ -21,13 +25,13 @@ def check_process(processes: List[Process]) -> None:
             raise Exception(f"Process {process.pid} exited with code {process.exitcode}")
 
 def start_generator(
-        run_id: str,
-        mlruns_dir: str, 
-        train_repo: str, 
-        eval_repo: str, 
-        resume: bool = False,
-        privileged: bool = True
-    ) -> None: 
+    run_id: str,
+    mlruns_dir: str, 
+    train_repo: str, 
+    eval_repo: str, 
+    resume: bool = False,
+    privileged: bool = True
+) -> None: 
     print("Creating generator instance...")
     generator: Generator = Generator(
         mlruns_dir=mlruns_dir,
@@ -37,6 +41,32 @@ def start_generator(
     )
     print("Preparing collection session...")
     generator.execute(run_id=run_id, resume=resume)
+
+def start_trainer(
+    run_id: str,
+    mlruns_dir: str,
+    device: str, 
+    prefill_steps: int, 
+    resume: bool = False
+) -> None: 
+    print("Creating trainer instance...")
+    trainer: Trainer = Trainer(
+        mlruns_dir=mlruns_dir, 
+        run_id=run_id, 
+        device=device, 
+        prefill_steps=prefill_steps
+    )
+    trainer.prepare_training(resume=resume)
+    stop_training: bool = False
+    while not stop_training: 
+        try: 
+            trainer.execute()
+        except InsufficientDataException: 
+            logging.info(f"Insufficient data sampled:[ {len(trainer.data)}/{PREFILL} ]")
+            time.sleep(20)
+        except StopTrainingException: 
+            logging.info(f'Finished {MAX_TRAINING_STEPS} grad steps.')
+            stop_training = True 
 
 def start_system(resume_run_id: str = '') -> None: 
     # setup mlflow directory
@@ -62,6 +92,8 @@ def start_system(resume_run_id: str = '') -> None:
     train_repo: str = f'{artifact_uri}/episodes_train/0'
     eval_repo: str = f'{artifact_uri}/episodes_eval/0'
     logging.info(f"Started New MLFlow Run: {artifact_uri}")
+    # initialize processes
+    processes: List[Process] = []
     generator_process: Process = Process(
         target=start_generator, 
         daemon=True,
@@ -74,10 +106,26 @@ def start_system(resume_run_id: str = '') -> None:
             privileged=True
         )
     )
-    print("Starting generator process...")
+    processes.append(generator_process)
+    trainer_process: Process = Process(
+        target=start_trainer, 
+        daemon=False, 
+        kwargs=dict(
+            mlruns_dir=mlflow_directory, 
+            run_id=designated_run_id,
+            device="cuda:0",
+            prefill_steps=0,
+        )
+    )
+    processes.append(trainer_process)
+    # start process
     generator_process.start()
+    trainer_process.start()
+    # check process
+    check_process(processes=processes)
     generator_process.join()
-    # processes.append(generator_process)
+    trainer_process.join()
 
 if __name__ == '__main__':
-    start_system(resume_run_id='')
+    resume_run_id = ''
+    start_system(resume_run_id=resume_run_id)

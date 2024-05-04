@@ -11,7 +11,15 @@ buffer_update_rate = 2
 policy_noise = 0.02,
 noise_clip = 0.05,
 policy_freq = 2
-prefill = 10000
 run_id = ''
+prefill = 10000
 
+PREFILL = 10000
+# generator constants
 METRIC_PREFIX: str = 'agent'
+
+# trainer constants
+MAX_TRAINING_STEPS = 1_000_000
+SAVE_INTERVAL = 200
+LOGBATCH_INTERVAL = 1000
+LOG_INTERVAL = 10
