@@ -119,14 +119,14 @@ class ACCMapBuilder:
         car_position: list = [position[0], position[1], 0.0]
         car_orientation: list = [0, 0, position[2]]
 
-        car.spawn_id(
-            actorNumber=0,
-            location=car_position,
-            rotation=car_orientation,
-            scale=[.1, .1, .1],
-            configuration=0,
-            waitForConfirmation=True
-        )
+        # car.spawn_id(
+        #     actorNumber=0,
+        #     location=car_position,
+        #     rotation=car_orientation,
+        #     scale=[.1, .1, .1],
+        #     configuration=0,
+        #     waitForConfirmation=True
+        # )
 
         basic_shape.spawn_id_and_parent_with_relative_transform(
             actorNumber=102, location=[1.15, 0, 1.8],
