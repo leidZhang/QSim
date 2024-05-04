@@ -22,7 +22,8 @@ class Generator:
     def __init__(self, mlruns_dir: str, train_repo: str, eval_repo: str, privileged: bool = True) -> None:
         self.episode_num: int = 10000
         self.mlruns_dir: str = mlruns_dir
-        self.env: CollectionWrapper = CollectionWrapper(QLabEnvironment(dt=0.05, privileged=privileged))
+        base_env: QLabEnvironment = QLabEnvironment(dt=0.05, privileged=privileged)
+        self.env: CollectionWrapper = CollectionWrapper(ActionRewardResetWrapper(base_env))
         self.train_repository: MlflowEpisodeRepository = MlflowEpisodeRepository(train_repo)
         self.eval_repository: MlflowEpisodeRepository = MlflowEpisodeRepository(eval_repo)
         set_tracking_uri(self.mlruns_dir)
