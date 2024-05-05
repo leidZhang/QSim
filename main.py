@@ -71,7 +71,7 @@ def start_trainer(
             trainer.execute()
         except InsufficientDataException:
             logging.info(f"Insufficient data sampled:[ {len(trainer.data)}/{PREFILL} ]")
-            time.sleep(2)
+            time.sleep(20)
         except StopTrainingException:
             logging.info(f'Finished {MAX_TRAINING_STEPS} grad steps.')
             stop_training = True
@@ -147,6 +147,6 @@ def start_system(resume_run_id: str, init_pos: list, waypoints: np.ndarray) -> N
         print(e)
 
 if __name__ == '__main__':
-    resume_run_id = '4a53b255415c4436abd0a74ddf90b32d'
+    resume_run_id = ''
     init_pos, waypoints = prepare_map_info(node_id=24)
     start_system(resume_run_id=resume_run_id, init_pos=init_pos, waypoints=waypoints)

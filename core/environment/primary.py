@@ -63,8 +63,8 @@ class QLabEnvironment(Env):
         if type(action) != np.ndarray and not action.empty():
             action: np.ndarray = action.get()
         # execute action and get image
-        if action[0] <= 0.045:
-            print("low speed!")
+        # if action[0] <= 0.045:
+        #     print("low speed!")
         self.execute_action(action)
         # front_image: np.ndarray = self.front_csi.await_image()
 

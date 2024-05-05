@@ -1,6 +1,6 @@
 import time
 import logging
-import datetime
+from datetime import datetime
 from collections import defaultdict
 
 import numpy as np
@@ -29,6 +29,7 @@ class Generator:
         privileged: bool = True
     ) -> None:
         self.episode_num: int = 10000
+        self.metrics_agg = defaultdict(list)
         self.mlruns_dir: str = mlruns_dir
         base_env: GeneratorEnvironment = GeneratorEnvironment(dt=0.05, privileged=privileged)
         self.env: CollectionWrapper = CollectionWrapper(ActionRewardResetWrapper(base_env, qcar_pos, waypoints))
@@ -37,7 +38,7 @@ class Generator:
         set_tracking_uri(self.mlruns_dir)
         configure_logging(prefix='[GENERATOR]', info_color=LogColorFormatter.GREEN)
 
-    def prepare_session(self, run_id: str, resume: bool) -> None:
+    def prepare_session(self, run_id: str, resume: bool) -> tuple:
         steps, episodes = 0, 0
         if resume:
             train_repo: str = self.train_repository.artifact_uris
@@ -71,14 +72,15 @@ class Generator:
         metrics = defaultdict(list)
         observation, reward, done, info = self.env.reset()
         start_time = time.time()
-        while not done:
-            if isinstance(self.policy, TD3Agent):
+        while not done and time.time() - start_time <= 60:
+            if type(self.policy) is TD3Agent:
                 action, metric = self.policy.select_action(observation['state'])
-                next_observation, reward, done, info = self.env.step(action, metrics)
+                next_observation, reward, done, info = self.env.step(action, metric)
+                self.policy.store_transition(observation['state'], action, reward, next_observation['state'], done)
                 observation = next_observation
             else:
                 action, metric = self.policy(observation)
-                observation, reward, done, info = self.env.step(action, metrics)
+                observation, reward, done, info = self.env.step(action, metric)
 
             for key, val in metric.items():
                 metrics[key].append(val)
@@ -86,9 +88,10 @@ class Generator:
             episdoe_steps += 1
             steps += 1 # ???
         time.sleep(COOL_DOWN_TIME)
+        # print(metrics)
         return info, episdoe_steps, steps, metrics
 
-    def log_metrics(self, data: dict, episode_steps: int, steps: int, episodes: int, saved_data, metrics: dict) -> None:
+    def log_episode(self, data: dict, episode_steps: int, steps: int, episodes: int, saved_data, metrics: dict) -> dict:
         logging.info(
             f"Episode recorded:"
             f"  steps: {episode_steps}"
@@ -105,20 +108,22 @@ class Generator:
             f'{METRIC_PREFIX}/episodes': episodes,
             f'{METRIC_PREFIX}/return': data['reward'].sum()
         })
+        return metrics
 
-    def aggregate_metrics(self, metrics: dict, episodes:int) -> None:
-        metrics_agg: defaultdict = defaultdict(list)
+    def aggregate_metrics(self, metrics: defaultdict, episodes:int) -> None:
         for key, val in metrics.items():
-            if not np.isnan(val).all():
-                metrics_agg[key].append(val)
-        if len(metrics_agg[f'{METRIC_PREFIX}/return']) >= 1: # log_every:
-            metrics_agg_max = {k: np.array(v).max() for k, v in metrics_agg.items()}
-            metrics_agg = {k: np.array(v).mean() for k, v in metrics_agg.items()}
-            metrics_agg[f'{METRIC_PREFIX}/return_max'] = metrics_agg_max[f'{METRIC_PREFIX}/return']
-            metrics_agg['_timestamp'] = datetime.now().timestamp()
+            if key == f'{METRIC_PREFIX}/return':
+                print(key)
+            self.metrics_agg[key].append(val)
 
-            mlflow_log_metrics(metrics_agg, step=episodes)  # use episode number as step
-            metrics_agg = defaultdict(list)
+        if len(self.metrics_agg[f'{METRIC_PREFIX}/return']) >= 1: # log_every:
+            metrics_agg_max = {k: np.array(v).max() for k, v in self.metrics_agg.items()}
+            self.metrics_agg = {k: np.array(v).mean() for k, v in self.metrics_agg.items()}
+            self.metrics_agg[f'{METRIC_PREFIX}/return_max'] = metrics_agg_max[f'{METRIC_PREFIX}/return']
+            self.metrics_agg['_timestamp'] = datetime.now().timestamp()
+            # log metrics
+            mlflow_log_metrics(self.metrics_agg, step=episodes)  # use episode number as step
+            self.metrics_agg = defaultdict(list)
 
     def save_to_replay_buffer(self, data: dict, datas: list, episodes: int) -> int:
         accumulator = 0
@@ -148,15 +153,17 @@ class Generator:
 
         datas = []
         for _ in range(self.episode_num):
-            self.load_policy(run_id, saved_data) # problem here
-            episode_steps: int = 0
-            if isinstance(self.policy, NetworkPolicy):
-                self.policy.reset_state()
-            info, episode_steps, steps, metrics = self.run_episode(episode_steps, steps)
-            episodes += 1
+            try:
+                self.load_policy(run_id, saved_data) # problem here
+                episode_steps: int = 0
+                if isinstance(self.policy, NetworkPolicy):
+                    self.policy.reset_state()
+                info, episode_steps, steps, metrics = self.run_episode(episode_steps, steps)
+                episodes += 1
 
-            if "episode" in info.keys(): # temp fix
                 data = info["episode"]
-            self.log_metrics(data, episode_steps, steps, episodes, saved_data, metrics)
-            self.aggregate_metrics(metrics, episodes) # aggregate metrics
-            saved_data += self.save_to_replay_buffer(data, datas, episodes)
+                metrics = self.log_episode(data, episode_steps, steps, episodes, saved_data, metrics)
+                self.aggregate_metrics(metrics, episodes) # aggregate metrics
+                saved_data += self.save_to_replay_buffer(data, datas, episodes)
+            except Exception as e:
+                print(e)

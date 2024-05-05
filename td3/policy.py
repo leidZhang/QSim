@@ -13,7 +13,7 @@ from core.policies.network import NetworkPolicy
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-class TD3Agent(torch.nn.Module): # td3_yida
+class TD3Agent(torch.nn.Module):
     def __init__(self, env, input_dir):
         super(TD3Agent, self).__init__()
         self.env = env

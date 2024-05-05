@@ -110,7 +110,7 @@ class Trainer:
         # update time and steps
         self.last_time = time_stamp
         self.last_steps = self.steps
-        if self.steps % 100 == 0:
+        if self.steps % 400 == 0:
             logging.info(
                 f"[steps{self.steps:06}]"
                 f"  actor_loss: {self.metrics.get('train/actor_loss', 0):.3f}"
@@ -135,9 +135,12 @@ class Trainer:
         checkpoint['optimizer_actor_state_dict'] = self.agent.actor_optimizer.state_dict()
         checkpoint['optimizer_critic_state_dict'] = self.agent.critic_optimizer.state_dict()
         checkpoint_path = f"{self.mlruns_dir[8:]}/0/{self.run_id}/latest_checkpoint.pt"
+        backup_path = f"{self.mlruns_dir[8:]}/0/{self.run_id}/backup.pt"
         # save model to disk
         try:
             torch.save(checkpoint, checkpoint_path)
+            if os.path.exists(checkpoint_path): # backup
+                torch.save(checkpoint, backup_path)
             if self.steps % (SAVE_INTERVAL * 16) == 0:
                 logging.info(f'Saved checkpoint {self.steps}')
         except IOError as e:
