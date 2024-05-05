@@ -13,9 +13,10 @@ noise_clip = 0.05,
 policy_freq = 2
 run_id = ''
 
-PREFILL = 100
+PREFILL = 1500
 # generator constants
 METRIC_PREFIX: str = 'agent'
+COOL_DOWN_TIME: float = 3.0
 
 # trainer constants
 MAX_TRAINING_STEPS = 1_000_000

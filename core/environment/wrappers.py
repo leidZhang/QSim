@@ -1,3 +1,4 @@
+import time
 from typing import Tuple, Union
 from multiprocessing import Queue
 
@@ -31,10 +32,10 @@ class ActionRewardResetWrapper(Wrapper):
 
         return observation, reward, done, info
 
-    def close_connection(self) -> None: 
+    def close_connection(self) -> None:
         self.env.close_connection()
-    
-    def reconnect(self) -> None: 
+
+    def reconnect(self) -> None:
         self.env.reconnect()
 
 
@@ -71,9 +72,3 @@ class CollectionWrapper(Wrapper):
         observation, reward, done, info = self.env.reset()
         self.episode = [observation.copy()]
         return observation, reward, done, info
-    
-    def close_connection(self) -> None: 
-        self.env.close_connection()
-    
-    def reconnect(self) -> None: 
-        self.env.reconnect()

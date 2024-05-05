@@ -1,7 +1,7 @@
 import os
 import time
 import logging
-from multiprocessing import Process, Event
+from multiprocessing import Process
 
 import mlflow
 from typing import List
@@ -15,7 +15,7 @@ from td3.constants import PREFILL, MAX_TRAINING_STEPS
 from td3.exceptions import InsufficientDataException, StopTrainingException
 from core.utils.tools import mlflow_init, configure_logging
 
-def check_process(processes: List[Process]) -> None: 
+def check_process(processes: List[Process]) -> None:
     for process in processes:
         # skip the process if it is still running
         if process.is_alive():
@@ -24,21 +24,19 @@ def check_process(processes: List[Process]) -> None:
         if process.exitcode == 0:
             processes.remove(process)
             logging.info(f"Process {process.pid} exited with code {process.exitcode}")
-        else: 
+        else:
             raise Exception(f"Process {process.pid} exited with code {process.exitcode}")
 
 def start_generator(
     run_id: str,
-    mlruns_dir: str, 
-    train_repo: str, 
+    mlruns_dir: str,
+    train_repo: str,
     eval_repo: str,
     init_pos: list,
     waypoints: np.ndarray,
-    event,
     resume: bool = False,
     privileged: bool = True
-) -> None: 
-    print("Creating generator instance...")
+) -> None:
     generator: Generator = Generator(
         mlruns_dir=mlruns_dir,
         train_repo=train_repo,
@@ -47,23 +45,20 @@ def start_generator(
         eval_repo=eval_repo,
         privileged=privileged
     )
-    print("Preparing collection session...")
     generator.execute(run_id=run_id, resume=resume)
 
 def start_trainer(
     run_id: str,
     mlruns_dir: str,
-    device: str, 
+    device: str,
     prefill_steps: int,
     init_pos: list,
     waypoints: np.ndarray,
-    event,
     resume: bool = False
-) -> None: 
-    print("Creating trainer instance...")
+) -> None:
     trainer: Trainer = Trainer(
-        mlruns_dir=mlruns_dir, 
-        run_id=run_id, 
+        mlruns_dir=mlruns_dir,
+        run_id=run_id,
         device=device,
         qcar_pos=init_pos,
         waypoints=waypoints,
@@ -71,13 +66,13 @@ def start_trainer(
     )
     trainer.prepare_training(resume=resume)
     stop_training: bool = False
-    while not stop_training: 
-        try: 
+    while not stop_training:
+        try:
             trainer.execute()
-        except InsufficientDataException: 
+        except InsufficientDataException:
             logging.info(f"Insufficient data sampled:[ {len(trainer.data)}/{PREFILL} ]")
-            time.sleep(20)
-        except StopTrainingException: 
+            time.sleep(2)
+        except StopTrainingException:
             logging.info(f'Finished {MAX_TRAINING_STEPS} grad steps.')
             stop_training = True
 
@@ -87,7 +82,7 @@ def prepare_map_info(node_id: int = 24) -> tuple:
     waypoint_sequence = roadmap.generate_path([10, 4, 14, 20, 22, 10])
     return [x_pos, y_pose, angle], waypoint_sequence
 
-def start_system(event, resume_run_id: str, init_pos: list, waypoints: np.ndarray) -> None:
+def start_system(resume_run_id: str, init_pos: list, waypoints: np.ndarray) -> None:
     # setup mlflow directory
     root_directory: str = os.getcwd() # get the absolute directory
     mlflow_directory: str = os.path.join(root_directory, 'mlruns')
@@ -105,7 +100,6 @@ def start_system(event, resume_run_id: str, init_pos: list, waypoints: np.ndarra
         mlrun = mlflow_init(mlflow_directory)
         designated_run_id = mlrun.info.run_id
 
-    print(f"Started MLFlow Run: {designated_run_id}")
     # start generator process
     artifact_uri: str = mlflow_directory + f'/0/{designated_run_id}/artifacts'
     train_repo: str = f'{artifact_uri}/episodes_train/0'
@@ -114,7 +108,7 @@ def start_system(event, resume_run_id: str, init_pos: list, waypoints: np.ndarra
     # initialize processes
     processes: List[Process] = []
     generator_process: Process = Process(
-        target=start_generator, 
+        target=start_generator,
         daemon=True,
         kwargs=dict(
             mlruns_dir=mlflow_directory,
@@ -122,7 +116,6 @@ def start_system(event, resume_run_id: str, init_pos: list, waypoints: np.ndarra
             train_repo=train_repo,
             eval_repo=eval_repo,
             init_pos=init_pos,
-            event=event,
             waypoints=waypoints,
             resume=resume,
             privileged=True
@@ -130,12 +123,11 @@ def start_system(event, resume_run_id: str, init_pos: list, waypoints: np.ndarra
     )
     processes.append(generator_process)
     trainer_process: Process = Process(
-        target=start_trainer, 
-        daemon=False, 
+        target=start_trainer,
+        daemon=False,
         kwargs=dict(
-            mlruns_dir=mlflow_directory, 
+            mlruns_dir=mlflow_directory,
             run_id=designated_run_id,
-            event=event,
             init_pos=init_pos,
             waypoints=waypoints,
             device="cuda:0",
@@ -147,15 +139,14 @@ def start_system(event, resume_run_id: str, init_pos: list, waypoints: np.ndarra
     generator_process.start()
     trainer_process.start()
     # check process
-    try: 
-        while True: 
+    try:
+        while True:
             check_process(processes=processes)
             time.sleep(5)
-    except Exception as e: 
+    except Exception as e:
         print(e)
 
 if __name__ == '__main__':
-    resume_run_id = ''
-    event = Event()
+    resume_run_id = '4a53b255415c4436abd0a74ddf90b32d'
     init_pos, waypoints = prepare_map_info(node_id=24)
-    start_system(event=event, resume_run_id=resume_run_id, init_pos=init_pos, waypoints=waypoints)
+    start_system(resume_run_id=resume_run_id, init_pos=init_pos, waypoints=waypoints)

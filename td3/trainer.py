@@ -17,7 +17,7 @@ from .constants import PREFILL, LOG_INTERVAL, SAVE_INTERVAL, MAX_TRAINING_STEPS
 from .exceptions import InsufficientDataException, StopTrainingException
 
 
-class Trainer: 
+class Trainer:
     def __init__(
         self,
         mlruns_dir: str,
@@ -33,8 +33,8 @@ class Trainer:
         self.prefill_steps: int = prefill_steps
         base_env: TrainerEnvironment = TrainerEnvironment(dt=0.05, privileged=True)
         self.env: CollectionWrapper = CollectionWrapper(ActionRewardResetWrapper(base_env, qcar_pos, waypoints))
-    
-    def setup_mlflow(self) -> tuple: 
+
+    def setup_mlflow(self) -> tuple:
         configure_logging(prefix="[TRAIN]")
         # connect to the running mlflow instance
         os.environ["MLFLOW_RUN_ID"] = self.run_id
@@ -46,9 +46,9 @@ class Trainer:
         eval_dir = self.mlruns_dir + f'/0/{self.run_id}/artifacts/episodes_eval/0'
 
         return input_dir, eval_dir
-    
-    def resume_training(self, agent: TD3Agent, resume: bool) -> None: 
-        if resume: 
+
+    def resume_training(self, agent: TD3Agent, resume: bool) -> None:
+        if resume:
             load_status: str = load_checkpoint(agent, self.mlruns_dir, self.run_id, map_location="cpu")
             logging.info(f'Trainer loaded model checkpoint status {load_status}')
             self.start_time = time.time()
@@ -56,10 +56,10 @@ class Trainer:
             with open(path_to_train_steps) as f:
                 last_line = f.readlines()[-1]
                 self.steps = int(last_line.split()[2])
-        else: 
+        else:
             self.start_time = time.time()
             self.steps = 0
-    
+
     def prepare_training(self, resume: bool = False) -> None: # setup function
         input_dir, eval_dir = self.setup_mlflow()
         torch.autograd.set_detect_anomaly(True)
@@ -75,23 +75,23 @@ class Trainer:
         self.metrics: defaultdict = defaultdict(list)
         self.metrics_max: defaultdict = defaultdict(list)
 
-    def update_agent_metrics(self, samples) -> None: 
+    def update_agent_metrics(self, samples) -> None:
         metric_counter: int = 0
-        if len(self.data) >= PREFILL: 
+        if len(self.data) >= PREFILL:
             actor_loss, critic_loss = self.agent.learn(samples)
-            if actor_loss is not None and critic_loss is not None: 
+            if actor_loss is not None and critic_loss is not None:
                 self.metrics["actor_loss"] = actor_loss
                 self.metrics["critic_loss"] = critic_loss
                 metric_counter += 1
-                if metric_counter % 10 == 0: 
+                if metric_counter % 10 == 0:
                     print(self.metrics)
-        else: 
+        else:
             raise InsufficientDataException()
 
-    def log_training_metrics(self) -> None: 
+    def log_training_metrics(self) -> None:
         if self.steps % LOG_INTERVAL != 0:
-            return 
-         
+            return
+
         # cal average value and max value
         self.metrics = {f'train/{k}': np.array(v).mean() for k, v in self.metrics.items()}
         self.metrics.update({f'train/{k}_max': np.array(v).max() for k, v in self.metrics_max.items()})
@@ -102,7 +102,7 @@ class Trainer:
         # cal fps
         time_stamp = time.time()
         time_diff = time_stamp - self.last_time
-        if time_diff > 0: 
+        if time_diff > 0:
             fps = (self.steps - self.last_steps) / time_diff
         else:
             fps = 0
@@ -110,24 +110,24 @@ class Trainer:
         # update time and steps
         self.last_time = time_stamp
         self.last_steps = self.steps
-        # if self.steps % 400 == 0: 
-        #     logging.info(
-        #         f"[steps{self.steps:06}]"
-        #         f"  actor_loss: {self.metrics.get('train/actor_loss', 0):.3f}"
-        #         f"  critic_loss: {self.metrics.get('train/critic_loss', 0):.3f}"
-        #         f"  fps: {self.metrics.get('train/fps', 0):.3f}"
-        #     )
+        if self.steps % 100 == 0:
+            logging.info(
+                f"[steps{self.steps:06}]"
+                f"  actor_loss: {self.metrics.get('train/actor_loss', 0):.3f}"
+                f"  critic_loss: {self.metrics.get('train/critic_loss', 0):.3f}"
+                f"  fps: {self.metrics.get('train/fps', 0):.3f}"
+            )
         if self.steps > LOG_INTERVAL:  #skip first batch because the losses are very high and mess up y axis
             mlflow_log_metrics(self.metrics, step=self.steps)
         # clear metrics and metric_max
         self.metrics = defaultdict(list)
         self.metrics_max = defaultdict(list)
 
-    def save_model(self) -> None: 
+    def save_model(self) -> None:
         # skip if we do not have enough steps
-        if self.steps % SAVE_INTERVAL != 0: 
-            return 
-        
+        if self.steps % SAVE_INTERVAL != 0:
+            return
+
         # create checkpoint dict
         checkpoint = {}
         checkpoint["epoch"] = self.steps
@@ -135,7 +135,7 @@ class Trainer:
         checkpoint['optimizer_actor_state_dict'] = self.agent.actor_optimizer.state_dict()
         checkpoint['optimizer_critic_state_dict'] = self.agent.critic_optimizer.state_dict()
         checkpoint_path = f"{self.mlruns_dir[8:]}/0/{self.run_id}/latest_checkpoint.pt"
-        # save model to disk 
+        # save model to disk
         try:
             torch.save(checkpoint, checkpoint_path)
             if self.steps % (SAVE_INTERVAL * 16) == 0:
@@ -149,5 +149,5 @@ class Trainer:
         self.update_agent_metrics(samples)
         self.log_training_metrics()
         self.save_model()
-        if self.steps >= MAX_TRAINING_STEPS: 
+        if self.steps >= MAX_TRAINING_STEPS:
             raise StopTrainingException()

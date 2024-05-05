@@ -19,7 +19,7 @@ class QLabEnvironment(Env):
         self.max_episode_steps: int = 1000
         self.episode_steps: int = 0
         # self.simulator: QLabSimulator = QLabSimulator(dt)
-        
+
     def setup(self, initial_state: list, sequence: np.ndarray) -> None:
         self.simulator.render_map(initial_state)
         self.set_waypoint_sequence(sequence)
@@ -63,6 +63,8 @@ class QLabEnvironment(Env):
         if type(action) != np.ndarray and not action.empty():
             action: np.ndarray = action.get()
         # execute action and get image
+        if action[0] <= 0.045:
+            print("low speed!")
         self.execute_action(action)
         # front_image: np.ndarray = self.front_csi.await_image()
 
@@ -76,7 +78,7 @@ class QLabEnvironment(Env):
             dist_ix: int = np.argmin(norm_dist)
             # get state info
             ego_state: np.ndarray = self.simulator.get_actor_state('car')
-            reward += action[0] * 0.44 # temporary reward
+            reward += action[0] * 0.5 # temporary reward
             self.current_waypoint_index = (self.current_waypoint_index + dist_ix) % self.waypoint_sequence.shape[0]
             self.prev_dist_ix = dist_ix
             self.next_waypoints = self.next_waypoints[dist_ix:]  # clear pasted waypoints
@@ -90,13 +92,20 @@ class QLabEnvironment(Env):
         observation['state'] = ego_state
         observation['waypoints'] = np.matmul(self.next_waypoints[:MAX_LOOKAHEAD_INDICES] - orig, rot) if self.privileged else None
         # observation["image"] = cv2.resize(front_image[:, :, :3], (160, 120))
-
+        if self.privileged and time.time() - self.last_check_pos >= 0.3:
+            reward += action[0] * 2.0 if (self.last_orig != orig).any() else -action[0] * 2.0
+            self.last_orig = orig # update position
+            self.last_check_pos = time.time() # update timer
+        if self.privileged and abs(action[0]) < 0.045:
+            reward -= 0.55
         if self.privileged and norm_dist[dist_ix] >= 0.25:
             done = True
             reward -= 30.0 # penalty for not reaching the waypoint
         if self.privileged and (np.linalg.norm(self.goal - ego_state[:2]) < GOAL_THRESHOLD and len(self.next_waypoints) < 201):
-            done = True
-        if done:
+            time_taken: float = time.time() - self.episode_start
+            if time_taken > 5: # bonus for reach the goal
+                reward += 30 - (time_taken - 5) * 0.9
+            done = True # stop episode after this step
             self.execute_action([0, 0]) # stop the car
 
         self.episode_steps += 1
@@ -132,21 +141,23 @@ class QLabEnvironment(Env):
 
         orig, yaw, rot = self.get_states('car')
         ego_state = self.simulator.get_actor_state('car')
+        self.episode_start: float = time.time()
         observation['state'] = ego_state
         observation['waypoints'] = np.matmul(self.next_waypoints[:MAX_LOOKAHEAD_INDICES] - orig, rot) if self.privileged else None
-        # observation["image"] = cv2.resize(front_image[:, :, :3], (160, 120))
 
         self.prev_dist = np.inf # set previous distance to infinity
+        self.last_orig: np.ndarray = orig
+        self.last_check_pos: float = time.time()
         return observation, reward, done, info
-    
 
-class GeneratorEnvironment(QLabEnvironment): 
+
+class GeneratorEnvironment(QLabEnvironment):
     def __init__(self, dt: float = 0.05, action_size: int = 2, privileged: bool = False) -> None:
         super().__init__(dt, action_size, privileged)
         self.simulator: FullSimulator = FullSimulator(dt)
 
 
-class TrainerEnvironment(QLabEnvironment): 
+class TrainerEnvironment(QLabEnvironment):
     def __init__(self, dt: float = 0.05, action_size: int = 2, privileged: bool = False) -> None:
         super().__init__(dt, action_size, privileged)
         self.simulator: PartialSimulator = PartialSimulator(dt)
