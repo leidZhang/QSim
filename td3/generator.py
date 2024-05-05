@@ -52,14 +52,15 @@ class Generator:
         self.last_load_time = time.perf_counter()
         return steps, episodes
 
-    def load_policy(self, run_id: str, saved_data: int) -> bool:
+    def load_policy(self, run_id: str, saved_data: int) -> None:
+        # print(saved_data)
         if type(self.policy) is not TD3Agent and saved_data >= PREFILL:
             logging.info("Prefill Complete, switching to main policy")
             train_repo: str = self.train_repository.artifact_uris
             self.policy = TD3Agent(self.env, train_repo)
             # is_prefill_policy = False
 
-        if isinstance(self.policy, TD3Agent) and time.perf_counter() - self.last_load_time > 300:
+        if type(self.policy) is TD3Agent and time.perf_counter() - self.last_load_time > 300:
             model_step = load_checkpoint(self.policy, self.mlruns_dir, run_id)
             while model_step is None:
                 model_step = load_checkpoint(self.policy, self.mlruns_dir, run_id)
@@ -112,8 +113,6 @@ class Generator:
 
     def aggregate_metrics(self, metrics: defaultdict, episodes:int) -> None:
         for key, val in metrics.items():
-            if key == f'{METRIC_PREFIX}/return':
-                print(key)
             self.metrics_agg[key].append(val)
 
         if len(self.metrics_agg[f'{METRIC_PREFIX}/return']) >= 1: # log_every:
@@ -139,7 +138,7 @@ class Generator:
             datas = []
 
             # save data as npz
-            if np.random.rand() < 0.2:
+            if np.random.rand() < 0: # 0.2
                 self.eval_repository.save_data(data, episodes - data_episodes, episodes - 1, 0)
             else:
                 self.train_repository.save_data(data, episodes - data_episodes, episodes - 1, 0)
@@ -164,6 +163,6 @@ class Generator:
                 data = info["episode"]
                 metrics = self.log_episode(data, episode_steps, steps, episodes, saved_data, metrics)
                 self.aggregate_metrics(metrics, episodes) # aggregate metrics
-                saved_data += self.save_to_replay_buffer(data, datas, episodes)
+                saved_data = self.save_to_replay_buffer(data, datas, episodes)
             except Exception as e:
                 print(e)

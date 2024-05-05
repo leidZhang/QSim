@@ -424,17 +424,8 @@ class SequenceRolloutBuffer:
 
     def parse_and_load_buffer(self, start, end):
     # 加载memory列表里的所有文件的所有step数据并存到buffer里
-    #     print("Begin parsing...")
-    #     print(f"start: {start}, end: {end}")
         for i in range(start, end):
             episode = self.load_file(i)
-            # print(f"episode state: {episode['state'].shape[0] - 1}")
-            # episode = {
-            #   "state": [], (T, S)
-            #   "action": [] (T, A)
-            #   "reward": [], (T, 1)
-            #   "terminal": [], (T, 1)
-            # }
             for t in range(episode["state"].shape[0] - 1):
                 state = episode["state"][t]
                 next_state = episode["state"][t + 1]
@@ -446,14 +437,6 @@ class SequenceRolloutBuffer:
 
         self.end = end
 
-    # def reset(self):
-    #     self.observations = np.zeros((self.buffer_size, *self.obs_shape), dtype=np.float32)
-    #     self.actions = np.zeros((self.buffer_size, self.action_dim), dtype=np.float32)
-    #     self.rewards = np.zeros(self.buffer_size, dtype=np.float32)
-    #     self.next_states = np.zeros((self.buffer_size, *self.obs_shape), dtype=np.float32)
-    #     self.dones = np.zeros(self.buffer_size, dtype=bool)
-    #     self.pos = 0
-    #     self.full = False
 
     def add(self, state, action, reward, next_state, done):
     # add a new step data to buffer
@@ -470,16 +453,6 @@ class SequenceRolloutBuffer:
         if self.pos >= self.buffer_size:
             self.full = True
 
-    # def sample(self, batch_size: int):
-    #     max_ind = self.buffer_size if self.full else self.pos
-    #     index = np.random.choice(max_ind, size=batch_size, replace=False)
-    #     return {
-    #         'states': self.observations[index],
-    #         'actions': self.actions[index],
-    #         'rewards': self.rewards[index],
-    #         'next_states': self.next_states[index],
-    #         'dones': self.dones[index]
-    #     }
 
     def sample(self, batch_size: int):
     # buffer --> batch

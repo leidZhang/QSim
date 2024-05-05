@@ -33,6 +33,8 @@ class Trainer:
         self.prefill_steps: int = prefill_steps
         base_env: TrainerEnvironment = TrainerEnvironment(dt=0.05, privileged=True)
         self.env: CollectionWrapper = CollectionWrapper(ActionRewardResetWrapper(base_env, qcar_pos, waypoints))
+        self.timer: float = time.time()
+        self.last_backup_path: str = ''
 
     def setup_mlflow(self) -> tuple:
         configure_logging(prefix="[TRAIN]")
@@ -123,9 +125,9 @@ class Trainer:
         self.metrics = defaultdict(list)
         self.metrics_max = defaultdict(list)
 
-    def save_model(self) -> None:
+    def save_model(self, interrupt: bool = 'False') -> None:
         # skip if we do not have enough steps
-        if self.steps % SAVE_INTERVAL != 0:
+        if self.steps % SAVE_INTERVAL != 0 or not interrupt:
             return
 
         # create checkpoint dict
@@ -134,23 +136,27 @@ class Trainer:
         checkpoint["model_state_dict"] = self.agent.state_dict()
         checkpoint['optimizer_actor_state_dict'] = self.agent.actor_optimizer.state_dict()
         checkpoint['optimizer_critic_state_dict'] = self.agent.critic_optimizer.state_dict()
-        checkpoint_path = f"{self.mlruns_dir[8:]}/0/{self.run_id}/latest_checkpoint.pt"
-        backup_path = f"{self.mlruns_dir[8:]}/0/{self.run_id}/backup.pt"
+
+        checkpoint_path = f"{self.mlruns_dir[8:]}/0/{self.run_id}/last_checkpoint.pt"
+        backup_path = f"{self.mlruns_dir[8:]}/0/{self.run_id}/backup_{datetime.now().strftime('%Y%m%d%H%M%S')}.pt"
         # save model to disk
         try:
+            logging.info(f'Saving checkpoint...')
             torch.save(checkpoint, checkpoint_path)
-            if os.path.exists(checkpoint_path): # backup
+            if time.time() - self.timer >= 1800: # backup
                 torch.save(checkpoint, backup_path)
+                # os.remove(self.last_backup_path)
+                # self.last_backup_path = backup_path
             if self.steps % (SAVE_INTERVAL * 16) == 0:
                 logging.info(f'Saved checkpoint {self.steps}')
         except IOError as e:
             logging.error(f"Failed to save checkpoint at {checkpoint_path}: {e}")
 
-    def execute(self) -> None: # execution function
+    def execute(self, interrupt: bool = True) -> None: # execution function
         self.steps += 1
         samples = self.data.file_to_batch()
         self.update_agent_metrics(samples)
         self.log_training_metrics()
-        self.save_model()
+        self.save_model(interrupt)
         if self.steps >= MAX_TRAINING_STEPS:
             raise StopTrainingException()

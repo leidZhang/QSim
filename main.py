@@ -64,17 +64,23 @@ def start_trainer(
         waypoints=waypoints,
         prefill_steps=prefill_steps
     )
+    timer = time.time()
     trainer.prepare_training(resume=resume)
     stop_training: bool = False
-    while not stop_training:
-        try:
-            trainer.execute()
-        except InsufficientDataException:
-            logging.info(f"Insufficient data sampled:[ {len(trainer.data)}/{PREFILL} ]")
-            time.sleep(20)
-        except StopTrainingException:
-            logging.info(f'Finished {MAX_TRAINING_STEPS} grad steps.')
-            stop_training = True
+    try:
+        while not stop_training:
+            try:
+                trainer.execute()
+            except InsufficientDataException:
+                if time.time() - timer >= 5:
+                    logging.info(f"Insufficient data sampled:[ {len(trainer.data)}/{PREFILL} ]")
+                    timer = time.time()
+            except StopTrainingException:
+                logging.info(f'Finished {MAX_TRAINING_STEPS} grad steps.')
+                stop_training = True
+    finally:
+        if not stop_training:
+            trainer.execute(True)
 
 def prepare_map_info(node_id: int = 24) -> tuple:
     roadmap: ACCRoadMap = ACCRoadMap()
