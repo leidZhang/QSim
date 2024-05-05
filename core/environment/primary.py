@@ -6,7 +6,7 @@ from gym import Env
 import numpy as np
 from pal.products.qcar import QCar
 
-from core.simulator import QLabSimulator
+from core.simulator import FullSimulator, PartialSimulator
 from core.sensor import VirtualCSICamera
 from .constants import MAX_LOOKAHEAD_INDICES, GOAL_THRESHOLD
 
@@ -14,12 +14,12 @@ from .constants import MAX_LOOKAHEAD_INDICES, GOAL_THRESHOLD
 class QLabEnvironment(Env):
     def __init__(self, dt: float = 0.05, action_size: int = 2, privileged: bool = False) -> None:
         # self.front_csi: VirtualCSICamera = None
-        self.simulator: QLabSimulator = QLabSimulator(dt)
         self.action_size: int = action_size
         self.privileged: bool = privileged
         self.max_episode_steps: int = 1000
         self.episode_steps: int = 0
-
+        # self.simulator: QLabSimulator = QLabSimulator(dt)
+        
     def setup(self, initial_state: list, sequence: np.ndarray) -> None:
         self.simulator.render_map(initial_state)
         self.set_waypoint_sequence(sequence)
@@ -138,3 +138,15 @@ class QLabEnvironment(Env):
 
         self.prev_dist = np.inf # set previous distance to infinity
         return observation, reward, done, info
+    
+
+class GeneratorEnvironment(QLabEnvironment): 
+    def __init__(self, dt: float = 0.05, action_size: int = 2, privileged: bool = False) -> None:
+        super().__init__(dt, action_size, privileged)
+        self.simulator: FullSimulator = FullSimulator(dt)
+
+
+class TrainerEnvironment(QLabEnvironment): 
+    def __init__(self, dt: float = 0.05, action_size: int = 2, privileged: bool = False) -> None:
+        super().__init__(dt, action_size, privileged)
+        self.simulator: PartialSimulator = PartialSimulator(dt)

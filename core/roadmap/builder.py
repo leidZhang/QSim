@@ -96,11 +96,12 @@ class ACCMapBuilder:
         Builds the traffic lights of the map
         """
         traffic_lights: List[QLabsTrafficLight] = [QLabsTrafficLight(self.qlab)] * 2
+
         traffic_lights[0].spawn_degrees([2.3 + ACC_X_OFFSET, ACC_Y_OFFSET, 0], [0, 0, 0], scale=[.1, .1, .1],
                                         configuration=0, waitForConfirmation=True)
-        traffic_lights[0].set_state(QLabsTrafficLight.STATE_GREEN)
         traffic_lights[1].spawn_degrees([-2.3 + ACC_X_OFFSET, -1 + ACC_Y_OFFSET, 0], [0, 0, 180],
                                               scale=[.1, .1, .1], configuration=0, waitForConfirmation=True)
+        traffic_lights[0].set_state(QLabsTrafficLight.STATE_GREEN)
         traffic_lights[1].set_state(QLabsTrafficLight.STATE_RED)
         return traffic_lights
 

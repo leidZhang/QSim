@@ -10,8 +10,8 @@ from .primary import QLabEnvironment
 class ActionRewardResetWrapper(Wrapper):
     def __init__(self, env: QLabEnvironment, qcar_pos: list, waypoints) -> None:
         super().__init__(env)
-        self.env.setup(qcar_pos, waypoints)
         self.action_size: int = env.action_size
+        self.env.setup(qcar_pos, waypoints)
 
     def step(self, action: Union[np.ndarray, Queue], metrics: np.ndarray) -> tuple:
         observation, reward, done, info = self.env.step(action=action, metrics=metrics)
@@ -30,6 +30,12 @@ class ActionRewardResetWrapper(Wrapper):
         observation["reset"] = np.array(True, dtype=bool)
 
         return observation, reward, done, info
+
+    def close_connection(self) -> None: 
+        self.env.close_connection()
+    
+    def reconnect(self) -> None: 
+        self.env.reconnect()
 
 
 class CollectionWrapper(Wrapper):
@@ -65,3 +71,9 @@ class CollectionWrapper(Wrapper):
         observation, reward, done, info = self.env.reset()
         self.episode = [observation.copy()]
         return observation, reward, done, info
+    
+    def close_connection(self) -> None: 
+        self.env.close_connection()
+    
+    def reconnect(self) -> None: 
+        self.env.reconnect()

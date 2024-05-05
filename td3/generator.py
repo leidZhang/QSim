@@ -11,11 +11,11 @@ from core.policies.network import NetworkPolicy
 from core.utils.tools import configure_logging, LogColorFormatter, load_checkpoint
 from core.utils.tools import mlflow_log_metrics
 from core.environment.wrappers import CollectionWrapper, ActionRewardResetWrapper
-from core.environment.primary import QLabEnvironment
+from core.environment.primary import GeneratorEnvironment
 from core.data.data_TD3 import MlflowDataRepository, MlflowEpisodeRepository
 
 from .policy import TD3Agent
-from . import constants as C
+from .constants import PREFILL, METRIC_PREFIX
 
 
 class Generator:
@@ -30,7 +30,7 @@ class Generator:
     ) -> None:
         self.episode_num: int = 10000
         self.mlruns_dir: str = mlruns_dir
-        base_env: QLabEnvironment = QLabEnvironment(dt=0.05, privileged=privileged)
+        base_env: GeneratorEnvironment = GeneratorEnvironment(dt=0.05, privileged=privileged)
         self.env: CollectionWrapper = CollectionWrapper(ActionRewardResetWrapper(base_env, qcar_pos, waypoints))
         self.train_repository: MlflowEpisodeRepository = MlflowEpisodeRepository(train_repo)
         self.eval_repository: MlflowEpisodeRepository = MlflowEpisodeRepository(eval_repo)
@@ -49,19 +49,19 @@ class Generator:
         else:
             self.policy = PurePursuitPolicy(max_lookahead_distance=0.5)
 
-        self.last_load_time = 0
+        self.last_load_time = time.perf_counter()
         return steps, episodes
 
-    def load_policy(self, is_prefill_policy: bool, run_id: str, saved_data: int) -> None:
-        print(f"Loading policy with run_id: {run_id}")
-        if is_prefill_policy and saved_data >= C.prefill:
+    def load_policy(self, is_prefill_policy: bool, run_id: str, saved_data: int) -> bool:
+        print(f"Prefill status: {is_prefill_policy}")
+        if is_prefill_policy and saved_data >= PREFILL:
+            print("saved data ", saved_data)
             logging.info("Prefill Complete, switching to main policy")
             train_repo: str = self.train_repository.artifact_uris
             self.policy = TD3Agent(self.env, train_repo)
             is_prefill_policy = False
 
-        print(f"Last load time {self.last_load_time}")
-        if not is_prefill_policy and self.last_load_time > 30:
+        if isinstance(self.policy, TD3Agent) and time.perf_counter() - self.last_load_time > 30:
             model_step = load_checkpoint(self.policy, self.mlruns_dir, run_id)
             while model_step is None:
                 model_step = load_checkpoint(self.policy, self.mlruns_dir, run_id)
@@ -69,12 +69,13 @@ class Generator:
                 time.sleep(10)
             logging.info(f'Generator loaded model checkpoint {model_step}')
             self.last_load_time = time.perf_counter()
+        return is_prefill_policy
 
     def run_episode(self, is_prefill_policy: bool, episdoe_steps: int, steps: int) -> tuple:
         metrics = defaultdict(list)
         observation, reward, done, info = self.env.reset()
         while not done:
-            if not is_prefill_policy:
+            if isinstance(self.policy, TD3Agent):
                 action, metric = self.policy.select_action(observation['state'])
                 next_observation, reward, done, info = self.env.step(action, metrics)
                 observation = next_observation
@@ -98,24 +99,24 @@ class Generator:
             f",  episodes: {episodes}"
         )
         # log metrics on mlflow
-        metrics = {f'{C.METRIC_PREFIX}/{k}': np.array(v).mean() for k, v in metrics.items()}
+        metrics = {f'{METRIC_PREFIX}/{k}': np.array(v).mean() for k, v in metrics.items()}
         metrics.update({
-            f'{C.METRIC_PREFIX}/episode_length': episode_steps,
-            f'{C.METRIC_PREFIX}/steps': steps,  # All steps since previous restart
-            f'{C.METRIC_PREFIX}/data_saved': saved_data,  # Steps saved in the training repo
-            f'{C.METRIC_PREFIX}/episodes': episodes,
-            f'{C.METRIC_PREFIX}/return': data['reward'].sum()
+            f'{METRIC_PREFIX}/episode_length': episode_steps,
+            f'{METRIC_PREFIX}/steps': steps,  # All steps since previous restart
+            f'{METRIC_PREFIX}/data_saved': saved_data,  # Steps saved in the training repo
+            f'{METRIC_PREFIX}/episodes': episodes,
+            f'{METRIC_PREFIX}/return': data['reward'].sum()
         })
 
     def aggregate_metrics(self, metrics: dict, episodes:int) -> None:
         metrics_agg: defaultdict = defaultdict(list)
         for key, val in metrics.items():
-            if not np.isnan(val):
+            if not np.isnan(val).all():
                 metrics_agg[key].append(val)
-        if len(metrics_agg[f'{C.METRIC_PREFIX}/return']) >= 1: # log_every:
+        if len(metrics_agg[f'{METRIC_PREFIX}/return']) >= 1: # log_every:
             metrics_agg_max = {k: np.array(v).max() for k, v in metrics_agg.items()}
             metrics_agg = {k: np.array(v).mean() for k, v in metrics_agg.items()}
-            metrics_agg[f'{C.METRIC_PREFIX}/return_max'] = metrics_agg_max[f'{C.METRIC_PREFIX}/return']
+            metrics_agg[f'{METRIC_PREFIX}/return_max'] = metrics_agg_max[f'{METRIC_PREFIX}/return']
             metrics_agg['_timestamp'] = datetime.now().timestamp()
 
             mlflow_log_metrics(metrics_agg, step=episodes)  # use episode number as step
@@ -144,14 +145,15 @@ class Generator:
         return accumulator
 
     def execute(self, run_id: str, resume: bool) -> tuple:
-        print(f"Starting generator with run_id: {run_id}")
+        print(f"Starting generator with run_id: {run_id}...")
         steps, episodes = self.prepare_session(run_id=run_id, resume=resume)
         _, saved_data, _ = self.train_repository.count_steps()
         is_prefill_policy: bool = resume
 
         datas = []
         for _ in range(self.episode_num):
-            self.load_policy(is_prefill_policy, run_id, saved_data) # problem here
+            print(f"Starting episode {episodes}")
+            is_prefill_policy = self.load_policy(is_prefill_policy, run_id, saved_data) # problem here
 
             episode_steps: int = 0
             if isinstance(self.policy, NetworkPolicy):
@@ -163,3 +165,4 @@ class Generator:
             self.log_metrics(data, episode_steps, steps, episodes, saved_data, metrics)
             self.aggregate_metrics(metrics, episodes) # aggregate metrics
             saved_data += self.save_to_replay_buffer(data, datas, episodes)
+            print(f"Episode {episodes} completed.")

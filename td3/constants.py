@@ -12,9 +12,8 @@ policy_noise = 0.02,
 noise_clip = 0.05,
 policy_freq = 2
 run_id = ''
-prefill = 10000
 
-PREFILL = 10000
+PREFILL = 100
 # generator constants
 METRIC_PREFIX: str = 'agent'
 

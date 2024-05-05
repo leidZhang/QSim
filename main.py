@@ -1,14 +1,12 @@
 import os
 import time
 import logging
-from multiprocessing import Process
+from multiprocessing import Process, Event
 
 import mlflow
 from typing import List
 
 import numpy as np
-
-from qvl.qlabs import QuanserInteractiveLabs
 
 from core.roadmap import ACCRoadMap
 from td3.generator import Generator
@@ -36,6 +34,7 @@ def start_generator(
     eval_repo: str,
     init_pos: list,
     waypoints: np.ndarray,
+    event,
     resume: bool = False,
     privileged: bool = True
 ) -> None: 
@@ -58,6 +57,7 @@ def start_trainer(
     prefill_steps: int,
     init_pos: list,
     waypoints: np.ndarray,
+    event,
     resume: bool = False
 ) -> None: 
     print("Creating trainer instance...")
@@ -83,12 +83,11 @@ def start_trainer(
 
 def prepare_map_info(node_id: int = 24) -> tuple:
     roadmap: ACCRoadMap = ACCRoadMap()
-    qlabs = QuanserInteractiveLabs()
     x_pos, y_pose, angle = roadmap.nodes[node_id].pose
     waypoint_sequence = roadmap.generate_path([10, 4, 14, 20, 22, 10])
     return [x_pos, y_pose, angle], waypoint_sequence
 
-def start_system(resume_run_id: str, init_pos: list, waypoints: np.ndarray) -> None:
+def start_system(event, resume_run_id: str, init_pos: list, waypoints: np.ndarray) -> None:
     # setup mlflow directory
     root_directory: str = os.getcwd() # get the absolute directory
     mlflow_directory: str = os.path.join(root_directory, 'mlruns')
@@ -123,6 +122,7 @@ def start_system(resume_run_id: str, init_pos: list, waypoints: np.ndarray) -> N
             train_repo=train_repo,
             eval_repo=eval_repo,
             init_pos=init_pos,
+            event=event,
             waypoints=waypoints,
             resume=resume,
             privileged=True
@@ -135,6 +135,7 @@ def start_system(resume_run_id: str, init_pos: list, waypoints: np.ndarray) -> N
         kwargs=dict(
             mlruns_dir=mlflow_directory, 
             run_id=designated_run_id,
+            event=event,
             init_pos=init_pos,
             waypoints=waypoints,
             device="cuda:0",
@@ -146,11 +147,15 @@ def start_system(resume_run_id: str, init_pos: list, waypoints: np.ndarray) -> N
     generator_process.start()
     trainer_process.start()
     # check process
-    check_process(processes=processes)
-    generator_process.join()
-    trainer_process.join()
+    try: 
+        while True: 
+            check_process(processes=processes)
+            time.sleep(5)
+    except Exception as e: 
+        print(e)
 
 if __name__ == '__main__':
     resume_run_id = ''
+    event = Event()
     init_pos, waypoints = prepare_map_info(node_id=24)
-    start_system(resume_run_id=resume_run_id, init_pos=init_pos, waypoints=waypoints)
+    start_system(event=event, resume_run_id=resume_run_id, init_pos=init_pos, waypoints=waypoints)

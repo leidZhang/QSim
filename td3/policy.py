@@ -55,8 +55,8 @@ class TD3Agent(torch.nn.Module): # td3_yida
 
             with torch.no_grad():
                 noise = (
-                        torch.randn_like(actions) * C.policy_noise
-                ).clamp(-C.noise_clip, C.noise_clip)
+                        torch.randn_like(actions) * 0.02
+                ).clamp(-0.05, 0.05)
 
                 next_action = (
                         self.actor_target(next_states) + noise

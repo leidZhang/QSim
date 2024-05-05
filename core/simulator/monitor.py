@@ -27,10 +27,10 @@ class Monitor:
         x, y, _, _, _, yaw, _, _, _, = struct.unpack(">fffffffff", c.payload[0:36])
         self.state = np.array([x, y, yaw, 0, 0, 0])
 
-    def cal_motion(self, state: np.ndarray) -> None:
-        x: float = state[0]
-        y: float = state[1]
-        yaw: float = state[2]
+    def cal_motion(self) -> None:
+        x: float = self.state[0]
+        y: float = self.state[1]
+        yaw: float = self.state[2]
 
         # calc velocity
         vx = (x - self.state[0]) / self.dt
@@ -44,4 +44,4 @@ class Monitor:
 
     def get_state(self, qlabs: QuanserInteractiveLabs) -> None:
         self.get_position(qlabs)
-        self.cal_motion(self.state)
+        self.cal_motion()

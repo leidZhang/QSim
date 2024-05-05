@@ -10,7 +10,7 @@ import numpy as np
 from torch.cuda.amp import GradScaler
 
 from core.utils.tools import configure_logging, mlflow_init, load_checkpoint, mlflow_log_metrics
-from core.environment.primary import QLabEnvironment
+from core.environment.primary import TrainerEnvironment
 from core.environment.wrappers import CollectionWrapper, ActionRewardResetWrapper
 from .policy import TD3Agent
 from .constants import PREFILL, LOG_INTERVAL, SAVE_INTERVAL, MAX_TRAINING_STEPS
@@ -31,7 +31,7 @@ class Trainer:
         self.run_id: str = run_id
         self.device: str = device
         self.prefill_steps: int = prefill_steps
-        base_env: QLabEnvironment = QLabEnvironment(dt=0.05, privileged=True)
+        base_env: TrainerEnvironment = TrainerEnvironment(dt=0.05, privileged=True)
         self.env: CollectionWrapper = CollectionWrapper(ActionRewardResetWrapper(base_env, qcar_pos, waypoints))
     
     def setup_mlflow(self) -> tuple: 
@@ -101,18 +101,22 @@ class Trainer:
         self.metrics['_timestamp'] = datetime.now().timestamp()
         # cal fps
         time_stamp = time.time()
-        fps = (self.steps - self.last_steps) / (time_stamp - self.last_time) if time_stamp != self.last_steps else 0
+        time_diff = time_stamp - self.last_time
+        if time_diff > 0: 
+            fps = (self.steps - self.last_steps) / time_diff
+        else:
+            fps = 0
         self.metrics['train/fps'] = fps
         # update time and steps
         self.last_time = time_stamp
         self.last_steps = self.steps
-        if self.steps % 400 == 0: 
-            logging.info(
-                f"[steps{self.steps:06}]"
-                f"  actor_loss: {self.metrics.get('train/actor_loss', 0):.3f}"
-                f"  critic_loss: {self.metrics.get('train/critic_loss', 0):.3f}"
-                f"  fps: {self.metrics.get('train/fps', 0):.3f}"
-            )
+        # if self.steps % 400 == 0: 
+        #     logging.info(
+        #         f"[steps{self.steps:06}]"
+        #         f"  actor_loss: {self.metrics.get('train/actor_loss', 0):.3f}"
+        #         f"  critic_loss: {self.metrics.get('train/critic_loss', 0):.3f}"
+        #         f"  fps: {self.metrics.get('train/fps', 0):.3f}"
+        #     )
         if self.steps > LOG_INTERVAL:  #skip first batch because the losses are very high and mess up y axis
             mlflow_log_metrics(self.metrics, step=self.steps)
         # clear metrics and metric_max
@@ -130,7 +134,7 @@ class Trainer:
         checkpoint["model_state_dict"] = self.agent.state_dict()
         checkpoint['optimizer_actor_state_dict'] = self.agent.actor_optimizer.state_dict()
         checkpoint['optimizer_critic_state_dict'] = self.agent.critic_optimizer.state_dict()
-        checkpoint_path = f"{self.mlruns_dir}/0/{self.run_id}/latest_checkpoint.pt"
+        checkpoint_path = f"{self.mlruns_dir[8:]}/0/{self.run_id}/latest_checkpoint.pt"
         # save model to disk 
         try:
             torch.save(checkpoint, checkpoint_path)

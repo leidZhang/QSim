@@ -7,6 +7,18 @@ import pal.resources.rtmodels as rtmodels
 from .builder import ACCMapBuilder
 
 
+class PartialDirector: 
+    def __init__(self, qlabs: QuanserInteractiveLabs) -> None:
+        self.qlabs: QuanserInteractiveLabs = qlabs
+        self.builder: ACCMapBuilder = ACCMapBuilder(self.qlabs)
+
+    def build_map(self, position: list) -> dict:
+        QLabsRealTime().terminate_all_real_time_models()
+        car: QLabsQCar = self.builder.build_car(position)
+        QLabsRealTime().start_real_time_model(rtmodels.QCAR_STUDIO)
+        return {'car': car}
+
+
 class ACCDirector: 
     """
     The Director class responsible for directing the building of the map for the ACC2024 competition
