@@ -73,14 +73,14 @@ class Generator:
         metrics = defaultdict(list)
         observation, reward, done, info = self.env.reset()
         start_time = time.time()
-        while not done and time.time() - start_time <= 60:
+        while not done:
             if type(self.policy) is TD3Agent:
                 '''
-                # event driven architecture? 
-                interapute : bool = 
+                # event driven architecture?
+                interapute : bool =
                 if interapute:
                     action = human_action
-                else: 
+                else:
                 action, metric = self.policy.select_action(observation['state'])
                 '''
                 action, metric = self.policy.select_action(observation['state'])
@@ -162,6 +162,7 @@ class Generator:
         datas = []
         for _ in range(self.episode_num):
             try:
+                logging.info("Starting new episode...")
                 self.load_policy(run_id, saved_data) # problem here
                 episode_steps: int = 0
                 if isinstance(self.policy, NetworkPolicy):
@@ -172,6 +173,6 @@ class Generator:
                 data = info["episode"]
                 metrics = self.log_episode(data, episode_steps, steps, episodes, saved_data, metrics)
                 self.aggregate_metrics(metrics, episodes) # aggregate metrics
-                saved_data = self.save_to_replay_buffer(data, datas, episodes)
+                saved_data += self.save_to_replay_buffer(data, datas, episodes)
             except Exception as e:
                 print(e)

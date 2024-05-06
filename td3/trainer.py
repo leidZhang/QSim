@@ -137,7 +137,7 @@ class Trainer:
         checkpoint['optimizer_actor_state_dict'] = self.agent.actor_optimizer.state_dict()
         checkpoint['optimizer_critic_state_dict'] = self.agent.critic_optimizer.state_dict()
 
-        checkpoint_path = f"{self.mlruns_dir[8:]}/0/{self.run_id}/last_checkpoint.pt"
+        checkpoint_path = f"{self.mlruns_dir[8:]}/0/{self.run_id}/latest_checkpoint.pt"
         backup_path = f"{self.mlruns_dir[8:]}/0/{self.run_id}/backup_{datetime.now().strftime('%Y%m%d%H%M%S')}.pt"
         # save model to disk
         try:

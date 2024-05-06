@@ -95,7 +95,7 @@ def start_system(resume_run_id: str, init_pos: list, waypoints: np.ndarray) -> N
     mlflow_directory = 'file:///' + mlflow_directory.replace('\\', '/')
 
     # configure logging
-    configure_logging("[launcher]")
+    configure_logging("[LAUNCHER]")
     # starting from existing checkpoint or not
     designated_run_id: str = None
     resume: bool = False

@@ -1,5 +1,6 @@
 import time
 import logging
+from queue import Queue
 import numpy as np
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
@@ -12,7 +13,7 @@ from mlflow.store.artifact.artifact_repository_registry import get_artifact_repo
 from core.utils.tools import mlflow_log_npz, mlflow_load_npz
 from core.utils.aggregation_utils import cat_structure_np, stack_structure_np, map_structure
 
-@dataclass
+@dataclass(frozen=True)
 class FileInfo:
     path: str
     episode_from: int
@@ -361,6 +362,7 @@ class SequenceRolloutBuffer:
         self.end = 0  # mark
         self.buffer_size = 100000
         self.full = False
+        self.buffer_set: set = set()
         self.pos = 0
         self.stats_steps = 0
         self.observations = np.zeros((self.buffer_size, *self.obs_shape), dtype=np.float32)
@@ -378,26 +380,23 @@ class SequenceRolloutBuffer:
     # 从一个存储库（repository）中加载, 降序排列以及更新文件
     # 并将它们添加到 self.files 列表中，直到累积的step数达到上限 (self.buffer_size)
         files_all = self.repository.list_files()
-        print('before_files_all: ', files_all)
-        # 依据 episode_to 属性的降序排序
-        files_all.sort(key = lambda e: -e.episode_to)
-        print('after_files_all: ', files_all)
-        files = []
-        steps_total = 0
-        steps_filtered = 0
-        for f in files_all:
-            print('f: ', f)
-            steps_total += f.steps
-            #  如果steps_total 小于 self.buffer_size 或者 buffer size 无限
-            if steps_total < self.buffer_size or not self.buffer_size:
-                # 则将文件 f 添加到 files 列表中，并将 f.steps 添加到 steps_filtered
-                files.append(f)
-                steps_filtered += f.steps
-        # 更新 self.files 为筛选后的文件列表 files
-        # 并指明 self.files 应该是一个列表 并且列表中的每个元素都应该是 FileInfo 类的实例
-        self.files: List[FileInfo] = files
+        # ascend
+        files_all.sort(key = lambda e: e.episode_to)
+        # files = []
+        # steps_total = 0
+        # steps_filtered = 0
+        # for f in files_all:
+        #     steps_total += f.steps
+        #     #  如果steps_total 小于 self.buffer_size 或者 buffer size 无限
+        #     if steps_total < self.buffer_size or not self.buffer_size:
+        #         # 则将文件 f 添加到 files 列表中，并将 f.steps 添加到 steps_filtered
+        #         files.append(f)
+        #         steps_filtered += f.steps
+        # # 更新 self.files 为筛选后的文件列表 files
+        # # 并指明 self.files 应该是一个列表 并且列表中的每个元素都应该是 FileInfo 类的实例
+        self.files: List[FileInfo] = files_all
         self.last_reload = time.time()
-        self.stats_steps = steps_total
+        # self.stats_steps = steps_total
 
     def file_to_batch(self):
     # file --> list --> buffer --> batch
@@ -406,7 +405,7 @@ class SequenceRolloutBuffer:
         if time.time() - self.last_load_time > self.update_rate:
             # print("Loading file to batch...")
             self.reload_files()  # file --> list
-            self.parse_and_load_buffer(self.end, len(self.files))  # list --> buffer
+            self.parse_and_load_buffer()  # list --> buffer
             self.last_load_time = time.time()
 
         return self.sample(self.batch_size)  # buffer --> batch
@@ -417,29 +416,54 @@ class SequenceRolloutBuffer:
         return episode
 
     # TODO: Fix bug here, two pointer is not correct?
-    def parse_and_load_buffer(self, start, end):
-    # list --> buffer
-        print(start, end)
-        if len(self.files) > start:
-            print("start", self.files[start])
-        if end-1>=0 and len(self.files) > end-1:
-            print("end", self.files[end-1])
+    def parse_and_load_buffer(self):
+        # list --> buffer
+        total_steps: int = 0
+        buffer_queue: Queue = Queue()
+        waste_queue: Queue = Queue()
+        for i in range(len(self.files)):
+            total_steps += self.files[i].steps
+            file = self.files[i] # file, index
+            buffer_queue.put(file)
+            if total_steps > self.buffer_size:
+                pop_file = buffer_queue.get()
+                waste_queue.put(pop_file)
+                total_steps -= pop_file.steps
 
-        for i in range(start, end):
-            episode = self.load_file(i)
-            for t in range(episode["state"].shape[0] - 1):
+        while not buffer_queue.empty():
+            file = buffer_queue.get()
+            if file in self.buffer_set:
+                continue # skip if is duplicate
+
+            episode = file.load_data()
+            self.buffer_set.add(file)
+            for t in range(episode['state'].shape[0] - 1):
                 state = episode["state"][t]
                 next_state = episode["state"][t + 1]
                 action = episode["action"][t]
                 reward = episode["reward"][t]
                 done = episode["terminal"][t]
                 self.add(state, action, reward, next_state, done)
-        self.end = end
+
+        while not waste_queue.empty(): # for resume
+            waste = waste_queue.get()
+            if waste in self.buffer_set:
+                self.buffer_set.remove(waste)
+        # for i in range(start, end):
+        #     episode = self.load_file(i)
+        #     for t in range(episode["state"].shape[0] - 1):
+        #         state = episode["state"][t]
+        #         next_state = episode["state"][t + 1]
+        #         action = episode["action"][t]
+        #         reward = episode["reward"][t]
+        #         done = episode["terminal"][t]
+        #         self.add(state, action, reward, next_state, done)
+        # self.end = end
 
     def add(self, state, action, reward, next_state, done):
-    # add a new step data to buffer
-    # update index and pos
-    # after full, replace buffer data from begin
+        # add a new step data to buffer
+        # update index and pos
+        # after full, replace buffer data from begin
         index = self.pos % self.buffer_size  # 取余数
         self.observations[index] = state
         self.actions[index] = action
