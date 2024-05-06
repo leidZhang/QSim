@@ -372,39 +372,33 @@ class SequenceRolloutBuffer:
     def __len__(self):
         return self.buffer_size if self.full else self.pos
 
+    # TODO: Improve this function
     def reload_files(self):
     # file --> list
     # 从一个存储库（repository）中加载, 降序排列以及更新文件
     # 并将它们添加到 self.files 列表中，直到累积的step数达到上限 (self.buffer_size)
         files_all = self.repository.list_files()
+        print('before_files_all: ', files_all)
         # 依据 episode_to 属性的降序排序
         files_all.sort(key = lambda e: -e.episode_to)
-
+        print('after_files_all: ', files_all)
         files = []
         steps_total = 0
         steps_filtered = 0
         for f in files_all:
+            print('f: ', f)
             steps_total += f.steps
             #  如果steps_total 小于 self.buffer_size 或者 buffer size 无限
             if steps_total < self.buffer_size or not self.buffer_size:
                 # 则将文件 f 添加到 files 列表中，并将 f.steps 添加到 steps_filtered
                 files.append(f)
                 steps_filtered += f.steps
-
         # 更新 self.files 为筛选后的文件列表 files
         # 并指明 self.files 应该是一个列表 并且列表中的每个元素都应该是 FileInfo 类的实例
         self.files: List[FileInfo] = files
         self.last_reload = time.time()
         self.stats_steps = steps_total
 
-    # def __iter__(self):
-    # # file --> list --> buffer --> batch
-    # # 按频率，更新文件列表，并加载列表文件数据到buffer
-    #     if time.time() - self.last_load_time > self.update_rate:
-    #         self.reload_files()  # file --> list
-    #         self.parse_and_load_buffer(self.end, len(self.files))  # list --> buffer
-    #
-    #     return self.sample(self.batch_size)  # buffer --> batch
     def file_to_batch(self):
     # file --> list --> buffer --> batch
     # 按频率，更新文件列表，并加载列表文件数据到buffer
@@ -422,8 +416,15 @@ class SequenceRolloutBuffer:
         episode = self.files[index].load_data()
         return episode
 
+    # TODO: Fix bug here, two pointer is not correct?
     def parse_and_load_buffer(self, start, end):
-    # 加载memory列表里的所有文件的所有step数据并存到buffer里
+    # list --> buffer
+        print(start, end)
+        if len(self.files) > start:
+            print("start", self.files[start])
+        if end-1>=0 and len(self.files) > end-1:
+            print("end", self.files[end-1])
+
         for i in range(start, end):
             episode = self.load_file(i)
             for t in range(episode["state"].shape[0] - 1):
@@ -432,11 +433,8 @@ class SequenceRolloutBuffer:
                 action = episode["action"][t]
                 reward = episode["reward"][t]
                 done = episode["terminal"][t]
-
                 self.add(state, action, reward, next_state, done)
-
         self.end = end
-
 
     def add(self, state, action, reward, next_state, done):
     # add a new step data to buffer
@@ -452,7 +450,6 @@ class SequenceRolloutBuffer:
         self.pos += 1
         if self.pos >= self.buffer_size:
             self.full = True
-
 
     def sample(self, batch_size: int):
     # buffer --> batch

@@ -75,7 +75,16 @@ class Generator:
         start_time = time.time()
         while not done and time.time() - start_time <= 60:
             if type(self.policy) is TD3Agent:
+                '''
+                # event driven architecture? 
+                interapute : bool = 
+                if interapute:
+                    action = human_action
+                else: 
                 action, metric = self.policy.select_action(observation['state'])
+                '''
+                action, metric = self.policy.select_action(observation['state'])
+                # filtered action = human and agent
                 next_observation, reward, done, info = self.env.step(action, metric)
                 self.policy.store_transition(observation['state'], action, reward, next_observation['state'], done)
                 observation = next_observation
