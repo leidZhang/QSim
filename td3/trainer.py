@@ -161,4 +161,3 @@ class Trainer:
         self.save_model(interrupt)
         if self.steps >= MAX_TRAINING_STEPS:
             raise StopTrainingException()
-        time.sleep(0.01) # sleep for 10ms

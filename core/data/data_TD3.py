@@ -451,7 +451,8 @@ class SequenceRolloutBuffer:
             file = buffer_queue.get()
             if file in self.buffer_set:
                 continue # skip if is duplicate
-
+            
+            # self.pos = 0 # reset pos???
             episode = file.load_data()
             self.buffer_set.add(file)
             for t in range(episode['state'].shape[0] - 1):

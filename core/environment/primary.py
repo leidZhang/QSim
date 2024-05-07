@@ -8,7 +8,7 @@ from pal.products.qcar import QCar
 
 from core.simulator import FullSimulator, PartialSimulator
 from core.sensor import VirtualCSICamera
-from .constants import MAX_LOOKAHEAD_INDICES, GOAL_THRESHOLD
+from .constants import MAX_LOOKAHEAD_INDICES, GOAL_THRESHOLD, DEFAULT_MAX_STEPS
 
 
 class QLabEnvironment(Env):
@@ -16,7 +16,7 @@ class QLabEnvironment(Env):
         # self.front_csi: VirtualCSICamera = None
         self.action_size: int = action_size
         self.privileged: bool = privileged
-        self.max_episode_steps: int = 1000
+        self.max_episode_steps: int = DEFAULT_MAX_STEPS
         self.episode_steps: int = 0
         # self.simulator: QLabSimulator = QLabSimulator(dt)
 

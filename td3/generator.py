@@ -136,23 +136,16 @@ class Generator:
 
     def save_to_replay_buffer(self, data: dict, datas: list, episodes: int) -> int:
         accumulator = 0
-        datas.append(data)
         data_episodes = len(data)
-        datas_steps = sum(len(d['reset']) - 1 for d in datas)
+        datas_steps = len(data['reset']) - 1
         # print(f"Current data step: {datas_steps}")
-        if datas_steps >= 0: # steps_per_npz
-            # concatenate episodes
-            data = {}
-            for key in datas[0]:
-                data[key] = np.concatenate([b[key] for b in datas], axis=0)
-            datas = []
 
-            # save data as npz
-            if np.random.rand() < 0: # 0.2
-                self.eval_repository.save_data(data, episodes - data_episodes, episodes - 1, 0)
-            else:
-                self.train_repository.save_data(data, episodes - data_episodes, episodes - 1, 0)
-                accumulator = datas_steps
+        # save data as npz
+        if np.random.rand() < 0: # 0.2
+            self.eval_repository.save_data(data, episodes - data_episodes, episodes - 1, 0)
+        else:
+            self.train_repository.save_data(data, episodes - data_episodes, episodes - 1, 0)
+            accumulator = datas_steps
 
         return accumulator
 
