@@ -18,6 +18,7 @@ class QLabEnvironment(Env):
         self.privileged: bool = privileged
         self.max_episode_steps: int = DEFAULT_MAX_STEPS
         self.episode_steps: int = 0
+        self.deviate_steps: int = 0
         # self.simulator: QLabSimulator = QLabSimulator(dt)
 
     def setup(self, initial_state: list, sequence: np.ndarray) -> None:
@@ -99,9 +100,15 @@ class QLabEnvironment(Env):
             self.last_check_pos = time.time() # update timer
 
         if self.privileged and norm_dist[dist_ix] >= 0.25:
-            reward -= (abs(action[0]) - 0.045) * 0.5 # penalty for deviate from the waypoints
+            reward -= (abs(action[0])) * 0.5 # penalty for deviate from the waypoints
+            self.deviate_steps += 1
         else:
-            reward += (abs(action[0]) - 0.045) * 0.5 # reward for on the waypoints
+            reward += (abs(action[0])) * 0.5 # reward for on the waypoints
+            self.deviate_steps = 0
+
+        if self.deviate_steps >= 30:
+            done = True
+            self.execute_action([0, 0]) # stop the car
 
         if self.privileged and (np.linalg.norm(self.goal - ego_state[:2]) < GOAL_THRESHOLD and len(self.next_waypoints) < 201):
             time_taken: float = time.time() - self.episode_start
