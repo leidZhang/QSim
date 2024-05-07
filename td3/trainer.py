@@ -13,7 +13,7 @@ from core.utils.tools import configure_logging, mlflow_init, load_checkpoint, ml
 from core.environment.primary import TrainerEnvironment
 from core.environment.wrappers import CollectionWrapper, ActionRewardResetWrapper
 from .policy import TD3Agent
-from .constants import PREFILL, LOG_INTERVAL, SAVE_INTERVAL, MAX_TRAINING_STEPS
+from .constants import PREFILL, LOG_INTERVAL, SAVE_INTERVAL, MAX_TRAINING_STEPS, LOGBATCH_INTERVAL
 from .exceptions import InsufficientDataException, StopTrainingException
 
 
@@ -64,7 +64,7 @@ class Trainer:
             self.start_time = time.time()
             self.steps = 0
 
-    def resume_buffer(self) -> None: 
+    def resume_buffer(self) -> None:
         self.data.reload_files()
         self.data.parse_and_load_buffer()
         self.data.last_load_time = time.time()
@@ -128,7 +128,8 @@ class Trainer:
                 f"  critic_loss: {self.metrics.get('train/critic_loss', 0):.3f}"
                 f"  fps: {self.metrics.get('train/fps', 0):.3f}"
             )
-        if self.steps > LOG_INTERVAL:  #skip first batch because the losses are very high and mess up y axis
+        # skip first batch because the losses are very high and mess up y axis
+        if self.steps > LOG_INTERVAL:
             mlflow_log_metrics(self.metrics, step=self.steps)
         # clear metrics and metric_max
         self.metrics = defaultdict(list)
