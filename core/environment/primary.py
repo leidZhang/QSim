@@ -99,9 +99,12 @@ class QLabEnvironment(Env):
             self.last_check_pos = time.time() # update timer
 
         if self.privileged and norm_dist[dist_ix] >= 0.25:
-            reward -= (abs(action[0]) - 0.045) * 0.5 # penalty for deviate from the waypoints
+            reward -= (abs(action[0])) * 0.5 # penalty for deviate from the waypoints
         else:
-            reward += (abs(action[0]) - 0.045) * 0.5 # reward for on the waypoints
+            reward += (abs(action[0])) * 0.5 # reward for on the waypoints
+
+        if abs(action[0]) < 0.045:
+            reward -= abs(action[0]) * 0.5
 
         if self.privileged and (np.linalg.norm(self.goal - ego_state[:2]) < GOAL_THRESHOLD and len(self.next_waypoints) < 201):
             time_taken: float = time.time() - self.episode_start
