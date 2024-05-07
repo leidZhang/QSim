@@ -93,6 +93,7 @@ class QLabEnvironment(Env):
         observation['waypoints'] = np.matmul(self.next_waypoints[:MAX_LOOKAHEAD_INDICES] - orig, rot) if self.privileged else None
         # observation["image"] = cv2.resize(front_image[:, :, :3], (160, 120))
 
+        # TODO: Extract reward function to a separate method， use the strategy pattern?
         if self.privileged and time.time() - self.last_check_pos >= 0.3:
             reward += action[0] * 2.0 if (self.last_orig != orig).any() else -action[0] * 2.0
             self.last_orig = orig # update position
@@ -104,6 +105,8 @@ class QLabEnvironment(Env):
             time_taken: float = time.time() - self.episode_start
             if time_taken > 5: # bonus for reach the goal
                 reward += 30 - (time_taken - 5) * 0.9
+            else: # panalty for cheating
+                reward -= 30.0
             done = True # stop episode after this step
             self.execute_action([0, 0]) # stop the car
 

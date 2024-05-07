@@ -153,6 +153,6 @@ def start_system(resume_run_id: str, init_pos: list, waypoints: np.ndarray) -> N
         print(e)
 
 if __name__ == '__main__':
-    resume_run_id = ''
+    resume_run_id = '2bb1c329468c41f5ac83b0bb357227a8'
     init_pos, waypoints = prepare_map_info(node_id=24)
     start_system(resume_run_id=resume_run_id, init_pos=init_pos, waypoints=waypoints)

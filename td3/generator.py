@@ -76,12 +76,12 @@ class Generator:
         while not done:
             if type(self.policy) is TD3Agent:
                 '''
-                # event driven architecture?
-                interapute : bool =
+                # event driven architecture for keyboard pvp?
+                human interrupt : bool
                 if interapute:
-                    action = human_action
+                    action = human_action()
                 else:
-                action, metric = self.policy.select_action(observation['state'])
+                    action, metric = self.policy.select_action(observation['state'])
                 '''
                 action, metric = self.policy.select_action(observation['state'])
                 # filtered action = human and agent
@@ -121,7 +121,7 @@ class Generator:
         })
         return metrics
 
-    def aggregate_metrics(self, metrics: defaultdict, episodes:int) -> None:
+    def aggregate_metrics(self, metrics: defaultdict, episodes:int, run_id:str) -> None:
         for key, val in metrics.items():
             self.metrics_agg[key].append(val)
 
@@ -131,7 +131,7 @@ class Generator:
             self.metrics_agg[f'{METRIC_PREFIX}/return_max'] = metrics_agg_max[f'{METRIC_PREFIX}/return']
             self.metrics_agg['_timestamp'] = datetime.now().timestamp()
             # log metrics
-            mlflow_log_metrics(self.metrics_agg, step=episodes)  # use episode number as step
+            mlflow_log_metrics(self.metrics_agg, step=episodes, run_id=run_id)  # use episode number as step
             self.metrics_agg = defaultdict(list)
 
     def save_to_replay_buffer(self, data: dict, datas: list, episodes: int) -> int:
@@ -166,7 +166,7 @@ class Generator:
 
                 data = info["episode"]
                 metrics = self.log_episode(data, episode_steps, steps, episodes, saved_data, metrics)
-                self.aggregate_metrics(metrics, episodes) # aggregate metrics
+                self.aggregate_metrics(metrics, episodes, run_id) # aggregate metrics
                 saved_data += self.save_to_replay_buffer(data, datas, episodes)
             except Exception as e:
                 print(e)

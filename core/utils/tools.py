@@ -157,10 +157,10 @@ def mlflow_save_checkpoint(model, optimizers, steps, mlruns_dir=None, run_id=Non
         torch.save(checkpoint, path)
         mlflow_log_artifact(mlflow_path, subdir='checkpoints')
 
-def mlflow_log_metrics(metrics: dict, step: int):
+def mlflow_log_metrics(metrics: dict, step: int, run_id: str = None):
     while True:
         try:
-            mlflow.log_metrics(metrics, step=step)
+            mlflow.log_metrics(metrics, step=step, run_id=run_id)
             break
         except:
             logging.exception('Error logging metrics - will retry.')
