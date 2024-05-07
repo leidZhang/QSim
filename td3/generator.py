@@ -38,14 +38,17 @@ class Generator:
         set_tracking_uri(self.mlruns_dir)
         configure_logging(prefix='[GENERATOR]', info_color=LogColorFormatter.GREEN)
 
-    def prepare_session(self, run_id: str, resume: bool) -> tuple:
+    def prepare_session(self, run_id: str, resume: bool, saved_data: int) -> tuple:
         steps, episodes = 0, 0
         if resume:
-            train_repo: str = self.train_repository.artifact_uris
-            self.policy = TD3Agent(self.env, train_repo)
-            status: bool = load_checkpoint(self.policy, self.mlruns_dir, run_id, map_location='cpu')
-            logging.info(f"Generator model checkpoint load status: {status}")
             _, steps, episodes = self.train_repository.count_steps()
+            if saved_data >= PREFILL:
+                train_repo: str = self.train_repository.artifact_uris
+                self.policy = TD3Agent(self.env, train_repo)
+                status: bool = load_checkpoint(self.policy, self.mlruns_dir, run_id, map_location='cpu')
+                logging.info(f"Generator model checkpoint load status: {status}")
+            else: 
+                self.policy = PurePursuitPolicy(max_lookahead_distance=0.5)
         else:
             self.policy = PurePursuitPolicy(max_lookahead_distance=0.5)
 
@@ -150,8 +153,8 @@ class Generator:
         return accumulator
 
     def execute(self, run_id: str, resume: bool) -> tuple:
-        steps, episodes = self.prepare_session(run_id=run_id, resume=resume)
         _, saved_data, _ = self.train_repository.count_steps()
+        steps, episodes = self.prepare_session(run_id=run_id, resume=resume, saved_data=saved_data)
 
         datas = []
         for _ in range(self.episode_num):

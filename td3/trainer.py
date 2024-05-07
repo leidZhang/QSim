@@ -50,11 +50,13 @@ class Trainer:
         return input_dir, eval_dir
 
     def resume_training(self, agent: TD3Agent, resume: bool) -> None:
-        if resume:
+        print(resume)
+        if resume and len(self.data) >= PREFILL:
+            logging.info(f'Resuming training from {self.run_id}')
             load_status: str = load_checkpoint(agent, self.mlruns_dir, self.run_id, map_location=self.device)
             logging.info(f'Trainer loaded model checkpoint status {load_status}')
-            self.start_time = time.time()
             path_to_train_steps = f'{self.mlruns_dir[8:]}/0/{self.run_id}/metrics/train/steps'
+            self.start_time = time.time()
             with open(path_to_train_steps) as f:
                 last_line = f.readlines()[-1]
                 self.steps = int(last_line.split()[2])
@@ -62,18 +64,25 @@ class Trainer:
             self.start_time = time.time()
             self.steps = 0
 
+    def resume_buffer(self) -> None: 
+        self.data.reload_files()
+        self.data.parse_and_load_buffer()
+        self.data.last_load_time = time.time()
+
     def prepare_training(self, resume: bool = False) -> None: # setup function
+        print(resume)
         input_dir, eval_dir = self.setup_mlflow()
         torch.autograd.set_detect_anomaly(True)
         self.agent: TD3Agent = TD3Agent(self.env, input_dir)
         # whether we continue our training
+        self.data = self.agent.buffer
+        self.resume_buffer() # initial buffer load in case interrupted in prefill stage
         self.resume_training(agent=self.agent, resume=resume)
         # training parameters
         self.states = {}
         self.last_time: float = self.start_time
         self.last_steps: int = self.steps
         self.scaler: GradScaler = GradScaler(enabled=False)
-        self.data = self.agent.buffer
         self.metrics: defaultdict = defaultdict(list)
         self.metrics_max: defaultdict = defaultdict(list)
 
