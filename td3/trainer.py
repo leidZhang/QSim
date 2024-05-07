@@ -51,7 +51,7 @@ class Trainer:
 
     def resume_training(self, agent: TD3Agent, resume: bool) -> None:
         if resume:
-            load_status: str = load_checkpoint(agent, self.mlruns_dir, self.run_id, map_location="cpu")
+            load_status: str = load_checkpoint(agent, self.mlruns_dir, self.run_id, map_location=self.device)
             logging.info(f'Trainer loaded model checkpoint status {load_status}')
             self.start_time = time.time()
             path_to_train_steps = f'{self.mlruns_dir[8:]}/0/{self.run_id}/metrics/train/steps'
@@ -147,6 +147,7 @@ class Trainer:
                 torch.save(checkpoint, backup_path)
                 # os.remove(self.last_backup_path)
                 # self.last_backup_path = backup_path
+                self.timer = time.time()
             if self.steps % (SAVE_INTERVAL * 16) == 0:
                 logging.info(f'Saved checkpoint {self.steps}')
         except IOError as e:
@@ -160,3 +161,4 @@ class Trainer:
         self.save_model(interrupt)
         if self.steps >= MAX_TRAINING_STEPS:
             raise StopTrainingException()
+        time.sleep(0.01) # sleep for 10ms

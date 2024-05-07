@@ -47,16 +47,16 @@ class TD3Agent(torch.nn.Module):
         if len(self.buffer) > C.batch_size:
             self.total_it += 1
             # Get samples from buffer and Convert to PyTorch tensors
-            states = torch.FloatTensor(samples['states'])
-            actions = torch.FloatTensor(samples['actions'])
-            rewards = torch.FloatTensor(samples['rewards'])
-            next_states = torch.FloatTensor(samples['next_states'])
-            dones = torch.FloatTensor(samples['dones'])
+            states = torch.FloatTensor(samples['states']).to(device)
+            actions = torch.FloatTensor(samples['actions']).to(device)
+            rewards = torch.FloatTensor(samples['rewards']).to(device)
+            next_states = torch.FloatTensor(samples['next_states']).to(device)
+            dones = torch.FloatTensor(samples['dones']).to(device)
 
             with torch.no_grad():
                 noise = (
                         torch.randn_like(actions) * 0.02
-                ).clamp(-0.05, 0.05)
+                ).clamp(-0.05, 0.05).to(device)
 
                 next_action = (
                         self.actor_target(next_states) + noise
@@ -130,6 +130,7 @@ class Actor(torch.nn.Module):
         self.max_action = max_action
 
     def forward(self, state):
+        state = state.to(device)
         a = F.relu(self.l1(state))
         a = F.relu(self.l2(a))
         return self.max_action * torch.tanh(self.l3(a))

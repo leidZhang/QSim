@@ -78,7 +78,7 @@ class QLabEnvironment(Env):
             dist_ix: int = np.argmin(norm_dist)
             # get state info
             ego_state: np.ndarray = self.simulator.get_actor_state('car')
-            reward += action[0] * 0.5 # temporary reward
+            reward += (action[0] - 0.045) * 0.5 # temporary reward
             self.current_waypoint_index = (self.current_waypoint_index + dist_ix) % self.waypoint_sequence.shape[0]
             self.prev_dist_ix = dist_ix
             self.next_waypoints = self.next_waypoints[dist_ix:]  # clear pasted waypoints
@@ -92,12 +92,11 @@ class QLabEnvironment(Env):
         observation['state'] = ego_state
         observation['waypoints'] = np.matmul(self.next_waypoints[:MAX_LOOKAHEAD_INDICES] - orig, rot) if self.privileged else None
         # observation["image"] = cv2.resize(front_image[:, :, :3], (160, 120))
+
         if self.privileged and time.time() - self.last_check_pos >= 0.3:
             reward += action[0] * 2.0 if (self.last_orig != orig).any() else -action[0] * 2.0
             self.last_orig = orig # update position
             self.last_check_pos = time.time() # update timer
-        if self.privileged and abs(action[0]) < 0.045:
-            reward -= 0.55
         if self.privileged and norm_dist[dist_ix] >= 0.25:
             done = True
             reward -= 30.0 # penalty for not reaching the waypoint

@@ -363,6 +363,7 @@ class SequenceRolloutBuffer:
         self.buffer_size = 100000
         self.full = False
         self.buffer_set: set = set()
+        self.current_file = None
         self.pos = 0
         self.stats_steps = 0
         self.observations = np.zeros((self.buffer_size, *self.obs_shape), dtype=np.float32)
@@ -381,7 +382,7 @@ class SequenceRolloutBuffer:
     # 并将它们添加到 self.files 列表中，直到累积的step数达到上限 (self.buffer_size)
         files_all = self.repository.list_files()
         # ascend
-        files_all.sort(key = lambda e: e.episode_to)
+        files_all.sort(key = lambda e: -e.episode_to)
         # files = []
         # steps_total = 0
         # steps_filtered = 0
@@ -394,7 +395,9 @@ class SequenceRolloutBuffer:
         #         steps_filtered += f.steps
         # # 更新 self.files 为筛选后的文件列表 files
         # # 并指明 self.files 应该是一个列表 并且列表中的每个元素都应该是 FileInfo 类的实例
+        
         self.files: List[FileInfo] = files_all
+        # print(self.files)
         self.last_reload = time.time()
         # self.stats_steps = steps_total
 
@@ -417,11 +420,25 @@ class SequenceRolloutBuffer:
 
     # TODO: Fix bug here, two pointer is not correct?
     def parse_and_load_buffer(self):
-        # list --> buffer
+        # if self.files is None or len(self.files) == 0: return 
+
+        # latest_file = self.files[0]
+        # if latest_file == self.current_file: return
+        # self.pos = 0 # reset pos
+        # episode = latest_file.load_data()
+        # self.current_file = latest_file
+        # for t in range(episode["state"].shape[0] - 1):
+        #     state = episode["state"][t]
+        #     next_state = episode["state"][t + 1]
+        #     action = episode["action"][t]
+        #     reward = episode["reward"][t]
+        #     done = episode["terminal"][t]
+        #     self.add(state, action, reward, next_state, done)
+
         total_steps: int = 0
         buffer_queue: Queue = Queue()
         waste_queue: Queue = Queue()
-        for i in range(len(self.files)):
+        for i in range(len(self.files) - 1, -1, -1):
             total_steps += self.files[i].steps
             file = self.files[i] # file, index
             buffer_queue.put(file)
@@ -449,6 +466,7 @@ class SequenceRolloutBuffer:
             waste = waste_queue.get()
             if waste in self.buffer_set:
                 self.buffer_set.remove(waste)
+
         # for i in range(start, end):
         #     episode = self.load_file(i)
         #     for t in range(episode["state"].shape[0] - 1):
