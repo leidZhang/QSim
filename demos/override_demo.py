@@ -19,7 +19,7 @@ def limit_action(agent_action: float, human_action: float, limit: float):
         action = -limit
     return action
 
-def run_overdrive_demo():
+def run_override_demo():
     init_pos, waypoints = prepare_map_info()
     simulator: GeneratorEnvironment = GeneratorEnvironment(dt=0.05, privileged=True)
     simulator.setup(initial_state=[init_pos[0], init_pos[1], init_pos[2]], sequence=waypoints)
