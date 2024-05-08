@@ -65,9 +65,11 @@ class Trainer:
             self.steps = 0
 
     def resume_buffer(self) -> None:
+        logging.info(f'Resuming buffer from {self.run_id}')
         self.data.reload_files()
         self.data.parse_and_load_buffer()
         self.data.last_load_time = time.time()
+        logging.info(f'Buffer loaded with {len(self.data)} samples')
 
     def prepare_training(self, resume: bool = False) -> None: # setup function
         print(resume)

@@ -43,6 +43,28 @@ class QLabEnvironment(Env):
             [-np.sin(yaw), np.cos(yaw)]
         ])
         return orig, yaw, rot
+    
+    def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state, dist_ix) -> tuple:
+        done: bool = False
+        reward: float = 0.0
+        if norm_dist[dist_ix] >= 0.25:
+            reward -= (abs(action[0])) * 0.5 # penalty for deviate from the waypoints
+            self.deviate_steps += 1
+        else:
+            reward += (abs(action[0]) - 0.05) * 0.5 # reward for on the waypoints
+            self.deviate_steps = 0
+
+        if self.deviate_steps >= 5:
+            reward -= 30.0
+            done = True
+            self.execute_action([0, 0]) # stop the car
+        
+        if (np.linalg.norm(self.goal - ego_state[:2]) < GOAL_THRESHOLD and len(self.next_waypoints) < 201):
+            reward += 30
+            done = True # stop episode after this step
+            self.execute_action([0, 0]) # stop the car
+
+        return reward, done
 
     def step(self, action: Union[np.ndarray, Queue], metrics: np.ndarray) -> tuple:
         """
@@ -56,9 +78,9 @@ class QLabEnvironment(Env):
         """
         # initialize result variables
         observation: dict = {}
-        done: bool = self.episode_steps >= self.max_episode_steps
         reward: float = 0.0
         info: dict = {}
+        max_done = self.episode_steps >= self.max_episode_steps
 
         # get action from queue if action is a queue
         if type(action) != np.ndarray and not action.empty():
@@ -94,33 +116,11 @@ class QLabEnvironment(Env):
         # observation["image"] = cv2.resize(front_image[:, :, :3], (160, 120))
 
         # TODO: Extract reward function to a separate method， use the strategy pattern?
-        if self.privileged and time.time() - self.last_check_pos >= 0.3:
-            reward += action[0] * 2.0 if (self.last_orig != orig).any() else -action[0] * 2.0
-            self.last_orig = orig # update position
-            self.last_check_pos = time.time() # update timer
-
-        if self.privileged and norm_dist[dist_ix] >= 0.25:
-            reward -= (abs(action[0])) * 0.5 # penalty for deviate from the waypoints
-            self.deviate_steps += 1
-        else:
-            reward += (abs(action[0])) * 0.5 # reward for on the waypoints
-            self.deviate_steps = 0
-
-        if self.deviate_steps >= 30:
-            done = True
-            self.execute_action([0, 0]) # stop the car
-
-        if self.privileged and (np.linalg.norm(self.goal - ego_state[:2]) < GOAL_THRESHOLD and len(self.next_waypoints) < 201):
-            time_taken: float = time.time() - self.episode_start
-            if time_taken > 5: # bonus for reach the goal
-                reward += 30 - (time_taken - 5) * 0.9
-            else: # panalty for cheating
-                reward -= 30.0
-            done = True # stop episode after this step
-            self.execute_action([0, 0]) # stop the car
+        if self.privileged:
+            reward, reward_done = self.handle_reward(action, norm_dist, ego_state, dist_ix)
 
         self.episode_steps += 1
-        return observation, reward, done, info
+        return observation, reward, max_done or reward_done, info
 
     def reset(self) -> tuple:
         """
@@ -130,6 +130,7 @@ class QLabEnvironment(Env):
         - np.ndarray: The observation
         """
         self.simulator.reset_map()
+        self.deviate_steps = 0
 
         self.car: QCar = QCar()
         # self.front_csi: VirtualCSICamera = VirtualCSICamera()

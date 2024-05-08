@@ -89,7 +89,7 @@ class QLabSimulator:
             )
         ])
 
-    @abstractclassmethod
+    @classmethod
     def build_map(self, qcar_pos: list, qcar_view: int = 6) -> None:
         pass
 

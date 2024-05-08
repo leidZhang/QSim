@@ -381,21 +381,7 @@ class SequenceRolloutBuffer:
     # 从一个存储库（repository）中加载, 降序排列以及更新文件
     # 并将它们添加到 self.files 列表中，直到累积的step数达到上限 (self.buffer_size)
         files_all = self.repository.list_files()
-        # ascend
         files_all.sort(key = lambda e: -e.episode_to)
-        # files = []
-        # steps_total = 0
-        # steps_filtered = 0
-        # for f in files_all:
-        #     steps_total += f.steps
-        #     #  如果steps_total 小于 self.buffer_size 或者 buffer size 无限
-        #     if steps_total < self.buffer_size or not self.buffer_size:
-        #         # 则将文件 f 添加到 files 列表中，并将 f.steps 添加到 steps_filtered
-        #         files.append(f)
-        #         steps_filtered += f.steps
-        # # 更新 self.files 为筛选后的文件列表 files
-        # # 并指明 self.files 应该是一个列表 并且列表中的每个元素都应该是 FileInfo 类的实例
-        
         self.files: List[FileInfo] = files_all
         # print(self.files)
         self.last_reload = time.time()
@@ -418,23 +404,7 @@ class SequenceRolloutBuffer:
         episode = self.files[index].load_data()
         return episode
 
-    # TODO: Fix bug here, two pointer is not correct?
     def parse_and_load_buffer(self):
-        # if self.files is None or len(self.files) == 0: return 
-
-        # latest_file = self.files[0]
-        # if latest_file == self.current_file: return
-        # self.pos = 0 # reset pos
-        # episode = latest_file.load_data()
-        # self.current_file = latest_file
-        # for t in range(episode["state"].shape[0] - 1):
-        #     state = episode["state"][t]
-        #     next_state = episode["state"][t + 1]
-        #     action = episode["action"][t]
-        #     reward = episode["reward"][t]
-        #     done = episode["terminal"][t]
-        #     self.add(state, action, reward, next_state, done)
-
         total_steps: int = 0
         buffer_queue: Queue = Queue()
         waste_queue: Queue = Queue()
@@ -467,17 +437,6 @@ class SequenceRolloutBuffer:
             waste = waste_queue.get()
             if waste in self.buffer_set:
                 self.buffer_set.remove(waste)
-
-        # for i in range(start, end):
-        #     episode = self.load_file(i)
-        #     for t in range(episode["state"].shape[0] - 1):
-        #         state = episode["state"][t]
-        #         next_state = episode["state"][t + 1]
-        #         action = episode["action"][t]
-        #         reward = episode["reward"][t]
-        #         done = episode["terminal"][t]
-        #         self.add(state, action, reward, next_state, done)
-        # self.end = end
 
     def add(self, state, action, reward, next_state, done):
         # add a new step data to buffer
