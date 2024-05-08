@@ -44,25 +44,51 @@ class QLabEnvironment(Env):
         ])
         return orig, yaw, rot
     
+    # def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state, dist_ix) -> tuple:
+    #     done: bool = False
+    #     reward: float = 0.0
+    #     if norm_dist[dist_ix] >= 0.25:
+    #         reward -= (abs(action[0])) * 0.5 # penalty for deviate from the waypoints
+    #         self.deviate_steps += 1
+    #     else:
+    #         reward += (abs(action[0]) - 0.05) * 0.5 # reward for on the waypoints
+    #         self.deviate_steps = 0
+    #
+    #     if self.deviate_steps >= 5:
+    #         reward -= 30.0
+    #         done = True
+    #         self.execute_action([0, 0]) # stop the car
+    #
+    #     if (np.linalg.norm(self.goal - ego_state[:2]) < GOAL_THRESHOLD and len(self.next_waypoints) < 201):
+    #         reward += 30
+    #         done = True # stop episode after this step
+    #         self.execute_action([0, 0]) # stop the car
+    #
+    #     return reward, done
+
     def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state, dist_ix) -> tuple:
         done: bool = False
         reward: float = 0.0
-        if norm_dist[dist_ix] >= 0.25:
-            reward -= (abs(action[0])) * 0.5 # penalty for deviate from the waypoints
-            self.deviate_steps += 1
-        else:
-            reward += (abs(action[0]) - 0.05) * 0.5 # reward for on the waypoints
-            self.deviate_steps = 0
 
-        if self.deviate_steps >= 5:
+        # Forward reward
+        if self.prev_dist != np.inf:
+            if self.prev_dist > norm_dist[dist_ix]:  # Check if distance to the next waypoint has decreased
+                reward += (self.prev_dist - norm_dist[dist_ix]) * 200  # Reward for moving closer to the waypoint
+        self.prev_dist = norm_dist[dist_ix]  # Update the previous distance
+
+        # Velocity reward
+        reward += (action[0] - 0.088) * 0.44
+
+        # Max boundary
+        if norm_dist[dist_ix] >= 0.25:
             reward -= 30.0
             done = True
-            self.execute_action([0, 0]) # stop the car
-        
+            self.execute_action([0, 0])  # stop the car
+
+        # Reach goal
         if (np.linalg.norm(self.goal - ego_state[:2]) < GOAL_THRESHOLD and len(self.next_waypoints) < 201):
-            reward += 30
-            done = True # stop episode after this step
-            self.execute_action([0, 0]) # stop the car
+            done = True  # stop episode after this step
+            self.execute_action([0, 0])  # stop the car
 
         return reward, done
 
