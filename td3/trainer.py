@@ -91,6 +91,7 @@ class Trainer:
     def update_agent_metrics(self, samples) -> None:
         metric_counter: int = 0
         if len(self.data) >= PREFILL:
+            self.steps += 1
             actor_loss, critic_loss = self.agent.learn(samples)
             if actor_loss is not None and critic_loss is not None:
                 self.metrics["actor_loss"] = actor_loss
@@ -143,7 +144,6 @@ class Trainer:
             return
 
         # create checkpoint dict
-        self.steps += 1
         checkpoint = {}
         checkpoint["epoch"] = self.steps
         checkpoint["model_state_dict"] = self.agent.state_dict()
