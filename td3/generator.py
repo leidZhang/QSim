@@ -12,6 +12,7 @@ from core.utils.tools import configure_logging, LogColorFormatter, load_checkpoi
 from core.utils.tools import mlflow_log_metrics
 from core.environment.wrappers import CollectionWrapper, ActionRewardResetWrapper
 from core.environment.primary import GeneratorEnvironment
+from core.environment import AnomalousEpisodeException
 from core.data.data_TD3 import MlflowDataRepository, MlflowEpisodeRepository
 
 from .policy import TD3Agent
@@ -171,5 +172,7 @@ class Generator:
                 metrics = self.log_episode(data, episode_steps, steps, episodes, saved_data, metrics)
                 self.aggregate_metrics(metrics, episodes, run_id) # aggregate metrics
                 saved_data += self.save_to_replay_buffer(data, datas, episodes)
+            except AnomalousEpisodeException as e:
+                print(e)
             except Exception as e:
                 print(e)

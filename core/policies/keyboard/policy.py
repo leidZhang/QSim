@@ -8,12 +8,12 @@ from .constants import *
 class KeyboardController:
     def __init__(self, slow_to_zero: bool = False) -> None:
         self.slow_to_zero: bool = slow_to_zero
-        self.press_keys = {
-            'x_signal': (['w', 's'], MAX_X_AXIS_VALUE, X_AXIS_DECREASE),
-            'y_signal': (['a', 'd'], MAX_Y_AXIS_VALUE, Y_AXIS_DECREASE),
+        self.axises = {
+            'x_signal': (['up', 'down'], MAX_X_AXIS_VALUE, X_AXIS_DECREASE),
+            'y_signal': (['left', 'right'], MAX_Y_AXIS_VALUE, Y_AXIS_DECREASE),
         } # key pairs, press left to increase and press right to decrease
         self.state = {
-            'x_signal': 0,
+            'x_signal': 0, 
             'y_signal': 0,
         }
 
@@ -28,7 +28,7 @@ class KeyboardController:
         else:
             return 0
 
-    def handle_trigger(self, key_pair: list, signal: int, rate: int, max_signal: int) -> None:
+    def handle_axis(self, key_pair: list, signal: int, rate: int, max_signal: int) -> None:
         if keyboard.is_pressed(key_pair[0]):
             signal += rate
             if signal > max_signal:
@@ -44,10 +44,18 @@ class KeyboardController:
 
     def execute(self) -> None:
         # handle signals for triggered key pairs
-        for key, val in self.press_keys.items():
+        for key, val in self.axises.items():
             key_pair, max_signal, rate = val[0], val[1], val[2]
             signal: int = self.state[key] * max_signal
-            signal = self.handle_trigger(key_pair, signal, rate, max_signal)
+            signal = self.handle_axis(key_pair, signal, rate, max_signal)
             self.state[key] = self.normalize_signal(signal, max_signal)
+    
+    def clear_input_buffer(self) -> None:
+        while keyboard.read_event(suppress=True):
+            pass
 
+
+class KeyboardPolicy(KeyboardController):
+    def execute(self) -> np.ndarray:
+        super().execute()
         return np.array([self.state['x_signal'], self.state['y_signal']])

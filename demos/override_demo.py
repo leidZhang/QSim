@@ -3,7 +3,7 @@ import numpy as np
 from core.roadmap import ACCRoadMap
 from core.environment import GeneratorEnvironment
 from core.policies.pure_persuit import PurePursuitPolicy
-from core.policies.keyboard import KeyboardController
+from core.policies.keyboard import KeyboardPolicy
 
 def prepare_map_info(node_id: int = 24) -> tuple:
     roadmap: ACCRoadMap = ACCRoadMap()
@@ -19,12 +19,12 @@ def limit_action(agent_action: float, human_action: float, limit: float):
         action = -limit
     return action
 
-def run_override_demo():
+def run_override_demo(): # simple human in the loop
     init_pos, waypoints = prepare_map_info()
     simulator: GeneratorEnvironment = GeneratorEnvironment(dt=0.05, privileged=True)
     simulator.setup(initial_state=[init_pos[0], init_pos[1], init_pos[2]], sequence=waypoints)
     policy: PurePursuitPolicy = PurePursuitPolicy(max_lookahead_distance=0.75)
-    controller: KeyboardController = KeyboardController()
+    controller: KeyboardPolicy = KeyboardPolicy()
 
     action: np.ndarray = np.zeros(2)
     num_episodes = 10000
@@ -39,6 +39,6 @@ def run_override_demo():
             action[1] = limit_action(agent_action[1], human_action[1], 0.5)
 
             observation, reward, done, info = simulator.step(action, metrics)
-            print(f"agent: {agent_action}, human: {human_action}, final: {action}")
+            # print(f"agent: {agent_action}, human: {human_action}, final: {action}")
             # print(f"action: {agent_action}, step_reward: {reward}, done: {done}")
         print(f"Episode {episode} completed")
