@@ -143,6 +143,7 @@ class Trainer:
             return
 
         # create checkpoint dict
+        self.steps += 1
         checkpoint = {}
         checkpoint["epoch"] = self.steps
         checkpoint["model_state_dict"] = self.agent.state_dict()
@@ -166,7 +167,6 @@ class Trainer:
             logging.error(f"Failed to save checkpoint at {checkpoint_path}: {e}")
 
     def execute(self, interrupt: bool = True) -> None: # execution function
-        self.steps += 1
         samples = self.data.file_to_batch()
         self.update_agent_metrics(samples)
         self.log_training_metrics()

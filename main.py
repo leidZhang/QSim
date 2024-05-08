@@ -93,6 +93,8 @@ def start_system(resume_run_id: str, init_pos: list, waypoints: np.ndarray) -> N
     root_directory: str = os.getcwd() # get the absolute directory
     mlflow_directory: str = os.path.join(root_directory, 'mlruns')
     mlflow_directory = 'file:///' + mlflow_directory.replace('\\', '/')
+    # mlflow_directory: str = os.path.join(root_directory, 'mlruns.db')
+    # mlflow_directory = "sqlite:///" + mlflow_directory.replace('\\', '/')
 
     # configure logging
     configure_logging("[LAUNCHER]")
