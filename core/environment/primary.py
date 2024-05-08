@@ -77,11 +77,11 @@ class QLabEnvironment(Env):
         self.prev_dist = norm_dist[dist_ix]  # Update the previous distance
 
         # Velocity reward
-        reward += (action[0] - 0.088) * 0.44
+        # reward += (action[0] - 0.088) * 0.22
 
         # Max boundary
         if norm_dist[dist_ix] >= 0.25:
-            reward -= 30.0
+            reward -= 60.0
             done = True
             self.execute_action([0, 0])  # stop the car
 

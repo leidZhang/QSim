@@ -13,7 +13,7 @@ noise_clip = 0.05,
 policy_freq = 2
 run_id = ''
 
-PREFILL = 10000
+PREFILL = 512
 # generator constants
 METRIC_PREFIX: str = 'agent'
 COOL_DOWN_TIME: float = 3.0

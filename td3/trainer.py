@@ -50,7 +50,6 @@ class Trainer:
         return input_dir, eval_dir
 
     def resume_training(self, agent: TD3Agent, resume: bool) -> None:
-        print(resume)
         if resume and len(self.data) >= PREFILL:
             logging.info(f'Resuming training from {self.run_id}')
             load_status: str = load_checkpoint(agent, self.mlruns_dir, self.run_id, map_location=self.device)
@@ -72,7 +71,6 @@ class Trainer:
         logging.info(f'Buffer loaded with {len(self.data)} samples')
 
     def prepare_training(self, resume: bool = False) -> None: # setup function
-        print(resume)
         input_dir, eval_dir = self.setup_mlflow()
         torch.autograd.set_detect_anomaly(True)
         self.agent: TD3Agent = TD3Agent(self.env, input_dir)
@@ -166,9 +164,10 @@ class Trainer:
             logging.error(f"Failed to save checkpoint at {checkpoint_path}: {e}")
 
     def execute(self, interrupt: bool = True) -> None: # execution function
-        self.steps += 1
+
         samples = self.data.file_to_batch()
         self.update_agent_metrics(samples)
+        self.steps += 1
         self.log_training_metrics()
         self.save_model(interrupt)
         if self.steps >= MAX_TRAINING_STEPS:

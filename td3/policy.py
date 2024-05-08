@@ -55,8 +55,8 @@ class TD3Agent(torch.nn.Module):
 
             with torch.no_grad():
                 noise = (
-                        torch.randn_like(actions) * 0.02
-                ).clamp(-0.05, 0.05).to(device)
+                        torch.randn_like(actions) * 0.04
+                ).clamp(-0.08, 0.08).to(device)
 
                 next_action = (
                         self.actor_target(next_states) + noise
@@ -133,7 +133,7 @@ class Actor(torch.nn.Module):
         state = state.to(device)
         a = F.relu(self.l1(state))
         a = F.relu(self.l2(a))
-        return self.max_action * torch.tanh(self.l3(a))
+        return (self.max_action + 0.045) * torch.tanh(self.l3(a))
 
 class Critic(torch.nn.Module):
     def __init__(self):
