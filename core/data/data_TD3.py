@@ -13,6 +13,7 @@ from mlflow.store.artifact.artifact_repository_registry import get_artifact_repo
 from core.utils.tools import mlflow_log_npz, mlflow_load_npz
 from core.utils.aggregation_utils import cat_structure_np, stack_structure_np, map_structure
 
+
 @dataclass(frozen=True)
 class FileInfo:
     path: str
@@ -28,6 +29,7 @@ class FileInfo:
     def __repr__(self) -> str:
         return f'{self.path}'
 
+
 class EpisodeRepository(ABC):
     @abstractmethod
     def save_data(self, data: Dict[str, np.ndarray], episode_from: int, episode_to: int):
@@ -36,6 +38,17 @@ class EpisodeRepository(ABC):
     @abstractmethod
     def list_files(self) -> List[FileInfo]:
         ...
+
+
+class DataRepository(ABC):
+    @abstractmethod
+    def save_data(self, data: Dict[str, np.ndarray], n_samples: int):
+        ...
+
+    @abstractmethod
+    def list_files(self) -> List[FileInfo]:
+        ...
+
 
 class MlflowEpisodeRepository(EpisodeRepository):
     def __init__(self, artifcat_uris: Union[str, List[str]]):
@@ -108,15 +121,8 @@ class MlflowEpisodeRepository(EpisodeRepository):
     def __repr__(self) -> str:
         return f'{self.artifact_uris}'
 
-class DataRepository(ABC):
-    @abstractmethod
-    def save_data(self, data: Dict[str, np.ndarray], n_samples: int):
-        ...
 
-    @abstractmethod
-    def list_files(self) -> List[FileInfo]:
-        ...
-
+# data repository
 class MlflowDataRepository(DataRepository):
     def __init__(self, artifcat_uris: Union[str, List[str]]):
         super().__init__()
@@ -421,7 +427,7 @@ class SequenceRolloutBuffer:
             file = buffer_queue.get()
             if file in self.buffer_set:
                 continue # skip if is duplicate
-            
+
             # self.pos = 0 # reset pos???
             episode = file.load_data()
             self.buffer_set.add(file)

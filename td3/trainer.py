@@ -164,7 +164,6 @@ class Trainer:
             logging.error(f"Failed to save checkpoint at {checkpoint_path}: {e}")
 
     def execute(self, interrupt: bool = True) -> None: # execution function
-
         samples = self.data.file_to_batch()
         self.update_agent_metrics(samples)
         self.steps += 1

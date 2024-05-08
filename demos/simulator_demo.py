@@ -1,4 +1,4 @@
-from qvl.qlabs import QuanserInteractiveLabs 
+from qvl.qlabs import QuanserInteractiveLabs
 from qvl.basic_shape import QLabsBasicShape
 from core.policies.pure_persuit import PurePursuitPolicy
 from core.environment import QLabEnvironment
@@ -18,7 +18,7 @@ if __name__ == "__main__":
     num_episodes = 10000
     for episode in range(1, num_episodes+1):
         observation, reward, done, info = simulator.reset()
-        while not done: 
+        while not done:
             action, metrics = policy(observation)
             observation, reward, done, info = simulator.step(action, metrics)
             print(f"action: {action}, step_reward: {reward}, done: {done}")

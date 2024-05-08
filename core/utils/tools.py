@@ -20,8 +20,8 @@ class LogColorFormatter(logging.Formatter):
     RED_UNDERLINE = '\033[4;31m'
 
     def __init__(
-        self, 
-        fmt, 
+        self,
+        fmt,
         debug_color=GREY,
         info_color=None,
         warning_color=YELLOW,
@@ -116,13 +116,13 @@ def mlflow_load_checkpoint(model, run_id=None, optimizers=tuple(), artifact_path
             path = mlflow.artifacts.download_artifacts(run_id=run_id, artifact_path=artifact_path, dst_path=tmpdir)
         except Exception as e:
             return None
-        
+
         try:
             checkpoint = torch.load(path, map_location=map_location)
         except:
             logging.exception('Error reading checkpoint')
             return None
-        
+
         model.load_state_dict(checkpoint['model_state_dict'])
         for i, opt in enumerate(optimizers):
             opt.load_state_dict(checkpoint[f'optimizer_{i}_state_dict'])

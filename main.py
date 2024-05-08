@@ -11,7 +11,7 @@ import numpy as np
 from core.roadmap import ACCRoadMap
 from td3.generator import Generator
 from td3.trainer import Trainer
-from td3.constants import PREFILL, MAX_TRAINING_STEPS
+from constants import PREFILL, MAX_TRAINING_STEPS, run_id
 from td3.exceptions import InsufficientDataException, StopTrainingException
 from core.utils.tools import mlflow_init, configure_logging
 
@@ -64,7 +64,7 @@ def start_trainer(
         waypoints=waypoints,
         prefill_steps=prefill_steps
     )
-    timer = time.time()
+
     trainer.prepare_training(resume=resume)
     stop_training: bool = False
     try:
@@ -72,9 +72,8 @@ def start_trainer(
             try:
                 trainer.execute()
             except InsufficientDataException:
-                if time.time() - timer >= 5:
-                    logging.info(f"Insufficient data sampled:[ {len(trainer.data)}/{PREFILL} ]")
-                    timer = time.time()
+                logging.info(f"Insufficient data sampled:[ {len(trainer.data)}/{PREFILL} ]")
+                time.sleep(20)
             except StopTrainingException:
                 logging.info(f'Finished {MAX_TRAINING_STEPS} grad steps.')
                 stop_training = True
@@ -93,6 +92,8 @@ def start_system(resume_run_id: str, init_pos: list, waypoints: np.ndarray) -> N
     root_directory: str = os.getcwd() # get the absolute directory
     mlflow_directory: str = os.path.join(root_directory, 'mlruns')
     mlflow_directory = 'file:///' + mlflow_directory.replace('\\', '/')
+    # mlflow_directory: str = os.path.join(root_directory, 'mlruns.db')
+    # mlflow_directory = "sqlite:///" + mlflow_directory.replace('\\', '/')
 
     # configure logging
     configure_logging("[LAUNCHER]")
@@ -155,6 +156,6 @@ def start_system(resume_run_id: str, init_pos: list, waypoints: np.ndarray) -> N
 
 if __name__ == '__main__':
     # fill with file name of your experiment, set to '' to start new experiment
-    resume_run_id = ''
+    resume_run_id = run_id
     init_pos, waypoints = prepare_map_info(node_id=24)
     start_system(resume_run_id=resume_run_id, init_pos=init_pos, waypoints=waypoints)
