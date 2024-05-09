@@ -32,9 +32,14 @@ class QLabEnvironment(Env):
         self.goal: np.ndarray = self.waypoint_sequence[-1]
 
     def execute_action(self, action: list) -> None:
+        print(f"Get action from actor: {action}")
+        action[0] = 0.08 * action[0] # 0.08 is the max speed of the car
+        action[1] = 0.5 * action[1] # 0.5 is the max steering angle of the car
+
         self.car.read_write_std(action[0], action[1])
         time.sleep(self.simulator.dt)
         self.last_action_time: float = time.perf_counter()
+        return action
 
     def get_states(self, actor: str) -> tuple:
         ego_state: np.ndarray = self.simulator.get_actor_state(actor_name=actor)
@@ -124,7 +129,7 @@ class QLabEnvironment(Env):
         # execute action and get image
         # if action[0] <= 0.045:
         #     print("low speed!")
-        self.execute_action(action)
+        action = self.execute_action(action) # real qcar action
         # front_image: np.ndarray = self.front_csi.await_image()
 
         if self.privileged:

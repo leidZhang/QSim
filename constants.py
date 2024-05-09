@@ -23,9 +23,9 @@ QCAR_POS = []
 # env constants
 MAX_LOOKAHEAD_INDICES: int = 200
 GOAL_THRESHOLD: int = 2
-DEFAULT_MAX_STEPS: int = 200
+DEFAULT_MAX_STEPS: int = 240
 
 # settings
-batch_size = 512
-PREFILL = 512
+batch_size = 128
+PREFILL = 128
 run_id = ''

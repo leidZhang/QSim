@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import numpy as np
-from . import constants as C
+import constants as C
 from torch.optim import Adam
 from core.data.data_TD3 import SequenceRolloutBuffer, MlflowEpisodeRepository
 from core.policies.network import NetworkPolicy
@@ -55,13 +55,15 @@ class TD3Agent(torch.nn.Module):
 
             with torch.no_grad():
                 noise = (
-                        torch.randn_like(actions) * 0.04
-                ).clamp(-0.08, 0.08).to(device)
+                        torch.randn_like(actions) * 0.2
+                ).clamp(-0.5, 0.5).to(device)
+                print(f"NOISE: {noise}")
+                print(f"Before: {self.actor_target(next_states)}")
 
                 next_action = (
                         self.actor_target(next_states) + noise
                 ).clamp(-C.max_action, C.max_action)
-
+                print(f"After: {next_action}")
                 # Compute the target Q value
                 target_Q1, target_Q2 = self.critic_target(next_states, next_action)
                 target_Q = torch.min(target_Q1, target_Q2)
@@ -133,7 +135,7 @@ class Actor(torch.nn.Module):
         state = state.to(device)
         a = F.relu(self.l1(state))
         a = F.relu(self.l2(a))
-        return (self.max_action + 0.045) * torch.tanh(self.l3(a))
+        return self.max_action * torch.tanh(self.l3(a))
 
 class Critic(torch.nn.Module):
     def __init__(self):

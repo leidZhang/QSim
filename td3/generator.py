@@ -16,7 +16,7 @@ from core.environment import AnomalousEpisodeException
 from core.data.data_TD3 import MlflowDataRepository, MlflowEpisodeRepository
 
 from .policy import TD3Agent
-from .constants import PREFILL, METRIC_PREFIX, COOL_DOWN_TIME
+from constants import PREFILL, METRIC_PREFIX, COOL_DOWN_TIME
 
 
 class Generator:
