@@ -57,13 +57,13 @@ class TD3Agent(torch.nn.Module):
                 noise = (
                         torch.randn_like(actions) * 0.2
                 ).clamp(-0.5, 0.5).to(device)
-                print(f"NOISE: {noise}")
-                print(f"Before: {self.actor_target(next_states)}")
+                # print(f"NOISE: {noise}")
+                # print(f"Before: {self.actor_target(next_states)}")
 
                 next_action = (
                         self.actor_target(next_states) + noise
                 ).clamp(-C.max_action, C.max_action)
-                print(f"After: {next_action}")
+                # print(f"After: {next_action}")
                 # Compute the target Q value
                 target_Q1, target_Q2 = self.critic_target(next_states, next_action)
                 target_Q = torch.min(target_Q1, target_Q2)
@@ -125,7 +125,7 @@ class Actor(torch.nn.Module):
     def __init__(self, max_action):
         super(Actor, self).__init__()
 
-        self.l1 = nn.Linear(6, 256)
+        self.l1 = nn.Linear(8, 256) # (6, 256)
         self.l2 = nn.Linear(256, 256)
         self.l3 = nn.Linear(256, C.action_dim)
 

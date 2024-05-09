@@ -174,5 +174,5 @@ class Generator:
                 saved_data += self.save_to_replay_buffer(data, datas, episodes)
             except AnomalousEpisodeException as e:
                 print(e)
-            except Exception as e:
-                print(e)
+            # except Exception as e:
+            #     print(e)

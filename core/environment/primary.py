@@ -32,8 +32,9 @@ class QLabEnvironment(Env):
         self.goal: np.ndarray = self.waypoint_sequence[-1]
 
     def execute_action(self, action: list) -> None:
-        print(f"Get action from actor: {action}")
-        action[0] = 0.08 * action[0] # 0.08 is the max speed of the car
+        if action[0] <= 0.045:
+            action[0] += 0.045 - action[0]
+        # action[0] = 0.08 * action[0] # 0.08 is the max speed of the car
         action[1] = 0.5 * action[1] # 0.5 is the max steering angle of the car
 
         self.car.read_write_std(action[0], action[1])
@@ -152,8 +153,10 @@ class QLabEnvironment(Env):
                 slop = MAX_LOOKAHEAD_INDICES - self.next_waypoints.shape[0]
                 self.next_waypoints = np.concatenate([self.next_waypoints, self.waypoint_sequence[:slop]])
 
-        observation['state'] = ego_state
         observation['waypoints'] = np.matmul(self.next_waypoints[:MAX_LOOKAHEAD_INDICES] - orig, rot) if self.privileged else None
+        observation['state'] = np.concatenate((ego_state, observation['waypoints'][49]))
+        # print(observation['state'])
+        # print(f"Observation: {observation['waypoints']}")
         # observation["image"] = cv2.resize(front_image[:, :, :3], (160, 120))
 
         # TODO: Extract reward function to a separate method， use the strategy pattern?
@@ -195,8 +198,8 @@ class QLabEnvironment(Env):
         orig, yaw, rot = self.get_states('car')
         ego_state = self.simulator.get_actor_state('car')
         self.episode_start: float = time.time()
-        observation['state'] = ego_state
         observation['waypoints'] = np.matmul(self.next_waypoints[:MAX_LOOKAHEAD_INDICES] - orig, rot) if self.privileged else None
+        observation['state'] = np.concatenate((ego_state, observation['waypoints'][49]))
 
         self.prev_dist = np.inf # set previous distance to infinity
         self.last_orig: np.ndarray = orig

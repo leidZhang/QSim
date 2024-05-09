@@ -12,7 +12,7 @@ class PurePursuitPolicy:
         self.max_lookahead_distance = max_lookahead_distance
 
     def __call__(self, obs):
-        action = np.array([1, 0.0]) #v, steer
+        action = np.array([0.08, 0.0]) #v, steer
         metrics = {}
 
         state = np.zeros((6,), dtype=np.float32) #obs["state"]

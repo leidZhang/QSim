@@ -448,6 +448,7 @@ class SequenceRolloutBuffer:
         # add a new step data to buffer
         # update index and pos
         # after full, replace buffer data from begin
+        # print(f"state: {state}, next_state: {next_state}")
         index = self.pos % self.buffer_size  # 取余数
         self.observations[index] = state
         self.actions[index] = action

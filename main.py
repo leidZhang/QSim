@@ -11,7 +11,7 @@ import numpy as np
 from core.roadmap import ACCRoadMap
 from td3.generator import Generator
 from td3.trainer import Trainer
-from constants import PREFILL, MAX_TRAINING_STEPS, run_id
+from constants import PREFILL, MAX_TRAINING_STEPS, RUN_ID
 from td3.exceptions import InsufficientDataException, StopTrainingException
 from core.utils.tools import mlflow_init, configure_logging
 
@@ -156,6 +156,6 @@ def start_system(resume_run_id: str, init_pos: list, waypoints: np.ndarray) -> N
 
 if __name__ == '__main__':
     # fill with file name of your experiment, set to '' to start new experiment
-    resume_run_id = run_id
+    resume_run_id = RUN_ID
     init_pos, waypoints = prepare_map_info(node_id=24)
     start_system(resume_run_id=resume_run_id, init_pos=init_pos, waypoints=waypoints)

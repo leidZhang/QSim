@@ -1,11 +1,11 @@
 print_QCar_info = False  # print "QCar configured successfully." in qcar.py or not
 max_action = 1
 discount = 0.99
-state_dim = 6
+state_dim = 8
 action_dim = 2
 lr = 3e-4
 tau = 0.005
-observation_shape = (6,)
+observation_shape = (8,)
 buffer_update_rate = 2
 policy_freq = 2
 
@@ -28,4 +28,4 @@ DEFAULT_MAX_STEPS: int = 240
 # settings
 batch_size = 128
 PREFILL = 128
-run_id = ''
+RUN_ID = ''
