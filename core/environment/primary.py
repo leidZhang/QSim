@@ -92,10 +92,10 @@ class QLabEnvironment(Env):
         # Forward reward
         if self.prev_dist != np.inf:
             if self.prev_dist > norm_dist[dist_ix]:  # Check if distance to the next waypoint has decreased
-                forward_reward = (self.prev_dist - norm_dist[dist_ix]) * 240  # Reward for moving closer to the waypoint
+                forward_reward = (self.prev_dist - norm_dist[dist_ix]) * 200  # Reward for moving closer to the waypoint
                 # print(f"MOVE FORWARD {self.prev_dist - norm_dist[dist_ix]}")
                 reward += forward_reward
-                print(f"Forward reward: {forward_reward}")
+                # print(f"Forward reward: {forward_reward}")
         self.prev_dist = norm_dist[dist_ix]  # Update the previous distance
 
         # Max boundary
@@ -107,15 +107,17 @@ class QLabEnvironment(Env):
         # # Boundary reward
         b05_reward = -max(0.0, 1 * (norm_dist[dist_ix] - 0.05))
         reward += b05_reward
-        print(f"0.05 Boundary Reward: {b05_reward}")
-
-        b20_reward = -max(0.0, 16 * (norm_dist[dist_ix] - 0.2))
+        # print(f"0.05 Boundary Reward: {b05_reward}")
+        #
+        b20_reward = -max(0.0, 4 * (norm_dist[dist_ix] - 0.2))
         reward += b20_reward
-        print(f"0.20 Boundary Reward: {b20_reward}")
+        # print(f"0.20 Boundary Reward: {b20_reward}")
 
         # # Velocity reward
-        # reward += (action[0] - 0.088) * 0.44
-
+        v_reward = (action[0] - 0.045) * 20
+        # print(f'action[0]: {action[0]}')
+        reward += v_reward
+        # print(f"v_reward: {v_reward}")
         # (no reward) Check if the command is not properly executed by the car
         if abs(action[0]) >= 0.045 and np.array_equal(self.start_orig, ego_state[:2]):
             raise AnomalousEpisodeException("Anomalous episode detected!")
