@@ -10,7 +10,6 @@ import numpy as np
 from torch.cuda.amp import GradScaler
 
 from core.utils.tools import configure_logging, mlflow_init, load_checkpoint, mlflow_log_metrics
-from core.environment.primary import TrainerEnvironment
 from core.environment.wrappers import CollectionWrapper, ActionRewardResetWrapper
 from .policy import TD3Agent
 from constants import PREFILL, LOG_INTERVAL, SAVE_INTERVAL, MAX_TRAINING_STEPS, LOGBATCH_INTERVAL
@@ -31,8 +30,6 @@ class Trainer:
         self.run_id: str = run_id
         self.device: str = device
         self.prefill_steps: int = prefill_steps
-        base_env: TrainerEnvironment = TrainerEnvironment(dt=0.05, privileged=True)
-        self.env: CollectionWrapper = CollectionWrapper(ActionRewardResetWrapper(base_env, qcar_pos, waypoints))
         self.timer: float = time.time()
         self.last_backup_path: str = ''
 
@@ -73,7 +70,7 @@ class Trainer:
     def prepare_training(self, resume: bool = False) -> None: # setup function
         input_dir, eval_dir = self.setup_mlflow()
         torch.autograd.set_detect_anomaly(True)
-        self.agent: TD3Agent = TD3Agent(self.env, input_dir)
+        self.agent: TD3Agent = TD3Agent(input_dir)
         # whether we continue our training
         self.data = self.agent.buffer
         self.resume_buffer() # initial buffer load in case interrupted in prefill stage
@@ -89,6 +86,7 @@ class Trainer:
     def update_agent_metrics(self, samples) -> None:
         metric_counter: int = 0
         if len(self.data) >= PREFILL:
+            self.steps += 1
             actor_loss, critic_loss = self.agent.learn(samples)
             if actor_loss is not None and critic_loss is not None:
                 self.metrics["actor_loss"] = actor_loss
@@ -151,10 +149,8 @@ class Trainer:
         backup_path = f"{self.mlruns_dir[8:]}/0/{self.run_id}/backup_{datetime.now().strftime('%Y%m%d%H%M%S')}.pt"
         # save model to disk
         try:
-            # if self.steps % (SAVE_INTERVAL * 10) == 0:
-            #     logging.info(f'Saving checkpoint...')
             torch.save(checkpoint, checkpoint_path)
-            if time.time() - self.timer >= 1800: # backup
+            if time.time() - self.timer >= 600: # backup
                 torch.save(checkpoint, backup_path)
                 # os.remove(self.last_backup_path)
                 # self.last_backup_path = backup_path
@@ -167,7 +163,6 @@ class Trainer:
     def execute(self, interrupt: bool = True) -> None: # execution function
         samples = self.data.file_to_batch()
         self.update_agent_metrics(samples)
-        self.steps += 1
         self.log_training_metrics()
         self.save_model(interrupt)
         if self.steps >= MAX_TRAINING_STEPS:
