@@ -1,5 +1,4 @@
 import time
-from abc import abstractclassmethod
 
 import numpy as np
 from typing import List, Dict
@@ -11,7 +10,7 @@ from qvl.actor import QLabsActor
 from qvl.real_time import QLabsRealTime
 import pal.resources.rtmodels as rtmodels
 
-from core.roadmap import ACCDirector, PartialDirector
+from core.roadmap import ACCDirector
 from core.roadmap.constants import ACC_X_OFFSET, ACC_Y_OFFSET
 from .constants import QCAR_ACTOR_ID
 from .monitor import Monitor
