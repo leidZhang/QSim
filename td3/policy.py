@@ -45,7 +45,7 @@ class TD3Agent(torch.nn.Module):
 
             noise_rate = min(1, 1 - data_size / 100_000)
             rand_action = torch.rand(action.shape).to(device)
-            rand_action[1] -= 0.5
+            rand_action[1] = rand_action[1] * 2 - 1
             noise = (rand_action * noise_rate).to(device)
             # print(f"E Before: {action[0]}")
             action = (
@@ -158,7 +158,6 @@ class Actor(torch.nn.Module):
         a = F.relu(self.l2(a))
         action = self.max_action * torch.tanh(self.l3(a))
         action[:,0] = (action[:,0] + 1) / 2
-        action[:,1] = (action[:,1] + 1) / 2 - 0.5
         return action
 
 class Critic(torch.nn.Module):
