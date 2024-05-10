@@ -13,9 +13,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class TD3Agent(torch.nn.Module):
-    def __init__(self, env, input_dir):
+    def __init__(self, input_dir):
         super(TD3Agent, self).__init__()
-        self.env = env
+        # self.env = env
 
         self.buffer: SequenceRolloutBuffer = SequenceRolloutBuffer(
             MlflowEpisodeRepository(input_dir),

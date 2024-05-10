@@ -7,7 +7,7 @@ from gym import Env
 import numpy as np
 from pal.products.qcar import QCar
 
-from core.simulator import FullSimulator, PartialSimulator
+from core.simulator import QLabSimulator
 from core.sensor import VirtualCSICamera
 from .exception import AnomalousEpisodeException
 from constants import MAX_LOOKAHEAD_INDICES, GOAL_THRESHOLD, DEFAULT_MAX_STEPS, MAX_TRAINING_STEPS, max_action
@@ -24,8 +24,7 @@ class QLabEnvironment(Env):
         self.max_episode_steps: int = DEFAULT_MAX_STEPS
         self.episode_steps: int = 0
         self.deviate_steps: int = 0
-        # self.experiment_steps: int = 0
-        # self.simulator: QLabSimulator = QLabSimulator(dt)
+        self.simulator: QLabSimulator = QLabSimulator(dt)
 
     def setup(self, initial_state: list, sequence: np.ndarray) -> None:
         self.simulator.render_map(initial_state)
@@ -130,6 +129,13 @@ class QLabEnvironment(Env):
 
     #     return reward, done
 
+    def init_step_params(self) -> tuple:
+        observation: dict = {}
+        reward: float = 0.0
+        info: dict = {}
+
+        return observation, reward, info
+
     def step(self, action: Union[np.ndarray, Queue], metrics: np.ndarray) -> tuple:
         """
         Step the simulation forward
@@ -141,10 +147,11 @@ class QLabEnvironment(Env):
         - tuple: The observation, reward, done, and info
         """
         # initialize result variables
-        observation: dict = {}
-        reward: float = 0.0
-        info: dict = {}
+        # observation: dict = {}
+        # reward: float = 0.0
+        # info: dict = {}
         episode_done: bool = self.episode_steps >= self.max_episode_steps
+        observation, reward, info = self.init_step_params()
         # if self.episode_steps >= self.max_episode_steps:
         #     raise AnomalousEpisodeException("Anomalous episode detected!")
 
@@ -207,10 +214,8 @@ class QLabEnvironment(Env):
         # reset episode start time
         self.episode_start_time = time.time()
         # initialize result variables
-        observation: dict = {}
         done: bool = False
-        reward: float = 0.0
-        info: dict = {}
+        observation, reward, info = self.init_step_params()
         # initialize episode parameters
         self.prev_dist_ix: int = 0
         self.episode_steps = 0
@@ -233,13 +238,13 @@ class QLabEnvironment(Env):
         return observation, reward, done, info
 
 
-class GeneratorEnvironment(QLabEnvironment):
-    def __init__(self, dt: float = 0.05, action_size: int = 2, privileged: bool = False) -> None:
-        super().__init__(dt, action_size, privileged)
-        self.simulator: FullSimulator = FullSimulator(dt)
+# class GeneratorEnvironment(QLabEnvironment):
+#     def __init__(self, dt: float = 0.05, action_size: int = 2, privileged: bool = False) -> None:
+#         super().__init__(dt, action_size, privileged)
+#         self.simulator: FullSimulator = FullSimulator(dt)
 
 
-class TrainerEnvironment(QLabEnvironment):
-    def __init__(self, dt: float = 0.05, action_size: int = 2, privileged: bool = False) -> None:
-        super().__init__(dt, action_size, privileged)
-        self.simulator: PartialSimulator = PartialSimulator(dt)
+# class TrainerEnvironment(QLabEnvironment):
+#     def __init__(self, dt: float = 0.05, action_size: int = 2, privileged: bool = False) -> None:
+#         super().__init__(dt, action_size, privileged)
+#         self.simulator: PartialSimulator = PartialSimulator(dt)

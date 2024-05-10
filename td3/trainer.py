@@ -10,7 +10,6 @@ import numpy as np
 from torch.cuda.amp import GradScaler
 
 from core.utils.tools import configure_logging, mlflow_init, load_checkpoint, mlflow_log_metrics
-from core.environment.primary import TrainerEnvironment
 from core.environment.wrappers import CollectionWrapper, ActionRewardResetWrapper
 from .policy import TD3Agent
 from constants import PREFILL, LOG_INTERVAL, SAVE_INTERVAL, MAX_TRAINING_STEPS, LOGBATCH_INTERVAL
@@ -31,8 +30,8 @@ class Trainer:
         self.run_id: str = run_id
         self.device: str = device
         self.prefill_steps: int = prefill_steps
-        base_env: TrainerEnvironment = TrainerEnvironment(dt=0.05, privileged=True)
-        self.env: CollectionWrapper = CollectionWrapper(ActionRewardResetWrapper(base_env, qcar_pos, waypoints))
+        # base_env: TrainerEnvironment = TrainerEnvironment(dt=0.05, privileged=True)
+        # self.env: CollectionWrapper = CollectionWrapper(ActionRewardResetWrapper(base_env, qcar_pos, waypoints))
         self.timer: float = time.time()
         self.last_backup_path: str = ''
 
@@ -73,7 +72,7 @@ class Trainer:
     def prepare_training(self, resume: bool = False) -> None: # setup function
         input_dir, eval_dir = self.setup_mlflow()
         torch.autograd.set_detect_anomaly(True)
-        self.agent: TD3Agent = TD3Agent(self.env, input_dir)
+        self.agent: TD3Agent = TD3Agent(input_dir)
         # whether we continue our training
         self.data = self.agent.buffer
         self.resume_buffer() # initial buffer load in case interrupted in prefill stage
