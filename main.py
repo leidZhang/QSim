@@ -67,13 +67,16 @@ def start_trainer(
 
     trainer.prepare_training(resume=resume)
     stop_training: bool = False
+    counter = 0
     try:
         while not stop_training:
             try:
                 trainer.execute()
             except InsufficientDataException:
-                logging.info(f"Insufficient data sampled:[ {len(trainer.data)}/{PREFILL} ]")
-                time.sleep(20)
+                if counter % 4 == 0:
+                    logging.info(f"Insufficient data sampled:[ {len(trainer.data)}/{PREFILL} ]")
+                time.sleep(5)
+                counter += 1
             except StopTrainingException:
                 logging.info(f'Finished {MAX_TRAINING_STEPS} grad steps.')
                 stop_training = True

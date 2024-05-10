@@ -157,8 +157,9 @@ class Actor(torch.nn.Module):
         a = F.relu(self.l1(state))
         a = F.relu(self.l2(a))
         action = self.max_action * torch.tanh(self.l3(a))
-        action[0] = (action[0] + 1) / 2
-        action[1] = action[1] / 2
+        # print(f'action: {action}')
+        action[:, 0] = (action[:, 0] + 1) / 2
+        action[:, 1] = (action[:, 1] + 1) / 2 - 0.5
         return action
 
 class Critic(torch.nn.Module):

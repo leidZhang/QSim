@@ -154,7 +154,7 @@ class Trainer:
             # if self.steps % (SAVE_INTERVAL * 10) == 0:
             #     logging.info(f'Saving checkpoint...')
             torch.save(checkpoint, checkpoint_path)
-            if time.time() - self.timer >= 1800: # backup
+            if time.time() - self.timer >= 600: # backup
                 torch.save(checkpoint, backup_path)
                 # os.remove(self.last_backup_path)
                 # self.last_backup_path = backup_path

@@ -95,7 +95,7 @@ class QLabEnvironment(Env):
                 forward_reward = (self.prev_dist - norm_dist[dist_ix]) * 240  # Reward for moving closer to the waypoint
                 # print(f"MOVE FORWARD {self.prev_dist - norm_dist[dist_ix]}")
                 reward += forward_reward
-                # print(f"Forward reward: {forward_reward}")
+                print(f"Forward reward: {forward_reward}")
         self.prev_dist = norm_dist[dist_ix]  # Update the previous distance
 
         # Max boundary
@@ -105,20 +105,16 @@ class QLabEnvironment(Env):
             self.execute_action([0, 0])  # stop the car
 
         # # Boundary reward
-        # b05_reward = -max(0.0, 4 * (norm_dist[dist_ix] - 0.05))
-        # reward += b05_reward
-        # # print(f"0.05 Boundary Reward: {b05_reward}")
-        # b20_reward = -max(0.0, 4 * (norm_dist[dist_ix] - 0.2))
-        # reward += b20_reward
-        # print(f"0.20 Boundary Reward: {b20_reward}")
+        b05_reward = -max(0.0, 1 * (norm_dist[dist_ix] - 0.05))
+        reward += b05_reward
+        print(f"0.05 Boundary Reward: {b05_reward}")
+
+        b20_reward = -max(0.0, 16 * (norm_dist[dist_ix] - 0.2))
+        reward += b20_reward
+        print(f"0.20 Boundary Reward: {b20_reward}")
+
         # # Velocity reward
         # reward += (action[0] - 0.088) * 0.44
-
-        # # Velocity offset reward
-        # if action[0] <= 0.045:
-        #     v_reward = -max( 0, 0.045 - action[0])
-        #     # print(f"V-REWARD {v_reward}")
-        #     reward += v_reward
 
         # (no reward) Check if the command is not properly executed by the car
         if abs(action[0]) >= 0.045 and np.array_equal(self.start_orig, ego_state[:2]):

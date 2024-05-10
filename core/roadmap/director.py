@@ -54,15 +54,15 @@ class ACCDirector:
         self.qlabs.destroy_all_spawned_actors()
         QLabsRealTime().terminate_all_real_time_models()
         self.builder.build_floor()
-        self.builder.build_walls()
-        stop_signs: list = self.builder.build_stop_sign()
+        # self.builder.build_walls()
+        # stop_signs: list = self.builder.build_stop_sign()
         self.builder.build_crosswalk()
-        traffic_lights: list = self.builder.build_traffic_light()
+        # traffic_lights: list = self.builder.build_traffic_light()
         car: QLabsQCar = self.builder.build_car(position)
         QLabsRealTime().start_real_time_model(rtmodels.QCAR_STUDIO)
         return {
-            "stop_signs": stop_signs,
-            "traffic_lights": traffic_lights,
+            # "stop_signs": stop_signs,
+            # "traffic_lights": traffic_lights,
             "car": car
         }
 
