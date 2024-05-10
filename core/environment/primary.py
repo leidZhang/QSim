@@ -35,6 +35,7 @@ class QLabEnvironment(Env):
         self.goal: np.ndarray = self.waypoint_sequence[-1]
 
     def execute_action(self, action: list) -> None:
+        print(f"Action: {action}")
         action[0] = 0.074 * (action[0] + 1) / 2 # 0.08 is the max speed of the car
         action[1] = 0.5 * action[1] # 0.5 is the max steering angle of the car
         self.car.read_write_std(action[0], action[1])
@@ -71,8 +72,8 @@ class QLabEnvironment(Env):
             reward -= 0.5
     
         # deviate panelty
-        if norm_dist[dist_ix] >= 0.5:
-            reward -= 30.0
+        if norm_dist[dist_ix] >= 1.0:
+            reward -= 40.0
             done = True
             self.execute_action([0, 0]) # stop the car
     
