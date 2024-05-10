@@ -108,6 +108,23 @@ def load_checkpoint(model, mlruns_dir, run_id, map_location="cpu"):
     model.load_state_dict(checkpoint['model_state_dict'])
     return checkpoint["epoch"]
 
+
+# def load_checkpoint(model, mlruns_dir, run_id, map_location=None):
+#     # 动态设置 map_location，如果没有指定，则根据 cuda 的可用性自动设置
+#     if map_location is None:
+#         map_location = "cuda" if torch.cuda.is_available() else "cpu"
+#     path = Path(mlruns_dir[8:]) / "0" / run_id / "latest_checkpoint.pt"
+#
+#     try:
+#         logging.info(f"Loading checkpoint from {path} with map_location set to {map_location}")
+#         checkpoint = torch.load(path, map_location=map_location)
+#         model.load_state_dict(checkpoint['model_state_dict'])
+#         logging.info("Checkpoint loaded successfully and model state dict has been set.")
+#         return checkpoint["epoch"]
+#     except Exception as e:
+#         logging.exception('Error reading or setting the checkpoint.')
+#         return None
+
 def mlflow_load_checkpoint(model, run_id=None, optimizers=tuple(), artifact_path="checkpoints/latest.pt", map_location=None):
     with tempfile.TemporaryDirectory() as tmpdir:
         run_id = run_id if run_id is not None else mlflow.active_run().info.run_id
