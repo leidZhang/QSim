@@ -1,15 +1,17 @@
 import os
 from queue import Queue
 from typing import Tuple
-from collections import deque
+from collections import deque, defaultdict
 
 from core.policies.keyboard import KeyboardPolicy
 
 
 class OverrideDetector: 
     def __init__(self) -> None:
+        # signal buffer to store the last 10 signals
         self.signal_buffer: deque = deque(maxlen=10)
         self.signal_accumulator: float = 0.0
+        # signal difference buffer to store the last 5 signal differences
         self.diff_buffer_1: Queue = Queue(5)
         self.diff_buffer_2: Queue = Queue(5)
 
@@ -17,11 +19,28 @@ class OverrideDetector:
         self.diff_buffer_1 = buffer_2
         self.diff_buffer_2 = buffer_1
 
-    def get_signal(self, signal: float) -> None: 
+    def handle_diff_buffer(self, diff: int) -> None: 
+        if self.diff_buffer_1.full():
+            self.diff_buffer_1.get()
+        self.diff_buffer_1.put(diff)
+
+        diff_dict: dict = {}
+        while not self.diff_buffer_1.empty():
+            diff: int = self.diff_buffer_1.get()
+            diff_dict[diff] = diff_dict.get(diff, 0) + 1
+            self.diff_buffer_2.put(diff)
+
+    def get_signal(self, signal: int) -> None: 
+        # calculate the signal difference
+        left_signal: int = self.signal_buffer[0]
+        signal_diff: int = signal - left_signal
+        # push the signal to the signal buffer
         if len(self.signal_buffer) == 10: 
             self.signal_accumulator -= self.signal_buffer.pop()
         self.signal_buffer.appendleft(signal)
         self.signal_accumulator += signal
+        # push the signal difference to the diff buffer
+        self.handle_diff_buffer(signal_diff)
 
 def run_keyboard():
     policy: KeyboardPolicy = KeyboardPolicy(slow_to_zero=True)
