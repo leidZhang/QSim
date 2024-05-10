@@ -35,10 +35,8 @@ class QLabEnvironment(Env):
         self.goal: np.ndarray = self.waypoint_sequence[-1]
 
     def execute_action(self, action: list) -> None:
-        print(f"Action before: {action}")
         action[0] = 0.074 * (action[0] + 1) / 2 # 0.08 is the max speed of the car
         action[1] = 0.5 * action[1] # 0.5 is the max steering angle of the car
-        print(f"Action after: {action}")
         self.car.read_write_std(action[0], action[1])
         time.sleep(self.simulator.dt)
         self.last_action_time: float = time.perf_counter()
