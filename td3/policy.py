@@ -1,4 +1,4 @@
-import time
+import random
 import copy
 import torch
 import torch.nn as nn
@@ -40,20 +40,15 @@ class TD3Agent(torch.nn.Module):
 
         # add noise
         with torch.no_grad():
-            action = torch.from_numpy(np.array(action)).to(device)
-
-            noise_rate = min(1, 1 - data_size / 100_000)
-            rand_action = torch.rand(action.shape).to(device)
+            action = torch.from_numpy(np.array(action))
+            epsilon = max(1 - data_size / 1_000_000, 0.1)
+            # print(f'epsilon: {epsilon}')
+            rand_action = torch.rand(action.shape)
             rand_action[1] = rand_action[1] * 2 - 1
-            noise = (rand_action * noise_rate).to(device)
-            # print(f"E Before: {action[0]}")
-            action = (
-                (action * (1 - noise_rate)) + noise * noise_rate
-            ).clamp(-C.max_action, C.max_action)
-            # print(f"E After: {action[0]}")
+            if random.uniform(0, 1) < epsilon:
+                action = rand_action
             action = action.cpu().data.numpy().flatten()
-
-
+            # print(f'action: {action}')
         return action, {}
 
     def store_transition(self, state, action, reward, next_state, done):
@@ -156,7 +151,8 @@ class Actor(torch.nn.Module):
         a = F.relu(self.l1(state))
         a = F.relu(self.l2(a))
         action = self.max_action * torch.tanh(self.l3(a))
-        action[:,0] = (action[:,0] + 1) / 2
+        # print(f'action: {action}')
+        action[:, 0] = (action[:, 0] + 1) / 2
         return action
 
 class Critic(torch.nn.Module):
