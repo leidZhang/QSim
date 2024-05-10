@@ -41,10 +41,10 @@ class TD3Agent(torch.nn.Module):
 
         # add noise
         with torch.no_grad():
-            action = torch.from_numpy(np.array(action))
+            action = torch.from_numpy(np.array(action)).to(device)
 
             noise_rate = min(1, 1 - data_size / 100_000)
-            rand_action = torch.rand(action.shape)
+            rand_action = torch.rand(action.shape).to(device)
             rand_action[1] -= 0.5
             noise = (rand_action * noise_rate).to(device)
             # print(f"E Before: {action[0]}")
