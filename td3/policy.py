@@ -15,7 +15,6 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class TD3Agent(torch.nn.Module):
     def __init__(self, input_dir):
         super(TD3Agent, self).__init__()
-        # self.env = env
 
         self.buffer: SequenceRolloutBuffer = SequenceRolloutBuffer(
             MlflowEpisodeRepository(input_dir),
@@ -42,17 +41,15 @@ class TD3Agent(torch.nn.Module):
         with torch.no_grad():
             action = torch.from_numpy(np.array(action))
             epsilon = max(1 - data_size / 1_000_000, 0.1)
-            # print(f'epsilon: {epsilon}')
             rand_action = torch.rand(action.shape)
             rand_action[1] = rand_action[1] * 2 - 1
-            if random.uniform(0, 1) < epsilon:
+            if random.uniform(0, 1) > epsilon:
                 action = rand_action
             action = action.cpu().data.numpy().flatten()
-            # print(f'action: {action}')
         return action, {}
 
     def store_transition(self, state, action, reward, next_state, done):
-    # 将一个step的s a r s' done保存到 buffer
+    # step --> buffer
         self.buffer.add(state, action, reward, next_state, done)
 
     def learn(self, samples):
@@ -65,20 +62,15 @@ class TD3Agent(torch.nn.Module):
             next_states = torch.FloatTensor(samples['next_states']).to(device)
             dones = torch.FloatTensor(samples['dones']).to(device)
 
-            # print(f'ACTION TB: {actions[0]}')
-
             with torch.no_grad():
                 noise = (
                         torch.randn_like(actions) * 0.02
                 ).clamp(-0.05, 0.05).to(device)
-                # print(f"NOISE: {noise[0]}")
-                # print(f"T Before: {self.actor_target(next_states[0])}")
 
                 next_action = (
                         self.actor_target(next_states) + noise
                 ).clamp(-C.max_action, C.max_action)
 
-                # print(f"T After: {next_action[0]}")
                 # Compute the target Q value
                 target_Q1, target_Q2 = self.critic_target(next_states, next_action)
                 target_Q = torch.min(target_Q1, target_Q2)
@@ -87,8 +79,6 @@ class TD3Agent(torch.nn.Module):
             current_Q1, current_Q2 = self.critic(states, actions)
             # Compute critic loss
             critic_loss = F.mse_loss(current_Q1, target_Q) + F.mse_loss(current_Q2, target_Q)
-            # print("C-LOSS SHAPE")
-            # print(critic_loss.shape)
             # Optimize the critic
             self.critic_optimizer.zero_grad()
             critic_loss.backward()
@@ -99,8 +89,6 @@ class TD3Agent(torch.nn.Module):
 
                 # Compute actor loss
                 actor_loss = -self.critic.Q1(states, self.actor(states)).mean()
-                # print("A-LOSS SHAPE")
-                # print(actor_loss.shape)
                 # Optimize the actor
                 self.actor_optimizer.zero_grad()
                 actor_loss.backward()
@@ -151,8 +139,6 @@ class Actor(torch.nn.Module):
         a = F.relu(self.l1(state))
         a = F.relu(self.l2(a))
         action = self.max_action * torch.tanh(self.l3(a))
-        # print(f'action: {action}')
-        action[:, 0] = (action[:, 0] + 1) / 2
         return action
 
 class Critic(torch.nn.Module):

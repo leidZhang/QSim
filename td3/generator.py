@@ -61,7 +61,7 @@ class Generator:
         if type(self.policy) is not TD3Agent and saved_data >= PREFILL:
             logging.info("Prefill Complete, switching to main policy")
             train_repo: str = self.train_repository.artifact_uris
-            self.policy = TD3Agent(self.env, train_repo)
+            self.policy = TD3Agent(train_repo)
             # is_prefill_policy = False
 
         if type(self.policy) is TD3Agent and time.perf_counter() - self.last_load_time > 30:
