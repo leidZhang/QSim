@@ -35,9 +35,26 @@ class TD3Agent(torch.nn.Module):
 
         self.total_it = 0
 
-    def select_action(self, state):
+    def select_action(self, state, data_size):
         state = torch.FloatTensor(state.reshape(1, -1)).to(device)
-        return self.actor(state).detach().cpu().data.numpy().flatten(), {}
+        action = self.actor(state).detach().cpu().data.numpy().flatten()
+
+        # add noise
+        with torch.no_grad():
+            action = torch.from_numpy(np.array(action))
+
+            noise_rate = min(1, 1 - data_size / 100_000)
+            rand_action = torch.rand(action.shape)
+            noise = (rand_action * noise_rate).to(device)
+            # print(f"E Before: {action[0]}")
+            action = (
+                (action * (1 - noise_rate)) + noise * noise_rate
+            ).clamp(-C.max_action, C.max_action)
+            # print(f"E After: {action[0]}")
+            action = action.cpu().data.numpy().flatten()
+
+
+        return action, {}
 
     def store_transition(self, state, action, reward, next_state, done):
     # 将一个step的s a r s' done保存到 buffer
@@ -53,17 +70,20 @@ class TD3Agent(torch.nn.Module):
             next_states = torch.FloatTensor(samples['next_states']).to(device)
             dones = torch.FloatTensor(samples['dones']).to(device)
 
+            # print(f'ACTION TB: {actions[0]}')
+
             with torch.no_grad():
                 noise = (
-                        torch.randn_like(actions) * 0.2
-                ).clamp(-0.5, 0.5).to(device)
-                # print(f"NOISE: {noise}")
-                # print(f"Before: {self.actor_target(next_states)}")
+                        torch.randn_like(actions) * 0.02
+                ).clamp(-0.05, 0.05).to(device)
+                # print(f"NOISE: {noise[0]}")
+                # print(f"T Before: {self.actor_target(next_states[0])}")
 
                 next_action = (
                         self.actor_target(next_states) + noise
                 ).clamp(-C.max_action, C.max_action)
-                # print(f"After: {next_action}")
+
+                # print(f"T After: {next_action[0]}")
                 # Compute the target Q value
                 target_Q1, target_Q2 = self.critic_target(next_states, next_action)
                 target_Q = torch.min(target_Q1, target_Q2)
@@ -135,7 +155,7 @@ class Actor(torch.nn.Module):
         state = state.to(device)
         a = F.relu(self.l1(state))
         a = F.relu(self.l2(a))
-        return self.max_action * torch.tanh(self.l3(a))
+        return (self.max_action * torch.tanh(self.l3(a)) + 1) / 2
 
 class Critic(torch.nn.Module):
     def __init__(self):

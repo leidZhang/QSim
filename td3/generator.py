@@ -64,7 +64,7 @@ class Generator:
             self.policy = TD3Agent(self.env, train_repo)
             # is_prefill_policy = False
 
-        if type(self.policy) is TD3Agent and time.perf_counter() - self.last_load_time > 300:
+        if type(self.policy) is TD3Agent and time.perf_counter() - self.last_load_time > 30:
             model_step = load_checkpoint(self.policy, self.mlruns_dir, run_id)
             while model_step is None:
                 model_step = load_checkpoint(self.policy, self.mlruns_dir, run_id)
@@ -87,7 +87,8 @@ class Generator:
                 else:
                     action, metric = self.policy.select_action(observation['state'])
                 '''
-                action, metric = self.policy.select_action(observation['state'])
+                action, metric = self.policy.select_action(observation['state'], steps)
+
                 # filtered action = human and agent
                 next_observation, reward, done, info = self.env.step(action, metric)
                 self.policy.store_transition(observation['state'], action, reward, next_observation['state'], done)

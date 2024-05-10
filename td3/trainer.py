@@ -52,7 +52,7 @@ class Trainer:
     def resume_training(self, agent: TD3Agent, resume: bool) -> None:
         if resume and len(self.data) >= PREFILL:
             logging.info(f'Resuming training from {self.run_id}')
-            load_status: str = load_checkpoint(agent, self.mlruns_dir, self.run_id, map_location=self.device)
+            load_status: str = load_checkpoint(agent, self.mlruns_dir, self.run_id, map_location='cpu')
             logging.info(f'Trainer loaded model checkpoint status {load_status}')
             path_to_train_steps = f'{self.mlruns_dir[8:]}/0/{self.run_id}/metrics/train/steps'
             self.start_time = time.time()
@@ -151,7 +151,8 @@ class Trainer:
         backup_path = f"{self.mlruns_dir[8:]}/0/{self.run_id}/backup_{datetime.now().strftime('%Y%m%d%H%M%S')}.pt"
         # save model to disk
         try:
-            logging.info(f'Saving checkpoint...')
+            # if self.steps % (SAVE_INTERVAL * 10) == 0:
+            #     logging.info(f'Saving checkpoint...')
             torch.save(checkpoint, checkpoint_path)
             if time.time() - self.timer >= 1800: # backup
                 torch.save(checkpoint, backup_path)
