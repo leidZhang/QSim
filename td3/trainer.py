@@ -30,8 +30,6 @@ class Trainer:
         self.run_id: str = run_id
         self.device: str = device
         self.prefill_steps: int = prefill_steps
-        # base_env: TrainerEnvironment = TrainerEnvironment(dt=0.05, privileged=True)
-        # self.env: CollectionWrapper = CollectionWrapper(ActionRewardResetWrapper(base_env, qcar_pos, waypoints))
         self.timer: float = time.time()
         self.last_backup_path: str = ''
 
@@ -88,6 +86,7 @@ class Trainer:
     def update_agent_metrics(self, samples) -> None:
         metric_counter: int = 0
         if len(self.data) >= PREFILL:
+            self.steps += 1
             actor_loss, critic_loss = self.agent.learn(samples)
             if actor_loss is not None and critic_loss is not None:
                 self.metrics["actor_loss"] = actor_loss
@@ -150,8 +149,6 @@ class Trainer:
         backup_path = f"{self.mlruns_dir[8:]}/0/{self.run_id}/backup_{datetime.now().strftime('%Y%m%d%H%M%S')}.pt"
         # save model to disk
         try:
-            # if self.steps % (SAVE_INTERVAL * 10) == 0:
-            #     logging.info(f'Saving checkpoint...')
             torch.save(checkpoint, checkpoint_path)
             if time.time() - self.timer >= 600: # backup
                 torch.save(checkpoint, backup_path)
@@ -166,7 +163,6 @@ class Trainer:
     def execute(self, interrupt: bool = True) -> None: # execution function
         samples = self.data.file_to_batch()
         self.update_agent_metrics(samples)
-        self.steps += 1
         self.log_training_metrics()
         self.save_model(interrupt)
         if self.steps >= MAX_TRAINING_STEPS:

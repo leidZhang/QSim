@@ -145,29 +145,3 @@ class QLabSimulator(Simulator):
                 dtype=np.float32
             )
         ])
-
-
-# class PartialSimulator(QLabSimulator): 
-#     def render_map(self, qcar_pos: list, qcar_view: int = 6) -> None:
-#         """
-#         Renders the map for the simulation
-
-#         Parameters:
-#         - qcar_pos: list: The position of the car
-#         - qcar_view: int: The view of the car
-#         """
-#         director: PartialDirector = PartialDirector(self.qlabs)
-#         self.actors = director.build_map(qcar_pos)
-#         self.actors['car'][0].possess(qcar_view)
-#         self.set_regions()
-#         time.sleep(2) # cool down time for the car to spawn
-#         # self.init_actor_states()
-
-#     def reset_map(self, qcar_view: int = 6) -> None:
-#         """
-#         Resets the actors in the map
-
-#         Parameters:
-#         - qcar_view: int: The view of the car
-#         """
-#         self.init_actor_states()

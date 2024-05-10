@@ -136,34 +136,21 @@ class QLabEnvironment(Env):
 
         return observation, reward, info
 
-    def step(self, action: Union[np.ndarray, Queue], metrics: np.ndarray) -> tuple:
+    def step(self, action: np.ndarray, metrics: np.ndarray) -> tuple:
         """
         Step the simulation forward
 
         Parameters:
-        - action: Union[np.ndarray, Queue]: The action to take
+        - action: np.ndarray: The action to take
 
         Returns:
         - tuple: The observation, reward, done, and info
         """
         # initialize result variables
-        # observation: dict = {}
-        # reward: float = 0.0
-        # info: dict = {}
         episode_done: bool = self.episode_steps >= self.max_episode_steps
         observation, reward, info = self.init_step_params()
-        # if self.episode_steps >= self.max_episode_steps:
-        #     raise AnomalousEpisodeException("Anomalous episode detected!")
-
-        # get action from queue if action is a queue
-        if type(action) != np.ndarray and not action.empty():
-            action: np.ndarray = action.get()
-        # execute action and get image
-        # if action[0] <= 0.045:
-        #     print("low speed!")
+        # execute action 
         action = self.execute_action(action) # real qcar action
-        # print(f'action: {action}')
-        # front_image: np.ndarray = self.front_csi.await_image()
 
         if self.privileged:
             # get ground truth state
@@ -209,8 +196,6 @@ class QLabEnvironment(Env):
         self.deviate_steps = 0
 
         self.car: QCar = QCar()
-        # self.front_csi: VirtualCSICamera = VirtualCSICamera()
-        # front_image: np.ndarray = self.front_csi.await_image()
         # reset episode start time
         self.episode_start_time = time.time()
         # initialize result variables
@@ -236,15 +221,3 @@ class QLabEnvironment(Env):
         self.last_orig: np.ndarray = orig
         self.last_check_pos: float = time.time()
         return observation, reward, done, info
-
-
-# class GeneratorEnvironment(QLabEnvironment):
-#     def __init__(self, dt: float = 0.05, action_size: int = 2, privileged: bool = False) -> None:
-#         super().__init__(dt, action_size, privileged)
-#         self.simulator: FullSimulator = FullSimulator(dt)
-
-
-# class TrainerEnvironment(QLabEnvironment):
-#     def __init__(self, dt: float = 0.05, action_size: int = 2, privileged: bool = False) -> None:
-#         super().__init__(dt, action_size, privileged)
-#         self.simulator: PartialSimulator = PartialSimulator(dt)
