@@ -73,7 +73,7 @@ class QLabEnvironment(Env):
     
         # deviate panelty
         if norm_dist[dist_ix] >= 0.5:
-            reward -= 60.0
+            reward -= 30.0
             done = True
             self.execute_action([0, 0]) # stop the car
     

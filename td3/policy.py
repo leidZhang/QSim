@@ -8,10 +8,9 @@ import numpy as np
 import constants as C
 from torch.optim import Adam
 from core.data.data_TD3 import SequenceRolloutBuffer, MlflowEpisodeRepository
-from core.policies.network import NetworkPolicy
-
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 class TD3Agent(torch.nn.Module):
     def __init__(self, env, input_dir):

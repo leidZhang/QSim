@@ -13,9 +13,9 @@ class PartialDirector:
         self.builder: ACCMapBuilder = ACCMapBuilder(self.qlabs)
 
     def build_map(self, position: list) -> dict:
-        QLabsRealTime().terminate_all_real_time_models()
+        # QLabsRealTime().terminate_all_real_time_models()
         car: QLabsQCar = self.builder.build_car(position)
-        QLabsRealTime().start_real_time_model(rtmodels.QCAR_STUDIO)
+        # QLabsRealTime().start_real_time_model(rtmodels.QCAR_STUDIO)
         return {'car': car}
 
 
