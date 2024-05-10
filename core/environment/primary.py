@@ -38,7 +38,7 @@ class QLabEnvironment(Env):
     def execute_action(self, action: list) -> None:
         # if action[0] <= 0.045:
         #     action[0] += 0.045 - action[0]
-        action[0] = 0.074 * action[0] # 0.08 is the max speed of the car
+        action[0] = 0.08 * action[0] # 0.08 is the max speed of the car
         # print(f"Velocity: {action[0]}")
         action[1] = 0.5 * action[1] # 0.5 is the max steering angle of the car
 
@@ -66,7 +66,7 @@ class QLabEnvironment(Env):
     #         if self.prev_dist > norm_dist[dist_ix]:  # Check if distance to the next waypoint has decreased
     #             reward += action[0] * 3.0 # (self.prev_dist - norm_dist[dist_ix]) * 100  # Reward for moving closer to the waypoint
     #         elif self.prev_dist == norm_dist[dist_ix]:
-    #             reward -= 0.5  # todo range
+    #             reward -= 0.5
     #     self.prev_dist = norm_dist[dist_ix]  # Update the previous distance
     #
     #     if action[0] <= 0.045:
@@ -92,33 +92,33 @@ class QLabEnvironment(Env):
         # Forward reward
         if self.prev_dist != np.inf:
             if self.prev_dist > norm_dist[dist_ix]:  # Check if distance to the next waypoint has decreased
-                forward_reward = (self.prev_dist - norm_dist[dist_ix]) * 400  # Reward for moving closer to the waypoint
+                forward_reward = (self.prev_dist - norm_dist[dist_ix]) * 240  # Reward for moving closer to the waypoint
                 # print(f"MOVE FORWARD {self.prev_dist - norm_dist[dist_ix]}")
                 reward += forward_reward
                 # print(f"Forward reward: {forward_reward}")
         self.prev_dist = norm_dist[dist_ix]  # Update the previous distance
 
         # Max boundary
-        if norm_dist[dist_ix] >= 0.80:
+        if norm_dist[dist_ix] >= 0.40:
             reward -= 40.0
             done = True
             self.execute_action([0, 0])  # stop the car
 
-        # Boundary reward
-        b05_reward = -max(0.0, 4 * (norm_dist[dist_ix] - 0.05))
-        reward += b05_reward
-        # print(f"0.05 Boundary Reward: {b05_reward}")
-        b20_reward = -max(0.0, 4 * (norm_dist[dist_ix] - 0.2))
-        reward += b20_reward
+        # # Boundary reward
+        # b05_reward = -max(0.0, 4 * (norm_dist[dist_ix] - 0.05))
+        # reward += b05_reward
+        # # print(f"0.05 Boundary Reward: {b05_reward}")
+        # b20_reward = -max(0.0, 4 * (norm_dist[dist_ix] - 0.2))
+        # reward += b20_reward
         # print(f"0.20 Boundary Reward: {b20_reward}")
         # # Velocity reward
         # reward += (action[0] - 0.088) * 0.44
 
-        # Velocity offset reward
-        if action[0] <= 0.045:
-            v_reward = -max( 0, 0.045 - action[0])
-            # print(f"V-REWARD {v_reward}")
-            reward += v_reward
+        # # Velocity offset reward
+        # if action[0] <= 0.045:
+        #     v_reward = -max( 0, 0.045 - action[0])
+        #     # print(f"V-REWARD {v_reward}")
+        #     reward += v_reward
 
         # (no reward) Check if the command is not properly executed by the car
         if abs(action[0]) >= 0.045 and np.array_equal(self.start_orig, ego_state[:2]):
