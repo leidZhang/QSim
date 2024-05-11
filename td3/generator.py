@@ -11,7 +11,7 @@ from core.policies.network import NetworkPolicy
 from core.utils.tools import configure_logging, LogColorFormatter, load_checkpoint
 from core.utils.tools import mlflow_log_metrics
 from core.environment.wrappers import CollectionWrapper, ActionRewardResetWrapper
-from core.environment.primary import GeneratorEnvironment
+from core.environment.primary import QLabEnvironment
 from core.environment import AnomalousEpisodeException
 from core.data.data_TD3 import MlflowDataRepository, MlflowEpisodeRepository
 
@@ -32,7 +32,7 @@ class Generator:
         self.episode_num: int = 10000
         self.metrics_agg = defaultdict(list)
         self.mlruns_dir: str = mlruns_dir
-        base_env: GeneratorEnvironment = GeneratorEnvironment(dt=0.05, privileged=privileged)
+        base_env: QLabEnvironment = QLabEnvironment(dt=0.05, privileged=privileged)
         self.env: CollectionWrapper = CollectionWrapper(ActionRewardResetWrapper(base_env, qcar_pos, waypoints))
         self.train_repository: MlflowEpisodeRepository = MlflowEpisodeRepository(train_repo)
         self.eval_repository: MlflowEpisodeRepository = MlflowEpisodeRepository(eval_repo)
@@ -45,7 +45,7 @@ class Generator:
             _, steps, episodes = self.train_repository.count_steps()
             if saved_data >= PREFILL:
                 train_repo: str = self.train_repository.artifact_uris
-                self.policy = TD3Agent(self.env, train_repo)
+                self.policy = TD3Agent(train_repo)
                 status: bool = load_checkpoint(self.policy, self.mlruns_dir, run_id, map_location='cpu')
                 logging.info(f"Generator model checkpoint load status: {status}")
             else: 
@@ -61,7 +61,7 @@ class Generator:
         if type(self.policy) is not TD3Agent and saved_data >= PREFILL:
             logging.info("Prefill Complete, switching to main policy")
             train_repo: str = self.train_repository.artifact_uris
-            self.policy = TD3Agent(self.env, train_repo)
+            self.policy = TD3Agent(train_repo)
             # is_prefill_policy = False
 
         if type(self.policy) is TD3Agent and time.perf_counter() - self.last_load_time > 30:
