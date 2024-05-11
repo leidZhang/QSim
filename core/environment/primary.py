@@ -35,7 +35,7 @@ class QLabEnvironment(Env):
         self.goal: np.ndarray = self.waypoint_sequence[-1]
 
     def execute_action(self, action: list) -> None:
-        print(f"Action: {action}")
+        # print(f"Action: {action}")
         action[0] = 0.074 * (action[0] + 1) / 2 # 0.08 is the max speed of the car
         action[1] = 0.5 * action[1] # 0.5 is the max steering angle of the car
         self.car.read_write_std(action[0], action[1])
@@ -63,13 +63,12 @@ class QLabEnvironment(Env):
         # Forward reward
         if self.prev_dist != np.inf:
             if abs(self.prev_dist - norm_dist[dist_ix]) > 0.0003:  # Check if distance to the next waypoint has decreased
-                reward += action[0] * 3.0 # (self.prev_dist - norm_dist[dist_ix]) * 100  # Reward for moving closer to the waypoint
-            elif self.prev_dist == norm_dist[dist_ix]:
-                reward -= 0.5
+                forward_reward = action[0] * 6.0
+                # print(f"FORWARD REWARD {forward_reward}")
+                reward += forward_reward  # (self.prev_dist - norm_dist[dist_ix]) * 100  # Reward for moving closer to the waypoint
+            else:
+                reward -= 0.6
         self.prev_dist = norm_dist[dist_ix]  # Update the previous distance
-    
-        if action[0] <= 0.045:
-            reward -= 0.5
     
         # deviate panelty
         if norm_dist[dist_ix] >= 1.0:
@@ -78,10 +77,11 @@ class QLabEnvironment(Env):
             self.execute_action([0, 0]) # stop the car
     
         if (np.linalg.norm(self.goal - ego_state[:2]) < GOAL_THRESHOLD and len(self.next_waypoints) < 201):
-            reward += 30.0
+            # reward += 30.0
             done = True # stop episode after this step
             self.execute_action([0, 0]) # stop the car
-    
+
+        # print(f"Reward: {reward}")
         return reward, done
 
     # def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state, dist_ix) -> tuple:
