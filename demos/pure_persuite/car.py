@@ -75,15 +75,16 @@ class PPCar:
 
 
 class MPCar:
-    def transmit_action(action: np.ndarray, shm_name: str, lock):
+    def transmit_action(self, action: np.ndarray, shm_name: str, lock) -> None:
         with lock:
             shm = SharedMemory(name=shm_name)
-            action_shared: np.ndarray = np.ndarray(action.shape, dtype=action.dtype, buffer=shm.buf)
-            action_shared[:] = action[:]
+            action_shared: np.ndarray = np.ndarray((2,), dtype=np.float64, buffer=shm.buf)
+            np.copyto(action_shared, action)
             shm.close()
 
+
 class PPCarMP(PPCar, MPCar):
-    def execute(self, shm_name) -> None:
+    def execute(self, shm_name, lock) -> None:
         super().execute()
         action: np.ndarray = np.array([self.throttle, self.steering])
-        self.transmit_action(action, shm_name)
+        self.transmit_action(action, shm_name, lock)
