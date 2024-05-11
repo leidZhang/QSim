@@ -54,7 +54,7 @@ class TD3Agent(torch.nn.Module):
             # print(f"E After: {action[0]}")
             action = action.cpu().data.numpy().flatten()
 
-
+        print(f"Action: {action}")
         return action, {}
 
     def store_transition(self, state, action, reward, next_state, done):

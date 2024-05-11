@@ -27,4 +27,4 @@ DEFAULT_MAX_STEPS: int = 400
 batch_size = 128
 PREFILL = 128
 # RUN_ID = ''
-RUN_ID = 'fc86971ff71743a2ac5eb174b280841c'
+RUN_ID = ''
