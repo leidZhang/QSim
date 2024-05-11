@@ -13,7 +13,7 @@ class PurePursuitPolicy:
 
     def __call__(self, obs):
         # action = np.array([0.074, 0.0]) #v, steer
-        action = np.array([0.9, 0.0])  # v, steer
+        action = np.array([1, 0.0])  # v, steer
         metrics = {}
 
         state = np.zeros((6,), dtype=np.float32) #obs["state"]
@@ -81,7 +81,7 @@ class PurePursuitNetworkPolicy(NetworkPolicy):
         '''act, recurrent_state = self.model.inference(obs_model, self.recurrent_state)
         self.recurrent_state = recurrent_state
 
-        action_noise = (0.9999**steps) * np.random.normal(loc=np.array([0.05]), scale=np.array([0.2])) 
+        action_noise = (0.9999**steps) * np.random.normal(loc=np.array([0.05]), scale=np.array([0.2]))
         action[0] = np.clip(np.clip(act, self.mins, self.maxs) + action_noise, self.mins, self.maxs)[0]'''
 
         state = np.zeros((6,)) #obs["state"]
