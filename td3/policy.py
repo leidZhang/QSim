@@ -47,11 +47,9 @@ class TD3Agent(torch.nn.Module):
             action = torch.from_numpy(np.array(action))
             epsilon = max(1 - data_size / 400_000, 0.2)
             rand_action = torch.rand(action.shape)
-<<<<<<< HEAD
+
             rand_action[1] = rand_action[1] * 2 - 1
-=======
             rand_action = rand_action * 2 - 1
->>>>>>> 0b3c207c3413f600c08f75cf47d8ebe2e6ae9f9a
             if random.uniform(0, 1) < epsilon:
                 action = rand_action
             action = action.cpu().data.numpy().flatten()
