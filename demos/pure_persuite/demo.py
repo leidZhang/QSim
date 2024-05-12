@@ -88,7 +88,7 @@ def run_observer(shm_name: str, step_event, activate_event, stop_event, episode_
     qlabs.open("localhost")
     director: ACCDirector = ACCDirector(qlabs)
     shm = SharedMemory(name=shm_name)
-    data_shared: np.ndarray = np.ndarray((4,), dtype=np.float64, buffer=shm.buf)
+    data_shared: np.ndarray = np.ndarray((2,), dtype=np.float64, buffer=shm.buf)
 
     print("Preparing map...")
     init_pos, _ = prepare_map_info(node_id=24)
@@ -102,9 +102,8 @@ def run_observer(shm_name: str, step_event, activate_event, stop_event, episode_
         episode_event.set()
         print("\nGenerating QCar...")
         activate_event.wait()
-        print("\nQCar generated!")
         while not stop_event.is_set():
-            if episode_step >= 800:
+            if episode_step >= max_step:
                 stop_event.set()
                 break
 
@@ -115,9 +114,8 @@ def run_observer(shm_name: str, step_event, activate_event, stop_event, episode_
                 step_event.clear()
                 episode_step += 1
         print(f"\nEpisode {i+1} complete with {episode_step} steps")
-        np.copyto(data_shared, np.zeros(4))
+        np.copyto(data_shared, np.zeros(2))
         stop_event.clear()
-        step_event.clear()
 
     qlabs.close()
     shm.close()

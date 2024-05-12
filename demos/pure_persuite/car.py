@@ -39,7 +39,7 @@ class PPMonitor:
         self.observation["waypoints"] = np.matmul(self.next_waypoints[:200] - orig, rot)
         return orig
 
-    def update(self) -> np.ndarray:
+    def update(self) -> None:
         orig, yaw, rot = self.get_state()
         waypoints: np.ndarray = np.roll(
             self.waypoint_sequence,
@@ -50,7 +50,6 @@ class PPMonitor:
         self.current_waypoint_index = (self.current_waypoint_index + dist_ix) % self.waypoint_sequence.shape[0]
         self.next_waypoints = self.next_waypoints[dist_ix:]  # clear pasted waypoints
         self.observation['waypoints'] = np.matmul(self.next_waypoints[:200] - orig, rot)
-        return orig
 
 
 class PPCar:
@@ -74,22 +73,21 @@ class PPCar:
         self.throttle: float = 0.08 * action[0]
         self.steering: float = 0.5 * action[1]
         self.running_gear.read_write_std(throttle=self.throttle, steering=self.steering)
-        return self.monitor.update()
+        self.monitor.update()
 
 
 class MPCar:
-    def transmit_action(self, orig: np.ndarray, action: np.ndarray, shm_name: str, step_event) -> None:
+    def transmit_action(self, action: np.ndarray, shm_name: str, step_event) -> None:
         if not step_event.is_set():
             shm = SharedMemory(name=shm_name)
-            data_shared: np.ndarray = np.ndarray((4,), dtype=np.float64, buffer=shm.buf)
-            data = np.concatenate([action, orig])
-            np.copyto(data_shared, data)
+            data_shared: np.ndarray = np.ndarray((2,), dtype=np.float64, buffer=shm.buf)
+            np.copyto(data_shared, action)
             step_event.set()
             shm.close()
 
 
 class PPCarMP(PPCar, MPCar):
     def execute(self, shm_name, step_event) -> None:
-        orig: np.ndarray = super().execute()
+        super().execute()
         action: np.ndarray = np.array([self.throttle, self.steering])
-        self.transmit_action(orig, action, shm_name, step_event)
+        self.transmit_action(action, shm_name, step_event)
