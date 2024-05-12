@@ -6,7 +6,7 @@ from collections import deque, defaultdict
 from core.policies.keyboard import KeyboardPolicy
 
 
-class OverrideDetector: 
+class OverrideDetector:
     def __init__(self) -> None:
         # signal buffer to store the last 10 signals
         self.signal_buffer: deque = deque(maxlen=10)
@@ -21,8 +21,8 @@ class OverrideDetector:
         self.diff_buffer_1 = buffer_2
         self.diff_buffer_2 = buffer_1
 
-    def handle_diff_buffer(self, diff: float) -> dict: 
-        diff_dict: dict = {}        
+    def handle_diff_buffer(self, diff: float) -> dict:
+        diff_dict: dict = {}
         if self.diff_buffer_1.full():
             pop_diff = self.diff_buffer_1.get()
             self.diff_accumulator -= pop_diff
@@ -38,18 +38,18 @@ class OverrideDetector:
 
         return diff_dict
 
-    def get_signal(self, signal: float) -> dict: 
+    def get_signal(self, signal: float) -> dict:
         # calculate the signal difference
         left_signal: int = self.signal_buffer[0]
         signal_diff: int = signal - left_signal
         # push the signal to the signal buffer
-        if len(self.signal_buffer) == 10: 
+        if len(self.signal_buffer) == 10:
             self.signal_accumulator -= self.signal_buffer.pop()
         self.signal_buffer.appendleft(signal)
         self.signal_accumulator += signal
         # push the signal difference to the diff buffer
         return self.handle_diff_buffer(signal_diff)
-    
+
     def is_dominate(self, diff: int, diff_dict: dict) -> bool:
         queue_size: int = max(self.diff_buffer_1.qsize(), self.diff_buffer_2.qsize())
         if diff in diff_dict.keys():
@@ -60,9 +60,9 @@ class OverrideDetector:
         is_override: bool = False
         diff_dict: dict = self.get_signal(signal)
         # check if the difference is significant
-        if signal > 0: 
+        if signal > 0:
             is_override: bool = self.is_dominate(-5.0, diff_dict)
-        elif signal < 0: 
+        elif signal < 0:
             is_override: bool = self.is_dominate(+5.0, diff_dict)
         else:
             is_override: bool = False

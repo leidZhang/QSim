@@ -1,6 +1,7 @@
-import os
+import sys
 import time
-from multiprocessing import Lock, Process
+from typing import List
+from multiprocessing import Lock, Process, Event
 from multiprocessing.shared_memory import SharedMemory
 
 import numpy as np
@@ -8,6 +9,7 @@ import numpy as np
 from qvl.qlabs import QuanserInteractiveLabs
 
 from core.roadmap import ACCDirector
+from main import check_process
 from demos.override_demo import prepare_map_info
 from .car import PPCar, PPCarMP
 
@@ -45,43 +47,68 @@ def run_pure_pursuite() -> None:
 
     qlabs.close()
 
-def run_subject(shm_name: str, lock) -> None:
+def run_subject(shm_name: str, lock, activate_event, stop_event) -> None:
     qlabs: QuanserInteractiveLabs = QuanserInteractiveLabs()
     qlabs.open("localhost")
     director: ACCDirector = ACCDirector(qlabs)
 
+    print("Preparing map...")
     init_pos, waypoint_sequence = prepare_map_info(node_id=24)
     actors: dict = director.build_map(init_pos)
+    print("Generating qcar...")
     generate_car(actors["car"])
+
     car: PPCarMP = PPCarMP(qlabs=qlabs, waypoint_sequence=waypoint_sequence)
-    car.setup()
+    car.setup() # get the initial observation
+    activate_event.set()
 
     done = False
     while not done:
         try:
             car.execute(shm_name, lock)
         except IndexError:
-            print("Reached the goal!")
             car.halt_car()
+            stop_event.set()
             done = True
 
     qlabs.close()
 
-def run_observer(shm_name: str, lock) -> None:
+def run_observer(shm_name: str, lock, activate_event, stop_event) -> None:
     shm = SharedMemory(name=shm_name)
     action_shared: np.ndarray = np.ndarray((2,), dtype=np.float64, buffer=shm.buf)
+    activate_event.wait()
     while True:
+        if stop_event.is_set():
+            break
+
         with lock:
-            action: np.ndarray = action_shared.copy()
-        print(action)
+            action = action_shared.copy()
+            sys.stdout.write(f'\rAction: {action}{" " * 10}')
+            sys.stdout.flush()
+
 
 def start_test_mp() -> None:
+    processes: List[Process] = []
     lock = Lock()
+    activate_event = Event()
+    stop_event= Event()
+
     shm_name = "test"
     shm = SharedMemory(name=shm_name, create=True, size=16)
-    p1 = Process(target=run_subject, args=(shm_name, lock))
-    p2 = Process(target=run_observer, args=(shm_name, lock))
-    p1.start()
-    p2.start()
-    while True:
-        time.sleep(100)
+    p1: Process = Process(
+        target=run_subject,
+        args=(shm_name, lock, activate_event, stop_event)
+    )
+    p2: Process = Process(
+        target=run_observer,
+        args=(shm_name, lock, activate_event, stop_event)
+    )
+
+    processes.append(p1)
+    processes.append(p2)
+    for p in processes:
+        p.start()
+
+    while not stop_event.is_set():
+        time.sleep(1)
+    print("\nEpisode complete!")

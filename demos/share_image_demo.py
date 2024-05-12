@@ -11,7 +11,7 @@ def run_camera_process(shm_name, lock, frame_shape, frame_dtype):
     img_shared = np.ndarray(frame_shape, dtype=frame_dtype, buffer=shm.buf)
     while True:
         _, img = cap.read()
-        img = cv2.flip(img, 1)
+        # img = cv2.flip(img, 1)
         with lock:
             np.copyto(img_shared, img)
 
