@@ -1,9 +1,10 @@
-from core.environment import QLabEnvironment, AnomalousEpisodeException
+from core.environment import AnomalousEpisodeException
 from core.policies.keyboard import KeyboardPolicy
+from core.environment.primary import QLabEnvironment
 
 from .override_demo import prepare_map_info
 
-def limit_action(action, limit):
+def limit_action(action, limit): 
     if action >= limit:
         action = limit
     elif action <= -limit:
@@ -23,7 +24,7 @@ def run_reward_func_demo():
         observation, reward, done, info = simulator.reset()
         # print(done)
         while not done:
-            try:
+            try: 
                 action = controller.execute()
                 # convert to qcar actions
                 action[0] = limit_action(action[0], 0.13)
@@ -35,7 +36,7 @@ def run_reward_func_demo():
                 flag = False
                 print(e)
                 break
-
+                
         # print(flag)
         if flag:
             print(f"Episode {episode} completed with reward: {episode_reward}")

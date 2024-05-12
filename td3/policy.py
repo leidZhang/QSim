@@ -36,17 +36,32 @@ class TD3Agent(torch.nn.Module):
     def select_action(self, state, data_size):
         state = torch.FloatTensor(state.reshape(1, -1)).to(device)
         action = self.actor(state).detach().cpu().data.numpy().flatten()
+        '''
+        action type #1: <class 'numpy.ndarray'>
+        action shape #1: (1,)
+        '''
+
 
         # add noise
         with torch.no_grad():
             action = torch.from_numpy(np.array(action))
-            epsilon = max(1 - data_size / 1_000_000, 0.1)
+            epsilon = max(1 - data_size / 400_000, 0.2)
             rand_action = torch.rand(action.shape)
+<<<<<<< HEAD
             rand_action[1] = rand_action[1] * 2 - 1
+=======
+            rand_action = rand_action * 2 - 1
+>>>>>>> 0b3c207c3413f600c08f75cf47d8ebe2e6ae9f9a
             if random.uniform(0, 1) < epsilon:
                 action = rand_action
             action = action.cpu().data.numpy().flatten()
-        return action, {}
+
+        action = np.concatenate((np.array([C.action_v]), action), axis=0)
+        '''
+        action type #2: <class 'numpy.ndarray'>
+        action shape #2: (2,)
+        '''
+        return action, {}  # action: np array
 
     def store_transition(self, state, action, reward, next_state, done):
     # step --> buffer
@@ -62,17 +77,48 @@ class TD3Agent(torch.nn.Module):
             next_states = torch.FloatTensor(samples['next_states']).to(device)
             dones = torch.FloatTensor(samples['dones']).to(device)
 
+            # print(f'actions: {actions}')
+            # print(f'shape of action: {actions.shape}')
+            # print(f'type of action: {type(actions)}')
+            '''
+            shape of actions: torch.Size([40, 2])
+            type of actions: <class 'torch.Tensor'>
+            actions: tensor([[ 7.6000e-02, -7.9606e-02],
+                             [ 7.6000e-02,  8.2937e-06],
+            '''
+
+            # with torch.no_grad():
+            #     noise = (
+            #             torch.randn_like(actions) * 0.02
+            #     ).clamp(-0.05, 0.05).to(device)
+            #     print(f'noise: {noise}')
+            #     print(f'shape of noise: {noise.shape}')
+            #
+            #     next_action = (
+            #             self.actor_target(next_states) + noise
+            #     ).clamp(-C.max_action, C.max_action)
+            #     print(f'next_action: {next_action}')
+            #     print(f'shape of next_action: {next_action.shape}')
+
             with torch.no_grad():
-                noise = (
-                        torch.randn_like(actions) * 0.02
-                ).clamp(-0.05, 0.05).to(device)
+                noise_yaw = (
+                        torch.randn_like(actions[:, 0].unsqueeze(1)) * 0.1
+                ).clamp(-0.25, 0.25).to(device)
+                # print(f'shape of noise_yaw: {noise_yaw.shape}')
 
-                next_action = (
-                        self.actor_target(next_states) + noise
-                ).clamp(-C.max_action, C.max_action)
+                next_actions_yaw = (
+                        self.actor_target(next_states) + noise_yaw
+                ).clamp(-0.5, 0.5)
+                # print(f'shape of next_actions_yaw: {next_actions_yaw.shape}')
+                # print(f'shape of next_action_yaw: {next_actions_yaw.shape}')
 
+                next_actions = torch.cat([actions[:, 0].unsqueeze(1), next_actions_yaw], 1)
+                # print(f'shape of next_action: {next_actions.shape}')
+
+
+                # action = np.concatenate((np.array([C.action_v]), action), axis=0)
                 # Compute the target Q value
-                target_Q1, target_Q2 = self.critic_target(next_states, next_action)
+                target_Q1, target_Q2 = self.critic_target(next_states, next_actions)
                 target_Q = torch.min(target_Q1, target_Q2)
                 target_Q = rewards.unsqueeze(1) + dones.unsqueeze(1) * C.discount * target_Q
             # Get current Q estimates
@@ -87,8 +133,12 @@ class TD3Agent(torch.nn.Module):
             # Delayed policy updates
             if self.total_it % C.policy_freq == 0:
 
+                actions_v = torch.full((C.batch_size, 1), C.action_v)
+                actions_yaw = self.actor(states)
+                actions = torch.cat((actions_v, actions_yaw), dim=1)
+
                 # Compute actor loss
-                actor_loss = -self.critic.Q1(states, self.actor(states)).mean()
+                actor_loss = -self.critic.Q1(states, actions).mean()
                 # Optimize the actor
                 self.actor_optimizer.zero_grad()
                 actor_loss.backward()
@@ -130,7 +180,8 @@ class Actor(torch.nn.Module):
 
         self.l1 = nn.Linear(8, 256) # (6, 256)
         self.l2 = nn.Linear(256, 256)
-        self.l3 = nn.Linear(256, C.action_dim)
+        # self.l3 = nn.Linear(256, C.action_dim)
+        self.l3 = nn.Linear(256, 1)
 
         self.max_action = max_action
 
@@ -139,6 +190,15 @@ class Actor(torch.nn.Module):
         a = F.relu(self.l1(state))
         a = F.relu(self.l2(a))
         action = self.max_action * torch.tanh(self.l3(a))
+        '''
+        action: tensor([[-0.0273]], grad_fn=<MulBackward0>)
+        action type #0: <class 'torch.Tensor'>
+        action shape #0: torch.Size([1, 1])
+        '''
+
+        # print(f'action: {action}')
+        # print(f'action type #0: {type(action)}')
+        # print(f'action shape #0: {action.shape}')
         return action
 
 class Critic(torch.nn.Module):
@@ -146,11 +206,13 @@ class Critic(torch.nn.Module):
         super(Critic, self).__init__()
 
         self.l1 = nn.Linear(C.state_dim + C.action_dim, 256)
+        # self.l1 = nn.Linear(C.state_dim + 1, 256)
         self.l2 = nn.Linear(256, 256)
         self.l3 = nn.Linear(256, 1)
 
         # Q2 architecture
         self.l4 = nn.Linear(C.state_dim + C.action_dim, 256)
+        # self.l4 = nn.Linear(C.state_dim + 1, 256)
         self.l5 = nn.Linear(256, 256)
         self.l6 = nn.Linear(256, 1)
 

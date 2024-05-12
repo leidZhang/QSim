@@ -87,7 +87,9 @@ def start_trainer(
 def prepare_map_info(node_id: int = 24) -> tuple:
     roadmap: ACCRoadMap = ACCRoadMap()
     x_pos, y_pose, angle = roadmap.nodes[node_id].pose
-    waypoint_sequence = roadmap.generate_path([10, 4, 14, 20, 22, 10])
+    # waypoint_sequence = roadmap.generate_path([10, 4, 14, 20, 22, 10])
+
+    waypoint_sequence = roadmap.generate_path([4, 14, 20])
     return [x_pos, y_pose, angle], waypoint_sequence
 
 def start_system(resume_run_id: str, init_pos: list, waypoints: np.ndarray) -> None:
@@ -160,5 +162,5 @@ def start_system(resume_run_id: str, init_pos: list, waypoints: np.ndarray) -> N
 if __name__ == '__main__':
     # fill with file name of your experiment, set to '' to start new experiment
     resume_run_id = RUN_ID
-    init_pos, waypoints = prepare_map_info(node_id=24)
+    init_pos, waypoints = prepare_map_info(node_id=4)
     start_system(resume_run_id=resume_run_id, init_pos=init_pos, waypoints=waypoints)

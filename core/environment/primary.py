@@ -10,7 +10,7 @@ from pal.products.qcar import QCar
 from core.simulator import QLabSimulator
 from core.sensor import VirtualCSICamera
 from .exception import AnomalousEpisodeException
-from constants import MAX_LOOKAHEAD_INDICES, GOAL_THRESHOLD, DEFAULT_MAX_STEPS, MAX_TRAINING_STEPS, max_action
+from constants import MAX_LOOKAHEAD_INDICES, GOAL_THRESHOLD, DEFAULT_MAX_STEPS, MAX_TRAINING_STEPS, max_action, action_v
 
 
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -34,10 +34,14 @@ class QLabEnvironment(Env):
         self.waypoint_sequence: np.ndarray = sequence
         self.goal: np.ndarray = self.waypoint_sequence[-1]
 
-    def execute_action(self, action: list) -> None:
-        # print(f"Action: {action}")
-        action[0] = 0.074 * (action[0] + 1) / 2 # 0.08 is the max speed of the car
-        action[1] = 0.5 * action[1] # 0.5 is the max steering angle of the car
+    def execute_action(self, action: np.ndarray) -> np.ndarray:
+        '''
+        action type #3: <class 'numpy.ndarray'>
+        action shape #3: (2,)
+        '''
+        action[0] = action_v * (action[0] + 1) / 2 # 0.08 is the max speed of the car
+        action[1] = 0.5 * action[1]  # 0.5 is the max steering angle of the car
+
         self.car.read_write_std(action[0], action[1])
         time.sleep(self.simulator.dt)
         self.last_action_time: float = time.perf_counter()
@@ -52,81 +56,117 @@ class QLabEnvironment(Env):
             [-np.sin(yaw), np.cos(yaw)]
         ])
         return orig, yaw, rot
-    
-    def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state, dist_ix) -> tuple:
-        if abs(action[0]) >= 0.045 and np.array_equal(self.start_orig, ego_state[:2]):
-            raise AnomalousEpisodeException("Anomalous episode detected!")
-
-        done: bool = False
-        reward: float = 0.0
-    
-        # Forward reward
-        if self.prev_dist != np.inf:
-            if abs(self.prev_dist - norm_dist[dist_ix]) > 0.0003:  # Check if distance to the next waypoint has decreased
-                forward_reward = action[0] * 6.0
-                # print(f"FORWARD REWARD {forward_reward}")
-                reward += forward_reward  # (self.prev_dist - norm_dist[dist_ix]) * 100  # Reward for moving closer to the waypoint
-            else:
-                reward -= 0.6
-        self.prev_dist = norm_dist[dist_ix]  # Update the previous distance
-    
-        # deviate panelty
-        if norm_dist[dist_ix] >= 1.0:
-            reward -= 40.0
-            done = True
-            self.execute_action([0, 0]) # stop the car
-    
-        if (np.linalg.norm(self.goal - ego_state[:2]) < GOAL_THRESHOLD and len(self.next_waypoints) < 201):
-            # reward += 30.0
-            done = True # stop episode after this step
-            self.execute_action([0, 0]) # stop the car
-
-        # print(f"Reward: {reward}")
-        return reward, done
 
     # def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state, dist_ix) -> tuple:
     #     done: bool = False
     #     reward: float = 0.0
-
+    #
     #     # Forward reward
     #     if self.prev_dist != np.inf:
     #         if self.prev_dist > norm_dist[dist_ix]:  # Check if distance to the next waypoint has decreased
-    #             forward_reward = (self.prev_dist - norm_dist[dist_ix]) * 240  # Reward for moving closer to the waypoint
-    #             # print(f"MOVE FORWARD {self.prev_dist - norm_dist[dist_ix]}")
-    #             reward += forward_reward
-    #             # print(f"Forward reward: {forward_reward}")
+    #             reward += action[0] * 3.0 # (self.prev_dist - norm_dist[dist_ix]) * 100  # Reward for moving closer to the waypoint
+    #         elif self.prev_dist == norm_dist[dist_ix]:
+    #             reward -= 0.5
     #     self.prev_dist = norm_dist[dist_ix]  # Update the previous distance
 
     #     # Max boundary
     #     if norm_dist[dist_ix] >= 0.40:
     #         reward -= 40.0
     #         done = True
-    #         self.execute_action([0, 0])  # stop the car
-
-    #     # # Boundary reward
-    #     # b05_reward = -max(0.0, 4 * (norm_dist[dist_ix] - 0.05))
-    #     # reward += b05_reward
-    #     # # print(f"0.05 Boundary Reward: {b05_reward}")
-    #     # b20_reward = -max(0.0, 4 * (norm_dist[dist_ix] - 0.2))
-    #     # reward += b20_reward
-    #     # print(f"0.20 Boundary Reward: {b20_reward}")
-    #     # # Velocity reward
-    #     # reward += (action[0] - 0.088) * 0.44
-
-    #     # # Velocity offset reward
-    #     # if action[0] <= 0.045:
-    #     #     v_reward = -max( 0, 0.045 - action[0])
-    #     #     # print(f"V-REWARD {v_reward}")
-    #     #     reward += v_reward
-
-    #     # (no reward) Check if the command is not properly executed by the car
-    #     if abs(action[0]) >= 0.045 and np.array_equal(self.start_orig, ego_state[:2]):
-    #         raise AnomalousEpisodeException("Anomalous episode detected!")
-
-    #     # (no reward) Reach goal
+    #         self.execute_action([0, 0]) # stop the car
+    #
     #     if (np.linalg.norm(self.goal - ego_state[:2]) < GOAL_THRESHOLD and len(self.next_waypoints) < 201):
-    #         done = True  # stop episode after this step
-    #         self.execute_action([0, 0])  # stop the car
+    #         reward += 30.0
+    #         done = True # stop episode after this step
+    #         self.execute_action([0, 0]) # stop the car
+    #
+    #     return reward, done
+
+    def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state, dist_ix) -> tuple:
+        done: bool = False
+        reward: float = 0.0
+
+        # Forward reward
+        if self.prev_dist != np.inf and self.prev_dist - norm_dist[dist_ix] >= -0.01:  # Check if distance to the next waypoint has decreased:
+
+            # FORWARD_REWARD V1
+            pos = self.current_waypoint_index
+            region_reward = [1, 4, 2]
+            waypoints_range = [(0, 332), (333, 446), (447, 625)]
+
+            for i, (start_point, end_point) in enumerate(waypoints_range):
+                if start_point <= pos <= end_point:
+                    forward_reward = region_reward[i]
+
+                    # print(f"FORWARD_REWARD REWARD {forward_reward}")
+                    reward += forward_reward
+
+
+            # FORWARD_REWARD V2
+            # forward_reward = action[0] * 24.0
+            # print(f"FORWARD REWARD {forward_reward}")
+            # reward += forward_reward
+
+
+            # FORWARD_REWARD V3
+            # pos = self.current_waypoint_index
+            #
+            # rewards_total = [40, 60, 40]
+            #
+            # waypoints_range = [(0, 332), (333, 446), (447, 625)]
+            #
+            # for i, (start_point, end_point) in enumerate(waypoints_range):
+            #     if start_point <= pos <= end_point:
+            #         # print(f'start_point: {start_point}, end_point: {end_point}, pos: {pos}')
+            #
+            #         relative_pos = pos - start_point
+            #         # print(f'relative_pos: {relative_pos}')
+            #
+            #         down_term_list = np.arange(0, end_point - start_point) ** 2
+            #         # print(f'down_term: {down_term}')
+            #
+            #         down_term = np.sum(down_term_list)
+            #         # print(f'down_term: {down_term}')
+            #
+            #         up_term = relative_pos ** 2
+            #         # print(f'up_term: {up_term}')
+            #
+            #         r_rate = up_term / down_term
+            #         # print(f'r_rate: {r_rate}')
+            #
+            #         forward_reward = r_rate * rewards_total[i] * 8
+            #         print(f"FORWARD REWARD {forward_reward}")
+            #
+            #         reward += forward_reward
+            #         break
+
+        self.prev_dist = norm_dist[dist_ix]  # Update the previous distance
+
+        # Max boundary
+        if norm_dist[dist_ix] >= 0.40:
+            max_boundary_reward = -80
+            # print(f'max_boundary_reward {max_boundary_reward}')
+            reward += max_boundary_reward
+            done = True
+            self.car.read_write_std(0, 0)  # stop the car
+
+        # # Boundary reward
+        # b05_reward = -max(0.0, 4 * (norm_dist[dist_ix] - 0.05))
+        # reward += b05_reward
+        # print(f"0.05 Boundary Reward: {b05_reward}")
+        # b20_reward = -max(0.0, 8 * (norm_dist[dist_ix] - 0.2))
+        # reward += b20_reward
+        # print(f"0.20 Boundary Reward: {b20_reward}")
+
+        # (no reward) Check if the command is not properly executed by the car
+        if abs(action[0]) >= 0.045 and np.array_equal(self.start_orig, ego_state[:2]):
+            raise AnomalousEpisodeException("Anomalous episode detected!")
+
+        # (no reward) Reach goal
+        if (np.linalg.norm(self.goal - ego_state[:2]) < GOAL_THRESHOLD and len(self.next_waypoints) < 201):
+            done = True  # stop episode after this step
+            self.car.read_write_std(0, 0)  # stop the car
+        return reward, done
 
     def init_step_params(self) -> tuple:
         observation: dict = {}
