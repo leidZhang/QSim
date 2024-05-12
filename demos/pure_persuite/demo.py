@@ -13,7 +13,7 @@ from main import check_process
 from demos.override_demo import prepare_map_info
 from .car import PPCar, PPCarMP
 
-def generate_car(actor_info) -> None:
+def generate_car(actor_info: tuple) -> None:
     actor_info[0].spawn_id(
         actorNumber=0,
         location=actor_info[1],
