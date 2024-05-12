@@ -5,6 +5,7 @@ import numpy as np
 from qvl.qlabs import QuanserInteractiveLabs
 from pal.products.qcar import QCar
 
+from core.environment.exception import AnomalousEpisodeException
 from core.simulator.monitor import Monitor
 from core.policies.pure_persuit import PurePursuitPolicy
 
@@ -22,7 +23,7 @@ class PPMonitor:
 
     def get_state(self) -> tuple:
         self.monitor.get_state(self.qlabs)
-        ego_state = self.monitor.state
+        ego_state: np.ndarray = self.monitor.state
         orig: np.ndarray = ego_state[:2]
         yaw: float = -ego_state[2]
         rot: np.ndarray = np.array([
@@ -31,11 +32,12 @@ class PPMonitor:
         ])
         return orig, yaw, rot
 
-    def setup(self) -> None:
+    def setup(self) -> np.ndarray:
         orig, yaw, rot = self.get_state()
         self.current_waypoint_index: int = 0
         self.next_waypoints: np.ndarray = self.waypoint_sequence
         self.observation["waypoints"] = np.matmul(self.next_waypoints[:200] - orig, rot)
+        return orig
 
     def update(self) -> np.ndarray:
         orig, yaw, rot = self.get_state()
@@ -48,6 +50,7 @@ class PPMonitor:
         self.current_waypoint_index = (self.current_waypoint_index + dist_ix) % self.waypoint_sequence.shape[0]
         self.next_waypoints = self.next_waypoints[dist_ix:]  # clear pasted waypoints
         self.observation['waypoints'] = np.matmul(self.next_waypoints[:200] - orig, rot)
+        return orig
 
 
 class PPCar:
@@ -60,7 +63,7 @@ class PPCar:
         self.running_gear: QCar = QCar()
 
     def setup(self) -> None:
-        self.monitor.setup()
+        self.start_orig = self.monitor.setup()
 
     def halt_car(self) -> None:
         self.running_gear.read_write_std(0, 0)
@@ -71,20 +74,22 @@ class PPCar:
         self.throttle: float = 0.08 * action[0]
         self.steering: float = 0.5 * action[1]
         self.running_gear.read_write_std(throttle=self.throttle, steering=self.steering)
-        self.monitor.update()
+        return self.monitor.update()
 
 
 class MPCar:
-    def transmit_action(self, action: np.ndarray, shm_name: str, lock) -> None:
-        with lock:
+    def transmit_action(self, orig: np.ndarray, action: np.ndarray, shm_name: str, step_event) -> None:
+        if not step_event.is_set():
             shm = SharedMemory(name=shm_name)
-            action_shared: np.ndarray = np.ndarray((2,), dtype=np.float64, buffer=shm.buf)
-            np.copyto(action_shared, action)
+            data_shared: np.ndarray = np.ndarray((4,), dtype=np.float64, buffer=shm.buf)
+            data = np.concatenate([action, orig])
+            np.copyto(data_shared, data)
+            step_event.set()
             shm.close()
 
 
 class PPCarMP(PPCar, MPCar):
-    def execute(self, shm_name, lock) -> None:
-        super().execute()
+    def execute(self, shm_name, step_event) -> None:
+        orig: np.ndarray = super().execute()
         action: np.ndarray = np.array([self.throttle, self.steering])
-        self.transmit_action(action, shm_name, lock)
+        self.transmit_action(orig, action, shm_name, step_event)
