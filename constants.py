@@ -1,5 +1,5 @@
 print_QCar_info = False  # print "QCar configured successfully." in qcar.py or not
-max_action = 1
+max_action = 0.5
 discount = 0.99
 state_dim = 8
 action_dim = 2
@@ -12,19 +12,20 @@ policy_freq = 2
 METRIC_PREFIX: str = 'agent'
 COOL_DOWN_TIME: float = 3.0
 # trainer constants
-MAX_TRAINING_STEPS = 100_000_000
+MAX_TRAINING_STEPS = 100_000_000000
 SAVE_INTERVAL = 30
 LOGBATCH_INTERVAL = 1000
 LOG_INTERVAL = 10
 QCAR_POS = []
 # env constants
 MAX_LOOKAHEAD_INDICES: int = 200
-GOAL_THRESHOLD: int = 2
+GOAL_THRESHOLD: int = 0.05
 
 
 # settings
 DEFAULT_MAX_STEPS: int = 1000
-batch_size = 2048
-PREFILL = 10000
+batch_size = 512
+PREFILL = 4000
+# RUN_ID = '79bd92f2ac964cf69136ab60e9785575'
 RUN_ID = ''
-# RUN_ID = 'fc86971ff71743a2ac5eb174b280841c'
+action_v = 0.08

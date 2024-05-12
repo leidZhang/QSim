@@ -6,6 +6,7 @@ from core.models.torch.model import Model
 from core.data.preprocessor import Preprocessor
 from core.policies.network import NetworkPolicy
 from core.utils.aggregation_utils import map_structure
+from constants import action_v
 
 class PurePursuitPolicy:
     def __init__(self, max_lookahead_distance=0.5):
