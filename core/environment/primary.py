@@ -23,7 +23,8 @@ class QLabEnvironment(Env):
         self.privileged: bool = privileged
         self.max_episode_steps: int = DEFAULT_MAX_STEPS
         self.episode_steps: int = 0
-        self.deviate_steps: int = 0
+        self.pointer: int = 0
+        self.counter: int = 0
         self.simulator: QLabSimulator = QLabSimulator(dt)
 
     def setup(self, initial_state: list, sequence: np.ndarray) -> None:
@@ -57,116 +58,119 @@ class QLabEnvironment(Env):
         ])
         return orig, yaw, rot
 
+    def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state, dist_ix) -> tuple:
+        if abs(action[0]) >= 0.045 and np.array_equal(self.start_orig, ego_state[:2]):
+            raise AnomalousEpisodeException("Anomalous episode detected!")
+
+        done: bool = False
+        reward: float = 0.0
+        # Stage reward
+        index = min(self.pointer, len(self.waypoint_sequence) - 1)
+        stage_goal = self.waypoint_sequence[index]
+        stage_dist = np.linalg.norm(stage_goal - ego_state[:2])
+        # print(stage_goal, ego_state[:2], stage_dist)
+        if stage_dist < GOAL_THRESHOLD:
+            reward += action[0] * 5 * min(self.counter + 1, 5)
+            self.counter += 1
+            self.pointer += 10
+
+        # Max boundary
+        if norm_dist[dist_ix] >= 0.40:
+            reward -= 40.0
+            done = True
+            self.car.read_write_std(0, 0) # stop the car
+
+        if (np.linalg.norm(self.goal - ego_state[:2]) < GOAL_THRESHOLD and len(self.next_waypoints) < 201):
+            done = True # stop episode after this step
+            self.car.read_write_std(0, 0) # stop the car
+
+        return reward, done
+
     # def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state, dist_ix) -> tuple:
     #     done: bool = False
     #     reward: float = 0.0
-    #
+
     #     # Forward reward
-    #     if self.prev_dist != np.inf:
-    #         if self.prev_dist > norm_dist[dist_ix]:  # Check if distance to the next waypoint has decreased
-    #             reward += action[0] * 3.0 # (self.prev_dist - norm_dist[dist_ix]) * 100  # Reward for moving closer to the waypoint
-    #         elif self.prev_dist == norm_dist[dist_ix]:
-    #             reward -= 0.5
+    #     if self.prev_dist != np.inf and self.prev_dist - norm_dist[dist_ix] >= -0.01:  # Check if distance to the next waypoint has decreased:
+
+    #         # FORWARD_REWARD V1
+    #         pos = self.current_waypoint_index
+    #         region_reward = [1, 4, 2]
+    #         waypoints_range = [(0, 332), (333, 446), (447, 625)]
+
+    #         for i, (start_point, end_point) in enumerate(waypoints_range):
+    #             if start_point <= pos <= end_point:
+    #                 forward_reward = region_reward[i]
+
+    #                 # print(f"FORWARD_REWARD REWARD {forward_reward}")
+    #                 reward += forward_reward
+
+
+    #         # FORWARD_REWARD V2
+    #         # forward_reward = action[0] * 24.0
+    #         # print(f"FORWARD REWARD {forward_reward}")
+    #         # reward += forward_reward
+
+
+    #         # FORWARD_REWARD V3
+    #         # pos = self.current_waypoint_index
+    #         #
+    #         # rewards_total = [40, 60, 40]
+    #         #
+    #         # waypoints_range = [(0, 332), (333, 446), (447, 625)]
+    #         #
+    #         # for i, (start_point, end_point) in enumerate(waypoints_range):
+    #         #     if start_point <= pos <= end_point:
+    #         #         # print(f'start_point: {start_point}, end_point: {end_point}, pos: {pos}')
+    #         #
+    #         #         relative_pos = pos - start_point
+    #         #         # print(f'relative_pos: {relative_pos}')
+    #         #
+    #         #         down_term_list = np.arange(0, end_point - start_point) ** 2
+    #         #         # print(f'down_term: {down_term}')
+    #         #
+    #         #         down_term = np.sum(down_term_list)
+    #         #         # print(f'down_term: {down_term}')
+    #         #
+    #         #         up_term = relative_pos ** 2
+    #         #         # print(f'up_term: {up_term}')
+    #         #
+    #         #         r_rate = up_term / down_term
+    #         #         # print(f'r_rate: {r_rate}')
+    #         #
+    #         #         forward_reward = r_rate * rewards_total[i] * 8
+    #         #         print(f"FORWARD REWARD {forward_reward}")
+    #         #
+    #         #         reward += forward_reward
+    #         #         break
+
     #     self.prev_dist = norm_dist[dist_ix]  # Update the previous distance
 
     #     # Max boundary
     #     if norm_dist[dist_ix] >= 0.40:
-    #         reward -= 40.0
+    #         max_boundary_reward = -80
+    #         # print(f'max_boundary_reward {max_boundary_reward}')
+    #         reward += max_boundary_reward
     #         done = True
-    #         self.execute_action([0, 0]) # stop the car
-    #
+    #         self.car.read_write_std(0, 0)  # stop the car
+
+    #     # # Boundary reward
+    #     # b05_reward = -max(0.0, 4 * (norm_dist[dist_ix] - 0.05))
+    #     # reward += b05_reward
+    #     # print(f"0.05 Boundary Reward: {b05_reward}")
+    #     # b20_reward = -max(0.0, 8 * (norm_dist[dist_ix] - 0.2))
+    #     # reward += b20_reward
+    #     # print(f"0.20 Boundary Reward: {b20_reward}")
+
+    #     # (no reward) Check if the command is not properly executed by the car
+    #     if abs(action[0]) >= 0.045 and np.array_equal(self.start_orig, ego_state[:2]):
+    #         raise AnomalousEpisodeException("Anomalous episode detected!")
+
+    #     # (no reward) Reach goal
     #     if (np.linalg.norm(self.goal - ego_state[:2]) < GOAL_THRESHOLD and len(self.next_waypoints) < 201):
-    #         reward += 30.0
-    #         done = True # stop episode after this step
-    #         self.execute_action([0, 0]) # stop the car
-    #
+    #         done = True  # stop episode after this step
+    #         self.car.read_write_std(0, 0)  # stop the car
     #     return reward, done
-
-    def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state, dist_ix) -> tuple:
-        done: bool = False
-        reward: float = 0.0
-
-        # Forward reward
-        if self.prev_dist != np.inf and self.prev_dist - norm_dist[dist_ix] >= -0.01:  # Check if distance to the next waypoint has decreased:
-
-            # FORWARD_REWARD V1
-            pos = self.current_waypoint_index
-            region_reward = [1, 4, 2]
-            waypoints_range = [(0, 332), (333, 446), (447, 625)]
-
-            for i, (start_point, end_point) in enumerate(waypoints_range):
-                if start_point <= pos <= end_point:
-                    forward_reward = region_reward[i]
-
-                    # print(f"FORWARD_REWARD REWARD {forward_reward}")
-                    reward += forward_reward
-
-
-            # FORWARD_REWARD V2
-            # forward_reward = action[0] * 24.0
-            # print(f"FORWARD REWARD {forward_reward}")
-            # reward += forward_reward
-
-
-            # FORWARD_REWARD V3
-            # pos = self.current_waypoint_index
-            #
-            # rewards_total = [40, 60, 40]
-            #
-            # waypoints_range = [(0, 332), (333, 446), (447, 625)]
-            #
-            # for i, (start_point, end_point) in enumerate(waypoints_range):
-            #     if start_point <= pos <= end_point:
-            #         # print(f'start_point: {start_point}, end_point: {end_point}, pos: {pos}')
-            #
-            #         relative_pos = pos - start_point
-            #         # print(f'relative_pos: {relative_pos}')
-            #
-            #         down_term_list = np.arange(0, end_point - start_point) ** 2
-            #         # print(f'down_term: {down_term}')
-            #
-            #         down_term = np.sum(down_term_list)
-            #         # print(f'down_term: {down_term}')
-            #
-            #         up_term = relative_pos ** 2
-            #         # print(f'up_term: {up_term}')
-            #
-            #         r_rate = up_term / down_term
-            #         # print(f'r_rate: {r_rate}')
-            #
-            #         forward_reward = r_rate * rewards_total[i] * 8
-            #         print(f"FORWARD REWARD {forward_reward}")
-            #
-            #         reward += forward_reward
-            #         break
-
-        self.prev_dist = norm_dist[dist_ix]  # Update the previous distance
-
-        # Max boundary
-        if norm_dist[dist_ix] >= 0.40:
-            max_boundary_reward = -80
-            # print(f'max_boundary_reward {max_boundary_reward}')
-            reward += max_boundary_reward
-            done = True
-            self.car.read_write_std(0, 0)  # stop the car
-
-        # # Boundary reward
-        # b05_reward = -max(0.0, 4 * (norm_dist[dist_ix] - 0.05))
-        # reward += b05_reward
-        # print(f"0.05 Boundary Reward: {b05_reward}")
-        # b20_reward = -max(0.0, 8 * (norm_dist[dist_ix] - 0.2))
-        # reward += b20_reward
-        # print(f"0.20 Boundary Reward: {b20_reward}")
-
-        # (no reward) Check if the command is not properly executed by the car
-        if abs(action[0]) >= 0.045 and np.array_equal(self.start_orig, ego_state[:2]):
-            raise AnomalousEpisodeException("Anomalous episode detected!")
-
-        # (no reward) Reach goal
-        if (np.linalg.norm(self.goal - ego_state[:2]) < GOAL_THRESHOLD and len(self.next_waypoints) < 201):
-            done = True  # stop episode after this step
-            self.car.read_write_std(0, 0)  # stop the car
-        return reward, done
 
     def init_step_params(self) -> tuple:
         observation: dict = {}
@@ -211,8 +215,6 @@ class QLabEnvironment(Env):
                 slop = MAX_LOOKAHEAD_INDICES - self.next_waypoints.shape[0]
                 self.next_waypoints = np.concatenate([self.next_waypoints, self.waypoint_sequence[:slop]])
 
-        observation['waypoints'] = np.matmul(self.next_waypoints[:MAX_LOOKAHEAD_INDICES] - orig, rot) if self.privileged else None
-        observation['state'] = np.concatenate((ego_state, observation['waypoints'][49])) # TODO: change to min(49, len)
         # print(observation['state'])
         # print(f"Observation: {observation['waypoints']}")
         # observation["image"] = cv2.resize(front_image[:, :, :3], (160, 120))
@@ -220,6 +222,10 @@ class QLabEnvironment(Env):
         # TODO: Extract reward function to a separate method， use the strategy pattern?
         if self.privileged:
             reward, reward_done = self.handle_reward(action, norm_dist, ego_state, dist_ix)
+
+        observation['waypoints'] = np.matmul(self.next_waypoints[:MAX_LOOKAHEAD_INDICES] - orig, rot) if self.privileged else None
+        index = min(self.pointer, len(self.waypoint_sequence) - 1)
+        observation['state'] = np.concatenate((ego_state, self.waypoint_sequence[index])) # TODO: change to min(49, len)
 
         self.episode_steps += 1
         return observation, reward, reward_done or episode_done, info
@@ -248,13 +254,15 @@ class QLabEnvironment(Env):
 
         self.current_waypoint_index = 0
         self.goal = self.waypoint_sequence[-1]  # x, y coords of goal
+        self.counter = 0
+        self.pointer = 0
 
         orig, yaw, rot = self.get_states('car')
         ego_state = self.simulator.get_actor_state('car')
         self.episode_start: float = time.time()
         self.start_orig = orig
         observation['waypoints'] = np.matmul(self.next_waypoints[:MAX_LOOKAHEAD_INDICES] - orig, rot) if self.privileged else None
-        observation['state'] = np.concatenate((ego_state, observation['waypoints'][49]))
+        observation['state'] = np.concatenate((ego_state, self.waypoint_sequence[self.pointer+10]))
 
         self.prev_dist = np.inf # set previous distance to infinity
         self.last_orig: np.ndarray = orig
