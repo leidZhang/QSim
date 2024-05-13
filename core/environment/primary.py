@@ -1,3 +1,4 @@
+import sys
 import time
 from typing import Union
 from multiprocessing import Queue
@@ -23,7 +24,6 @@ class QLabEnvironment(Env):
         self.privileged: bool = privileged
         self.max_episode_steps: int = DEFAULT_MAX_STEPS
         self.episode_steps: int = 0
-        self.pointer: int = 0
         self.counter: int = 0
         self.simulator: QLabSimulator = QLabSimulator(dt)
 
@@ -40,7 +40,7 @@ class QLabEnvironment(Env):
         action type #3: <class 'numpy.ndarray'>
         action shape #3: (2,)
         '''
-        action[0] = action_v * (action[0] + 1) / 2 # 0.08 is the max speed of the car
+        action[0] = 0.08 # action_v * (action[0] + 1) / 2 # 0.08 is the max speed of the car
         action[1] = 0.5 * action[1]  # 0.5 is the max steering angle of the car
 
         self.car.read_write_std(action[0], action[1])
@@ -68,11 +68,9 @@ class QLabEnvironment(Env):
         index = min(self.pointer, len(self.waypoint_sequence) - 1)
         stage_goal = self.waypoint_sequence[index]
         stage_dist = np.linalg.norm(stage_goal - ego_state[:2])
-        # print(stage_goal, ego_state[:2], stage_dist)
         if stage_dist < GOAL_THRESHOLD:
             reward += action[0] * 5 * min(self.counter + 1, 5)
             self.counter += 1
-            self.pointer += 10
 
         # Max boundary
         if norm_dist[dist_ix] >= 0.40:
@@ -222,11 +220,11 @@ class QLabEnvironment(Env):
         # TODO: Extract reward function to a separate method， use the strategy pattern?
         if self.privileged:
             reward, reward_done = self.handle_reward(action, norm_dist, ego_state, dist_ix)
+        self.pointer = ((self.current_waypoint_index // 10) + 1) * 10
+        index = min(self.pointer, len(self.waypoint_sequence) - 1)
 
         observation['waypoints'] = np.matmul(self.next_waypoints[:MAX_LOOKAHEAD_INDICES] - orig, rot) if self.privileged else None
-        index = min(self.pointer, len(self.waypoint_sequence) - 1)
         observation['state'] = np.concatenate((ego_state, self.waypoint_sequence[index])) # TODO: change to min(49, len)
-
         self.episode_steps += 1
         return observation, reward, reward_done or episode_done, info
 
@@ -254,15 +252,16 @@ class QLabEnvironment(Env):
 
         self.current_waypoint_index = 0
         self.goal = self.waypoint_sequence[-1]  # x, y coords of goal
+        self.stage_goal = self.waypoint_sequence[10]
         self.counter = 0
-        self.pointer = 0
+        self.pointer = 10
 
         orig, yaw, rot = self.get_states('car')
         ego_state = self.simulator.get_actor_state('car')
         self.episode_start: float = time.time()
         self.start_orig = orig
         observation['waypoints'] = np.matmul(self.next_waypoints[:MAX_LOOKAHEAD_INDICES] - orig, rot) if self.privileged else None
-        observation['state'] = np.concatenate((ego_state, self.waypoint_sequence[self.pointer+10]))
+        observation['state'] = np.concatenate((ego_state, self.waypoint_sequence[self.pointer]))
 
         self.prev_dist = np.inf # set previous distance to infinity
         self.last_orig: np.ndarray = orig
