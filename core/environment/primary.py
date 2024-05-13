@@ -222,7 +222,6 @@ class QLabEnvironment(Env):
             reward, reward_done = self.handle_reward(action, norm_dist, ego_state, dist_ix)
         self.pointer = ((self.current_waypoint_index // 10) + 1) * 10
         index = min(self.pointer, len(self.waypoint_sequence) - 1)
-
         observation['waypoints'] = np.matmul(self.next_waypoints[:MAX_LOOKAHEAD_INDICES] - orig, rot) if self.privileged else None
         observation['state'] = np.concatenate((ego_state, self.waypoint_sequence[index])) # TODO: change to min(49, len)
         self.episode_steps += 1
