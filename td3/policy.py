@@ -45,7 +45,7 @@ class TD3Agent(torch.nn.Module):
         # add noise
         with torch.no_grad():
             action = torch.from_numpy(np.array(action))
-            epsilon = max(1 - data_size / 864_956, 0.04)
+            epsilon = max(1 - data_size / 320_000, 0.04)
             rand_action = torch.rand(action.shape)
             rand_action = rand_action * 2 - 1
             if random.uniform(0, 1) < epsilon:

@@ -98,8 +98,13 @@ class QLabEnvironment(Env):
                 if start_point < pos <= end_point:
                     forward_reward = region_reward[i] * (pos - self.pre_pos) * 0.125
 
-                    print(f"FORWARD_REWARD REWARD {forward_reward}")
+                    # print(f"FORWARD_REWARD REWARD {forward_reward}")
                     reward += forward_reward
+
+                    b05_reward = -max(0.0, 13.6 * region_reward[i] * (pos - self.pre_pos) * (norm_dist[dist_ix] + 0.2) ** 4)
+
+                    # print(f"0.05 Boundary Reward: {b05_reward}")
+                    reward += b05_reward
 
             self.pre_pos = pos
 
@@ -144,17 +149,17 @@ class QLabEnvironment(Env):
         self.prev_dist = norm_dist[dist_ix]  # Update the previous distance
 
         # Max boundary
-        if norm_dist[dist_ix] >= 0.25:
-            max_boundary_reward = -80
-            print(f'max_boundary_reward {max_boundary_reward}')
+        if norm_dist[dist_ix] >= 0.10:
+            max_boundary_reward = -60
+            #print(f'max_boundary_reward {max_boundary_reward}')
             reward += max_boundary_reward
             done = True
             self.car.read_write_std(0, 0)  # stop the car
 
-        # Boundary reward
-        b05_reward = -max(0.0, 4 * (norm_dist[dist_ix] - 0.05))
-        reward += b05_reward
-        print(f"0.05 Boundary Reward: {b05_reward}")
+        # # Boundary reward
+        # b05_reward = -max(0.0, 4 * (norm_dist[dist_ix] - 0.05))
+        # reward += b05_reward
+        # print(f"0.05 Boundary Reward: {b05_reward}")
         # b20_reward = -max(0.0, 8 * (norm_dist[dist_ix] - 0.2))
         # reward += b20_reward
         # print(f"0.20 Boundary Reward: {b20_reward}")
