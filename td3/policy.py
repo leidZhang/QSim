@@ -45,7 +45,7 @@ class TD3Agent(torch.nn.Module):
         # add noise
         with torch.no_grad():
             action = torch.from_numpy(np.array(action))
-            epsilon = max(1 - data_size / 400_000, 0.2)
+            epsilon = max(1 - data_size / 864_956, 0.04)
             rand_action = torch.rand(action.shape)
             rand_action = rand_action * 2 - 1
             if random.uniform(0, 1) < epsilon:
@@ -82,19 +82,6 @@ class TD3Agent(torch.nn.Module):
             actions: tensor([[ 7.6000e-02, -7.9606e-02],
                              [ 7.6000e-02,  8.2937e-06],
             '''
-
-            # with torch.no_grad():
-            #     noise = (
-            #             torch.randn_like(actions) * 0.02
-            #     ).clamp(-0.05, 0.05).to(device)
-            #     print(f'noise: {noise}')
-            #     print(f'shape of noise: {noise.shape}')
-            #
-            #     next_action = (
-            #             self.actor_target(next_states) + noise
-            #     ).clamp(-C.max_action, C.max_action)
-            #     print(f'next_action: {next_action}')
-            #     print(f'shape of next_action: {next_action.shape}')
 
             with torch.no_grad():
                 noise_yaw = (
