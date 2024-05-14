@@ -95,12 +95,13 @@ class QLabEnvironment(Env):
             waypoints_range = [(0, 332), (333, 446), (447, 625)]
 
             for i, (start_point, end_point) in enumerate(waypoints_range):
-                if start_point <= pos <= end_point:
-                    forward_reward = region_reward[i]
+                if start_point < pos <= end_point:
+                    forward_reward = region_reward[i] * (pos - self.pre_pos) * 0.125
 
-                    # print(f"FORWARD_REWARD REWARD {forward_reward}")
+                    print(f"FORWARD_REWARD REWARD {forward_reward}")
                     reward += forward_reward
 
+            self.pre_pos = pos
 
             # FORWARD_REWARD V2
             # forward_reward = action[0] * 24.0
@@ -143,17 +144,17 @@ class QLabEnvironment(Env):
         self.prev_dist = norm_dist[dist_ix]  # Update the previous distance
 
         # Max boundary
-        if norm_dist[dist_ix] >= 0.40:
+        if norm_dist[dist_ix] >= 0.25:
             max_boundary_reward = -80
-            # print(f'max_boundary_reward {max_boundary_reward}')
+            print(f'max_boundary_reward {max_boundary_reward}')
             reward += max_boundary_reward
             done = True
             self.car.read_write_std(0, 0)  # stop the car
 
-        # # Boundary reward
-        # b05_reward = -max(0.0, 4 * (norm_dist[dist_ix] - 0.05))
-        # reward += b05_reward
-        # print(f"0.05 Boundary Reward: {b05_reward}")
+        # Boundary reward
+        b05_reward = -max(0.0, 4 * (norm_dist[dist_ix] - 0.05))
+        reward += b05_reward
+        print(f"0.05 Boundary Reward: {b05_reward}")
         # b20_reward = -max(0.0, 8 * (norm_dist[dist_ix] - 0.2))
         # reward += b20_reward
         # print(f"0.20 Boundary Reward: {b20_reward}")
@@ -259,4 +260,5 @@ class QLabEnvironment(Env):
         self.prev_dist = np.inf # set previous distance to infinity
         self.last_orig: np.ndarray = orig
         self.last_check_pos: float = time.time()
+        self.pre_pos = 0
         return observation, reward, done, info
