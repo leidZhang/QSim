@@ -1,3 +1,5 @@
+import time
+import sys
 from multiprocessing.shared_memory import SharedMemory
 
 import numpy as np
@@ -6,6 +8,7 @@ from qvl.qlabs import QuanserInteractiveLabs
 from pal.products.qcar import QCar
 
 from core.environment.exception import AnomalousEpisodeException
+from core.sensor.sensor import VirtualCSICamera
 from core.simulator.monitor import Monitor
 from core.policies.pure_persuit import PurePursuitPolicy
 
@@ -91,3 +94,33 @@ class PPCarMP(PPCar, MPCar):
         super().execute()
         action: np.ndarray = np.array([self.throttle, self.steering])
         self.transmit_action(action, shm_name, step_event)
+
+
+class PPCarCan(PPCar, MPCar): 
+    def __init__(self, qlabs: QuanserInteractiveLabs, waypoint_sequence: np.ndarray) -> None:
+        super().__init__(qlabs, waypoint_sequence)
+        self.front_csi = VirtualCSICamera()
+
+    def transmit_action(
+            self, action: np.ndarray, 
+            image: np.ndarray, 
+            shm_name_image: str, 
+            shm_name_action: str, 
+            step_event
+        ) -> None:
+        if not step_event.is_set():
+            shm_action: SharedMemory = SharedMemory(name=shm_name_action)
+            shm_image: SharedMemory = SharedMemory(name=shm_name_image)
+            action_shared: np.ndarray = np.ndarray((2,), dtype=np.float64, buffer=shm_action.buf)
+            image_shared: np.ndarray = np.ndarray((410, 820, 3), dtype=np.uint8, buffer=shm_image.buf)
+            np.copyto(action_shared, action)
+            np.copyto(image_shared, image)
+            step_event.set()
+            shm_action.close()
+            shm_image.close()
+
+    def execute(self, shm_name_image: str, shm_name_action: str, step_event) -> None:
+        super().execute()
+        action: np.ndarray = np.array([self.throttle, self.steering])
+        image: np.ndarray = self.front_csi.await_image()
+        self.transmit_action(action, image, shm_name_image, shm_name_action, step_event)

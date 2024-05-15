@@ -11,7 +11,7 @@ from pal.products.qcar import QCar
 from core.simulator import QLabSimulator
 from core.sensor import VirtualCSICamera
 from .exception import AnomalousEpisodeException
-from constants import MAX_LOOKAHEAD_INDICES, GOAL_THRESHOLD, DEFAULT_MAX_STEPS, MAX_TRAINING_STEPS, max_action, action_v
+from constants import MAX_LOOKAHEAD_INDICES, GOAL_THRESHOLD, DEFAULT_MAX_STEPS, DIFFICULTY_COEFFS
 
 
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -56,7 +56,7 @@ class QLabEnvironment(Env):
             [np.cos(yaw), np.sin(yaw)],
             [-np.sin(yaw), np.cos(yaw)]
         ])
-        return orig, yaw, rot
+        return orig, yaw, rot, ego_state
 
     def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state, dist_ix) -> tuple:
         if abs(action[0]) >= 0.045 and np.array_equal(self.start_orig, ego_state[:2]):
@@ -65,23 +65,25 @@ class QLabEnvironment(Env):
         done: bool = False
         reward: float = 0.0
         # Stage reward
-        index = min(self.pointer, len(self.waypoint_sequence) - 1)
-        stage_goal = self.waypoint_sequence[index]
-        stage_dist = np.linalg.norm(stage_goal - ego_state[:2])
-        if stage_dist < GOAL_THRESHOLD:
-            reward += action[0] * 5 * min(self.counter + 1, 5)
-            self.counter += 1
-
+        index = self.current_waypoint_index
+        diffculty_pointer = 0 + (1 if index >= 333 else 0) + (1 if index >= 447 else 0)
+        forward_reward = DIFFICULTY_COEFFS[diffculty_pointer] * (index - self.pre_index) * 0.125
+        reward += forward_reward
+                    
+        # Panalty for deviating from the path
+        if norm_dist[dist_ix] >= 0.05:
+            reward -= forward_reward * 0.7 * (norm_dist[dist_ix] / 0.05)
         # Max boundary
-        if norm_dist[dist_ix] >= 0.40:
-            reward -= 40.0
+        if norm_dist[dist_ix] >= 0.1:
+            reward -= 60.0
             done = True
             self.car.read_write_std(0, 0) # stop the car
 
-        if (np.linalg.norm(self.goal - ego_state[:2]) < GOAL_THRESHOLD and len(self.next_waypoints) < 201):
+        if np.linalg.norm(self.goal - ego_state[:2]) < GOAL_THRESHOLD: # and len(self.next_waypoints) < 201:
             done = True # stop episode after this step
             self.car.read_write_std(0, 0) # stop the car
 
+        self.pre_index = index
         return reward, done
 
     # def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state, dist_ix) -> tuple:
@@ -195,14 +197,14 @@ class QLabEnvironment(Env):
 
         if self.privileged:
             # get ground truth state
-            orig, yaw, rot = self.get_states('car')
+            orig, yaw, rot, ego_state = self.get_states('car')
             waypoints: np.ndarray = np.roll(self.waypoint_sequence, -self.current_waypoint_index, axis=0)[:MAX_LOOKAHEAD_INDICES]
             # get the distance between ego position and waypoints
             norm_dist: np.ndarray = np.linalg.norm(waypoints - orig, axis=1)
             # get the index of the closest waypoint
             dist_ix: int = np.argmin(norm_dist)
             # get state info
-            ego_state: np.ndarray = self.simulator.get_actor_state('car')
+            # ego_state: np.ndarray = self.simulator.get_actor_state('car')
             self.current_waypoint_index = (self.current_waypoint_index + dist_ix) % self.waypoint_sequence.shape[0]
             # self.prev_dist_ix = dist_ix
             self.next_waypoints = self.next_waypoints[dist_ix:]  # clear pasted waypoints
@@ -212,7 +214,6 @@ class QLabEnvironment(Env):
                 # self.goal = self.next_waypoints[-1]
                 slop = MAX_LOOKAHEAD_INDICES - self.next_waypoints.shape[0]
                 self.next_waypoints = np.concatenate([self.next_waypoints, self.waypoint_sequence[:slop]])
-
         # print(observation['state'])
         # print(f"Observation: {observation['waypoints']}")
         # observation["image"] = cv2.resize(front_image[:, :, :3], (160, 120))
@@ -220,10 +221,10 @@ class QLabEnvironment(Env):
         # TODO: Extract reward function to a separate method， use the strategy pattern?
         if self.privileged:
             reward, reward_done = self.handle_reward(action, norm_dist, ego_state, dist_ix)
-        self.pointer = ((self.current_waypoint_index // 10) + 1) * 10
-        index = min(self.pointer, len(self.waypoint_sequence) - 1)
+        index = min(49, len(self.next_waypoints) - 1)
+        
         observation['waypoints'] = np.matmul(self.next_waypoints[:MAX_LOOKAHEAD_INDICES] - orig, rot) if self.privileged else None
-        observation['state'] = np.concatenate((ego_state, self.waypoint_sequence[index])) # TODO: change to min(49, len)
+        observation['state'] = np.concatenate((ego_state, self.next_waypoints[index])) # TODO: change to min(49, len)
         self.episode_steps += 1
         return observation, reward, reward_done or episode_done, info
 
@@ -238,7 +239,7 @@ class QLabEnvironment(Env):
         self.deviate_steps = 0
 
         self.car: QCar = QCar()
-        # reset episode start time
+
         self.episode_start_time = time.time()
         # initialize result variables
         done: bool = False
@@ -251,16 +252,15 @@ class QLabEnvironment(Env):
 
         self.current_waypoint_index = 0
         self.goal = self.waypoint_sequence[-1]  # x, y coords of goal
-        self.stage_goal = self.waypoint_sequence[10]
         self.counter = 0
-        self.pointer = 10
+        self.pre_index = 0
 
-        orig, yaw, rot = self.get_states('car')
-        ego_state = self.simulator.get_actor_state('car')
+        orig, yaw, rot, ego_state = self.get_states('car')
+        # ego_state = self.simulator.get_actor_state('car')
         self.episode_start: float = time.time()
         self.start_orig = orig
         observation['waypoints'] = np.matmul(self.next_waypoints[:MAX_LOOKAHEAD_INDICES] - orig, rot) if self.privileged else None
-        observation['state'] = np.concatenate((ego_state, self.waypoint_sequence[self.pointer]))
+        observation['state'] = np.concatenate((ego_state, self.waypoint_sequence[49]))
 
         self.prev_dist = np.inf # set previous distance to infinity
         self.last_orig: np.ndarray = orig

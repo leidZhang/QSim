@@ -97,7 +97,7 @@ class QLabSimulator(Simulator):
         car.possess(qcar_view)
         time.sleep(1)
         QLabsRealTime().start_real_time_model(rtmodels.QCAR_STUDIO)
-        time.sleep(2) # wait for the state to change
+        time.sleep(3) # wait for the state to change
         self.init_actor_states()
 
     def set_waypoint_sequence(self, waypoints: np.ndarray) -> None:

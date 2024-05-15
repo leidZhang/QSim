@@ -45,7 +45,7 @@ class TD3Agent(torch.nn.Module):
         # add noise
         with torch.no_grad():
             action = torch.from_numpy(np.array(action))
-            epsilon = max(1 - data_size / 400_000, 0.2)
+            epsilon = max(1 - data_size / 200_000, 0.05)
             rand_action = torch.rand(action.shape)
             rand_action = rand_action * 2 - 1
             if random.uniform(0, 1) < epsilon:
@@ -129,8 +129,8 @@ class TD3Agent(torch.nn.Module):
             # Delayed policy updates
             if self.total_it % C.policy_freq == 0:
 
-                actions_v = torch.full((C.batch_size, 1), C.action_v)
-                actions_yaw = self.actor(states)
+                actions_v = torch.full((C.batch_size, 1), C.action_v).to(device)
+                actions_yaw = self.actor(states).to(device)
                 actions = torch.cat((actions_v, actions_yaw), dim=1)
 
                 # Compute actor loss
