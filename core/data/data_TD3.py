@@ -366,7 +366,7 @@ class SequenceRolloutBuffer:
         self.action_dim = action_dim
         self.last_load_time = time.time()  # 上次加载时间
         self.end = 0  # mark
-        self.buffer_size = 100000
+        self.buffer_size = 1000000
         self.full = False
         self.buffer_set: set = set()
         self.current_file = None
