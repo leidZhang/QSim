@@ -104,7 +104,7 @@ class TD3Agent(torch.nn.Module):
                 # Compute the target Q value
                 target_Q1, target_Q2 = self.critic_target(next_states, next_actions)
                 target_Q = torch.min(target_Q1, target_Q2)
-                target_Q = rewards.unsqueeze(1) + dones.unsqueeze(1) * C.discount * target_Q.to(device)
+                target_Q = rewards.unsqueeze(1) + ~dones.unsqueeze(1) * C.discount * target_Q.to(device)
             # Get current Q estimates
             current_Q1, current_Q2 = self.critic(states, actions)
             # Compute critic loss

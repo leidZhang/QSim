@@ -1,33 +1,35 @@
+from typing import Tuple
+
 import torch
 import numpy as np
-
 #project imports
 from core.models.torch.model import Model
 from core.data.preprocessor import Preprocessor
 from core.policies.network import NetworkPolicy
 from core.utils.aggregation_utils import map_structure
+from core.base_policy import PolicyAdapter
 from constants import action_v
 
 class PurePursuitPolicy:
-    def __init__(self, max_lookahead_distance=0.5):
+    def __init__(self, max_lookahead_distance: float = 0.5) -> None:
         self.max_lookahead_distance = max_lookahead_distance
 
-    def __call__(self, obs):
+    def __call__(self, obs: dict) -> Tuple[dict, dict]:
         # action = np.array([0.074, 0.0]) #v, steer
-        action = np.array([1, 0.0])  # v, steer
-        metrics = {}
+        action: np.ndarray = np.array([1, 0.0])  # v, steer
+        metrics: dict = {}
 
-        state = np.zeros((6,), dtype=np.float32) #obs["state"]
-        waypoints = obs["waypoints"]
+        state: np.ndarray = np.zeros((6,), dtype=np.float32) #obs["state"]
+        waypoints: np.ndarray = obs["waypoints"]
         metrics["waypoints"] = waypoints
 
-        lad = 0.0
-        i = 0
+        lad: float = 0.0
+        i: int = 0
         for i in range(waypoints.shape[0] - 1):
-            current_waypoint_x = waypoints[i, 0]
-            current_waypoint_y = waypoints[i, 1]
-            next_waypoint_x = waypoints[i + 1, 0]
-            next_waypoint_y = waypoints[i + 1, 1]
+            current_waypoint_x: float = waypoints[i, 0]
+            current_waypoint_y: float = waypoints[i, 1]
+            next_waypoint_x: float = waypoints[i + 1, 0]
+            next_waypoint_y: float = waypoints[i + 1, 1]
 
             lad = lad + np.hypot(next_waypoint_x - current_waypoint_x, next_waypoint_y - current_waypoint_y)
             if lad > self.max_lookahead_distance:
@@ -37,12 +39,21 @@ class PurePursuitPolicy:
 
         #compute steer action
         x, y, yaw = state[:3]
-        alpha = np.arctan2(ty - y, tx - x) - yaw
-        l = np.sqrt((x - tx)**2 + (y - ty)**2)
-        theta = np.arctan2(2 * 0.256 * np.sin(alpha), l)
+        alpha: float = np.arctan2(ty - y, tx - x) - yaw
+        l: float = np.sqrt((x - tx)**2 + (y - ty)**2)
+        theta: float = np.arctan2(2 * 0.256 * np.sin(alpha), l)
         action[1] = theta / 0.5
 
         return action, metrics
+    
+
+class PurePursuiteAdaptor(PolicyAdapter):
+    def __init__(self, max_lookahead_distance=0.5) -> None:
+        self.policy = PurePursuitPolicy(max_lookahead_distance)
+
+    def execute(self, obs) -> Tuple[dict, dict]:
+        return self.policy(obs)
+
 
 class PurePursuitNetworkPolicy(NetworkPolicy):
     def __init__(self, device, max_lookahead_distance=0.5):
