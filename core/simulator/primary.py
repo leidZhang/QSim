@@ -24,9 +24,9 @@ class Simulator:
     @classmethod
     def reset_map(self, qcar_pos: list, qcar_view: int = 6) -> None:
         ...
-    
 
-class QLabSimulator(Simulator): 
+
+class QLabSimulator(Simulator):
     def __init__(self, dt:float = 0.05) -> None:
         """
         Initializes the QLabSimulator object
@@ -95,6 +95,7 @@ class QLabSimulator(Simulator):
             waitForConfirmation=True
         )
         car.possess(qcar_view)
+        time.sleep(1)
         QLabsRealTime().start_real_time_model(rtmodels.QCAR_STUDIO)
         time.sleep(3) # wait for the state to change
         self.init_actor_states()
@@ -117,8 +118,8 @@ class QLabSimulator(Simulator):
         """
         self.monitors[actor_name].get_state(self.qlabs)
         return self.monitors[actor_name].state
-    
-    def set_regions(self) -> None: 
+
+    def set_regions(self) -> None:
         # set the regions for the stop signs and traffic lights
         self.regions['stop_signs'] = np.stack([
             np.array([
