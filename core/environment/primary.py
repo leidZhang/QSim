@@ -153,7 +153,7 @@ class QLabEnvironment(Env):
 
         # Max boundary
         if norm_dist[dist_ix] >= 0.10:
-            max_boundary_reward = -60
+            max_boundary_reward = -44
             # print(f'max_boundary_reward {max_boundary_reward}')
             reward += max_boundary_reward
             done = True

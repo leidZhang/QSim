@@ -122,7 +122,7 @@ class TD3Agent(torch.nn.Module):
                 actions = torch.cat((actions_v, actions_yaw), dim=1).to(device)
 
                 # Compute actor loss
-                actor_loss = -self.critic.Q1(states, actions).mean().to(device)
+                actor_loss = -self.critic.Q1(states, self.actor(states)).mean().to(device)
                 # Optimize the actor
                 self.actor_optimizer.zero_grad()
                 actor_loss.backward()
