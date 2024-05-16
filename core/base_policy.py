@@ -27,7 +27,7 @@ class BasePolicy(ABC):
         ...
 
     @abstractmethod
-    def execute(self, observation: dict) -> Tuple[dict, dict]: 
+    def execute(self, *args) -> Tuple[dict, dict]: 
         """
         The execute method is an abstract method that executes the policy
 
@@ -65,7 +65,7 @@ class PolicyAdapter(ABC):
         self.policy = policy
 
     @abstractmethod
-    def execute(self, observation: dict) -> Tuple[dict, dict]:
+    def execute(self, *args) -> Tuple[dict, dict]:
         """
         The execute method is an abstract method that executes the policy
 

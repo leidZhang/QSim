@@ -7,6 +7,7 @@ import torch.nn.functional as F
 import numpy as np
 import constants as C
 from torch.optim import Adam
+from core.base_policy import PolicyAdapter
 from core.data.data_TD3 import SequenceRolloutBuffer, MlflowEpisodeRepository
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -156,6 +157,11 @@ class TD3Agent(torch.nn.Module):
         self.actor.load_state_dict(torch.load(filename + "_actor"))
         self.actor_optimizer.load_state_dict(torch.load(filename + "_actor_optimizer"))
         self.actor_target = copy.deepcopy(self.actor)
+
+
+class TD3Policy(PolicyAdapter):
+    def execute(self, state, data_size):
+        return self.agent.select_action(state, data_size)
 
 
 class Actor(torch.nn.Module):

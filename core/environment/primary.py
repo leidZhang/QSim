@@ -8,8 +8,7 @@ import numpy as np
 from pal.products.qcar import QCar
 
 from core.simulator import QLabSimulator
-from core.sensor import VirtualCSICamera
-from .exception import AnomalousEpisodeException
+from .detector import EpisodeMonitor
 from constants import MAX_LOOKAHEAD_INDICES, GOAL_THRESHOLD, DEFAULT_MAX_STEPS, MAX_TRAINING_STEPS, max_action, action_v
 
 
@@ -83,6 +82,7 @@ class QLabEnvironment(Env):
     #     return reward, done
 
     def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state, dist_ix) -> tuple:
+        self.detector(action=action, orig=ego_state[:2])
         done: bool = False
         reward: float = 0.0
 
@@ -250,7 +250,6 @@ class QLabEnvironment(Env):
         """
         self.simulator.reset_map()
         self.deviate_steps = 0
-
         self.car: QCar = QCar()
         # reset episode start time
         self.episode_start_time = time.time()
@@ -269,7 +268,8 @@ class QLabEnvironment(Env):
         ego_state = self.simulator.get_actor_state('car')
         orig, yaw, rot = self.get_states(ego_state)
         self.episode_start: float = time.time()
-        self.start_orig = orig
+        # self.start_orig = orig
+        self.detector: EpisodeMonitor = EpisodeMonitor(start_orig=orig)
         observation['waypoints'] = np.matmul(self.next_waypoints[:MAX_LOOKAHEAD_INDICES] - orig, rot) if self.privileged else None
         observation['state'] = np.concatenate((ego_state, observation['waypoints'][0], observation['waypoints'][49]))
 
