@@ -91,7 +91,7 @@ class QLabEnvironment(Env):
 
             # FORWARD_REWARD V1
             pos = self.current_waypoint_index
-            # print(f'POS: {pos}')
+            print(f'POS: {pos}')
             region_reward = [1, 4, 2]
             waypoints_range = [(0, 332), (333, 446), (447, 625)]
 
@@ -221,8 +221,10 @@ class QLabEnvironment(Env):
                 self.next_waypoints = np.concatenate([self.next_waypoints, self.waypoint_sequence[:slop]])
 
         observation['waypoints'] = np.matmul(self.next_waypoints[:MAX_LOOKAHEAD_INDICES] - orig, rot) if self.privileged else None
-        observation['state'] = np.concatenate((ego_state, observation['waypoints'][0], observation['waypoints'][49])) # TODO: change to min(49, len)
-        # print(observation['state'])
+
+        global_0 = self.waypoint_sequence[self.current_waypoint_index]
+        global_49 = self.waypoint_sequence[(self.current_waypoint_index + 49) % self.waypoint_sequence.shape[0]]
+        observation['state'] = np.concatenate((ego_state, global_0, global_49))        # print(observation['state'])
         # print(f"Observation: {observation['waypoints']}")
         # observation["image"] = cv2.resize(front_image[:, :, :3], (160, 120))
 
@@ -263,8 +265,10 @@ class QLabEnvironment(Env):
         self.episode_start: float = time.time()
         self.start_orig = orig
         observation['waypoints'] = np.matmul(self.next_waypoints[:MAX_LOOKAHEAD_INDICES] - orig, rot) if self.privileged else None
-        observation['state'] = np.concatenate((ego_state, observation['waypoints'][0], observation['waypoints'][49]))
 
+        global_0 = self.waypoint_sequence[self.current_waypoint_index]
+        global_49 = self.waypoint_sequence[(self.current_waypoint_index + 49) % self.waypoint_sequence.shape[0]]
+        observation['state'] = np.concatenate((ego_state, global_0, global_49))
         self.prev_dist = np.inf # set previous distance to infinity
         self.last_orig: np.ndarray = orig
         self.last_check_pos: float = time.time()
