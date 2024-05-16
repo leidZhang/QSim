@@ -1,11 +1,11 @@
 print_QCar_info = False  # print "QCar configured successfully." in qcar.py or not
 max_action = 0.5
 discount = 0.99
-state_dim = 8
+state_dim = 10
 action_dim = 2
-lr = 3e-4
-tau = 0.005
-observation_shape = (8,)
+lr = 4e-4
+tau = 0.006
+observation_shape = (10,)
 buffer_update_rate = 2
 policy_freq = 2
 # generator constants
@@ -23,9 +23,9 @@ GOAL_THRESHOLD: int = 0.05
 
 
 # settings
-DEFAULT_MAX_STEPS: int = 300
-batch_size = 16
-PREFILL = 16
-# RUN_ID = 'dac197849d4048a4ba97d658c4a9d5d8'
+DEFAULT_MAX_STEPS: int = 600
+batch_size = 4096
+PREFILL = 10000
 RUN_ID = ''
+# RUN_ID = '4d2e229373de4830a5efc1bc79573e36'
 action_v = 0.08

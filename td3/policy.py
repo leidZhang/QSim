@@ -45,7 +45,8 @@ class TD3Agent(torch.nn.Module):
         # add noise
         with torch.no_grad():
             action = torch.from_numpy(np.array(action))
-            epsilon = max(1 - data_size / 864_956, 0.04)
+            epsilon = max(1 - data_size / 320_000, 0.04)
+            # epsilon = 0
             rand_action = torch.rand(action.shape)
             rand_action = rand_action * 2 - 1
             if random.uniform(0, 1) < epsilon:
@@ -91,11 +92,11 @@ class TD3Agent(torch.nn.Module):
 
                 next_actions_yaw = (
                         self.actor_target(next_states) + noise_yaw
-                ).clamp(-0.5, 0.5)
+                ).clamp(-0.5, 0.5).to(device)
                 # print(f'shape of next_actions_yaw: {next_actions_yaw.shape}')
                 # print(f'shape of next_action_yaw: {next_actions_yaw.shape}')
 
-                next_actions = torch.cat([actions[:, 0].unsqueeze(1), next_actions_yaw], 1)
+                next_actions = torch.cat([actions[:, 0].unsqueeze(1), next_actions_yaw], 1).to(device)
                 # print(f'shape of next_action: {next_actions.shape}')
 
 
@@ -103,7 +104,7 @@ class TD3Agent(torch.nn.Module):
                 # Compute the target Q value
                 target_Q1, target_Q2 = self.critic_target(next_states, next_actions)
                 target_Q = torch.min(target_Q1, target_Q2)
-                target_Q = rewards.unsqueeze(1) + dones.unsqueeze(1) * C.discount * target_Q
+                target_Q = rewards.unsqueeze(1) + dones.unsqueeze(1) * C.discount * target_Q.to(device)
             # Get current Q estimates
             current_Q1, current_Q2 = self.critic(states, actions)
             # Compute critic loss
@@ -116,12 +117,12 @@ class TD3Agent(torch.nn.Module):
             # Delayed policy updates
             if self.total_it % C.policy_freq == 0:
 
-                actions_v = torch.full((C.batch_size, 1), C.action_v)
-                actions_yaw = self.actor(states)
-                actions = torch.cat((actions_v, actions_yaw), dim=1)
+                actions_v = torch.full((C.batch_size, 1), C.action_v).to(device)
+                actions_yaw = self.actor(states).to(device)
+                actions = torch.cat((actions_v, actions_yaw), dim=1).to(device)
 
                 # Compute actor loss
-                actor_loss = -self.critic.Q1(states, actions).mean()
+                actor_loss = -self.critic.Q1(states, actions).mean().to(device)
                 # Optimize the actor
                 self.actor_optimizer.zero_grad()
                 actor_loss.backward()
@@ -161,10 +162,13 @@ class Actor(torch.nn.Module):
     def __init__(self, max_action):
         super(Actor, self).__init__()
 
-        self.l1 = nn.Linear(8, 256) # (6, 256)
+        self.l1 = nn.Linear(C.state_dim, 256)
         self.l2 = nn.Linear(256, 256)
-        # self.l3 = nn.Linear(256, C.action_dim)
-        self.l3 = nn.Linear(256, 1)
+        self.l3 = nn.Linear(256, 256)
+        self.l4 = nn.Linear(256, 256)
+        self.l5 = nn.Linear(256, 256)
+        self.l6 = nn.Linear(256, 1)
+        # self.l3 = nn.Linear(256, 1)
 
         self.max_action = max_action
 
@@ -172,7 +176,11 @@ class Actor(torch.nn.Module):
         state = state.to(device)
         a = F.relu(self.l1(state))
         a = F.relu(self.l2(a))
-        action = self.max_action * torch.tanh(self.l3(a))
+        a = F.relu(self.l3(a))
+        a = F.relu(self.l4(a))
+        a = F.relu(self.l5(a))
+        action = self.max_action * torch.tanh(self.l6(a))
+        # action = self.max_action * torch.tanh(self.l3(a))
         '''
         action: tensor([[-0.0273]], grad_fn=<MulBackward0>)
         action type #0: <class 'torch.Tensor'>
@@ -189,33 +197,57 @@ class Critic(torch.nn.Module):
         super(Critic, self).__init__()
 
         self.l1 = nn.Linear(C.state_dim + C.action_dim, 256)
-        # self.l1 = nn.Linear(C.state_dim + 1, 256)
         self.l2 = nn.Linear(256, 256)
-        self.l3 = nn.Linear(256, 1)
-
-        # Q2 architecture
-        self.l4 = nn.Linear(C.state_dim + C.action_dim, 256)
-        # self.l4 = nn.Linear(C.state_dim + 1, 256)
+        self.l3 = nn.Linear(256, 256)
+        self.l4 = nn.Linear(256, 256)
         self.l5 = nn.Linear(256, 256)
         self.l6 = nn.Linear(256, 1)
+        # self.l3 = nn.Linear(256, 1)
+
+        # Q2 architecture
+        self.l7 = nn.Linear(C.state_dim + C.action_dim, 256)
+        self.l8 = nn.Linear(256, 256)
+        self.l9 = nn.Linear(256, 256)
+        self.l10 = nn.Linear(256, 256)
+        self.l11 = nn.Linear(256, 256)
+        self.l12 = nn.Linear(256, 1)
+        # self.l4 = nn.Linear(C.state_dim + C.action_dim, 256)
+        # self.l5 = nn.Linear(256, 256)
+        # self.l6 = nn.Linear(256, 1)
 
     def forward(self, state, action):
+        state = state.to(device)
+        action = action.to(device)
         sa = torch.cat([state, action], 1)
 
         q1 = F.relu(self.l1(sa))
         q1 = F.relu(self.l2(q1))
-        q1 = self.l3(q1)
+        q1 = F.relu(self.l3(q1))
+        q1 = F.relu(self.l4(q1))
+        q1 = F.relu(self.l5(q1))
+        q1 = self.l6(q1)
+        # q1 = self.l3(q1)
 
-        q2 = F.relu(self.l4(sa))
-        q2 = F.relu(self.l5(q2))
-        q2 = self.l6(q2)
+        q2 = F.relu(self.l7(sa))
+        q2 = F.relu(self.l8(q2))
+        q2 = F.relu(self.l9(q2))
+        q2 = F.relu(self.l10(q2))
+        q2 = F.relu(self.l11(q2))
+        q2 = self.l12(q2)
+        # q2 = self.l6(q2)
         return q1, q2
 
 
     def Q1(self, state, action):
+        state = state.to(device)
+        action = action.to(device)
         sa = torch.cat([state, action], 1)
 
         q1 = F.relu(self.l1(sa))
         q1 = F.relu(self.l2(q1))
-        q1 = self.l3(q1)
+        q1 = F.relu(self.l3(q1))
+        q1 = F.relu(self.l4(q1))
+        q1 = F.relu(self.l5(q1))
+        q1 = self.l6(q1)
+        # q1 = self.l3(q1)
         return q1
