@@ -148,6 +148,8 @@ def run_observer(
         print("Saving images...")
         while not image_queue.empty(): 
             image = image_queue.get()
+            if cv2.countNonZero(image) == 0:
+                continue 
             file_name = f"image_{counter}.jpg"
             cv2.imwrite(os.path.join(file_path, file_name), image)
             counter += 1
