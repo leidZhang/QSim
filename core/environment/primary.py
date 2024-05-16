@@ -8,8 +8,7 @@ import numpy as np
 from pal.products.qcar import QCar
 
 from core.simulator import QLabSimulator
-from core.sensor import VirtualCSICamera
-from .exception import AnomalousEpisodeException
+from .detector import EpisodeMonitor
 from constants import MAX_LOOKAHEAD_INDICES, GOAL_THRESHOLD, DEFAULT_MAX_STEPS, MAX_TRAINING_STEPS, max_action, action_v
 
 
@@ -47,8 +46,8 @@ class QLabEnvironment(Env):
         self.last_action_time: float = time.perf_counter()
         return action
 
-    def get_states(self, actor: str) -> tuple:
-        ego_state: np.ndarray = self.simulator.get_actor_state(actor_name=actor)
+    def get_states(self, ego_state: np.ndarray) -> tuple:
+        # ego_state: np.ndarray = self.simulator.get_actor_state(actor_name=actor)
         orig: np.ndarray = ego_state[:2]
         yaw: float = -ego_state[2]
         rot: np.ndarray = np.array([
@@ -83,6 +82,7 @@ class QLabEnvironment(Env):
     #     return reward, done
 
     def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state, dist_ix) -> tuple:
+        self.detector(action=action, orig=ego_state[:2])
         done: bool = False
         reward: float = 0.0
 
@@ -91,7 +91,7 @@ class QLabEnvironment(Env):
 
             # FORWARD_REWARD V1
             pos = self.current_waypoint_index
-            print(f'POS: {pos}')
+            # print(f'POS: {pos}')
             region_reward = [1, 4, 2]
             waypoints_range = [(0, 332), (333, 446), (447, 625)]
 
@@ -168,8 +168,8 @@ class QLabEnvironment(Env):
         # print(f"0.20 Boundary Reward: {b20_reward}")
 
         # (no reward) Check if the command is not properly executed by the car
-        if abs(action[0]) >= 0.045 and np.array_equal(self.start_orig, ego_state[:2]):
-            raise AnomalousEpisodeException("Anomalous episode detected!")
+        # if abs(action[0]) >= 0.045 and np.array_equal(self.start_orig, ego_state[:2]):
+        #     raise AnomalousEpisodeException("Anomalous episode detected!")
 
         # (no reward) Reach goal
         if (np.linalg.norm(self.goal - ego_state[:2]) < GOAL_THRESHOLD and len(self.next_waypoints) < 201):
@@ -202,14 +202,15 @@ class QLabEnvironment(Env):
 
         if self.privileged:
             # get ground truth state
-            orig, yaw, rot = self.get_states('car')
+            ego_state: np.ndarray = self.simulator.get_actor_state('car')
+            orig, yaw, rot = self.get_states(ego_state)
             waypoints: np.ndarray = np.roll(self.waypoint_sequence, -self.current_waypoint_index, axis=0)[:MAX_LOOKAHEAD_INDICES]
             # get the distance between ego position and waypoints
             norm_dist: np.ndarray = np.linalg.norm(waypoints - orig, axis=1)
             # get the index of the closest waypoint
             dist_ix: int = np.argmin(norm_dist)
             # get state info
-            ego_state: np.ndarray = self.simulator.get_actor_state('car')
+
             self.current_waypoint_index = (self.current_waypoint_index + dist_ix) % self.waypoint_sequence.shape[0]
             # self.prev_dist_ix = dist_ix
             self.next_waypoints = self.next_waypoints[dist_ix:]  # clear pasted waypoints
@@ -244,7 +245,6 @@ class QLabEnvironment(Env):
         """
         self.simulator.reset_map()
         self.deviate_steps = 0
-
         self.car: QCar = QCar()
         # reset episode start time
         self.episode_start_time = time.time()
@@ -260,10 +260,11 @@ class QLabEnvironment(Env):
         self.current_waypoint_index = 0
         self.goal = self.waypoint_sequence[-1]  # x, y coords of goal
 
-        orig, yaw, rot = self.get_states('car')
         ego_state = self.simulator.get_actor_state('car')
+        orig, yaw, rot = self.get_states(ego_state)
         self.episode_start: float = time.time()
-        self.start_orig = orig
+        # self.start_orig = orig
+        self.detector: EpisodeMonitor = EpisodeMonitor(start_orig=orig)
         observation['waypoints'] = np.matmul(self.next_waypoints[:MAX_LOOKAHEAD_INDICES] - orig, rot) if self.privileged else None
 
         global_0 = self.waypoint_sequence[self.current_waypoint_index]
