@@ -32,7 +32,7 @@ class Generator:
         self.episode_num: int = 10000
         self.metrics_agg = defaultdict(list)
         self.mlruns_dir: str = mlruns_dir
-        base_env: QLabEnvironment = QLabEnvironment(dt=0.05, privileged=privileged)
+        base_env: QLabEnvironment = QLabEnvironment(dt=0.02, privileged=privileged)
         self.env: CollectionWrapper = CollectionWrapper(ActionRewardResetWrapper(base_env, qcar_pos, waypoints))
         self.train_repository: MlflowEpisodeRepository = MlflowEpisodeRepository(train_repo)
         self.eval_repository: MlflowEpisodeRepository = MlflowEpisodeRepository(eval_repo)
@@ -101,8 +101,8 @@ class Generator:
                 metrics[key].append(val)
 
             episdoe_steps += 1
-            steps += 1 # ???
-        self.env.step(np.zeros(2), {}) # stop the car
+            steps += 1  # ???
+        self.env.step(np.zeros(2), {})  # stop the car
         time.sleep(COOL_DOWN_TIME)
         # print(metrics)
         return info, episdoe_steps, steps, metrics

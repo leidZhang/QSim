@@ -47,7 +47,7 @@ class CollectionWrapper(Wrapper):
 
     def step(self, action: Union[np.ndarray, Queue], metrics: np.ndarray) -> tuple:
         observation, reward, done, info = self.env.step(action=action, metrics=metrics)
-        self.episode.append(observation.copy()) # copy obs dict as a item and add it to self.episode list
+        self.episode.append(observation.copy())  # copy obs dict as a item and add it to self.episode list
         if not done:
             return observation, reward, done, info
 

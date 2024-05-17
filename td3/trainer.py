@@ -14,6 +14,7 @@ from core.environment.wrappers import CollectionWrapper, ActionRewardResetWrappe
 from .policy import TD3Agent
 from constants import PREFILL, LOG_INTERVAL, SAVE_INTERVAL, MAX_TRAINING_STEPS, LOGBATCH_INTERVAL
 from .exceptions import InsufficientDataException, StopTrainingException
+import constants as C
 
 
 class Trainer:
@@ -23,7 +24,7 @@ class Trainer:
         run_id: str,
         qcar_pos: list,
         waypoints: np.ndarray,
-        device: str = "cuda:0",
+        device: str = C.cuda,
         prefill_steps: int = 0
     ) -> None:
         self.mlruns_dir: str = mlruns_dir
