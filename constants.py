@@ -25,15 +25,8 @@ GOAL_THRESHOLD: int = 0.05
 # settings
 DEFAULT_MAX_STEPS: int = 800
 batch_size = 4096
-<<<<<<< HEAD
-PREFILL = 100
-RUN_ID = ''
-# RUN_ID = '4d2e229373de4830a5efc1bc79573e36'
-action_v = 0.08
-=======
 PREFILL = 20000
 # RUN_ID = 'ec568c877dfc450a9379359cc314f466'
 RUN_ID = ''
 action_v = 0.08
 cuda = "cuda:1"
->>>>>>> Yida
