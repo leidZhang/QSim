@@ -23,7 +23,7 @@ class Trainer:
         run_id: str,
         qcar_pos: list,
         waypoints: np.ndarray,
-        device: str = "cuda:0",
+        device: str = "cuda:1",
         prefill_steps: int = 0
     ) -> None:
         self.mlruns_dir: str = mlruns_dir

@@ -9,7 +9,7 @@ import constants as C
 from torch.optim import Adam
 from core.data.data_TD3 import SequenceRolloutBuffer, MlflowEpisodeRepository
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 
 class TD3Agent(torch.nn.Module):
@@ -73,6 +73,14 @@ class TD3Agent(torch.nn.Module):
             rewards = torch.FloatTensor(samples['rewards']).to(device)
             next_states = torch.FloatTensor(samples['next_states']).to(device)
             dones = torch.FloatTensor(samples['dones']).to(device)
+            # print(f'dones: {dones}')
+            # print(f'shape of dones: {dones.shape}')
+            # print(f'type of action: {type(actions)}')
+
+            not_dones = 1. - dones
+            # print(f'not_dones: {not_dones}')
+            # print(f'shape of not_dones: {not_dones.shape}')
+            # print(f'type of not_dones: {type(not_dones)}')
 
             # print(f'actions: {actions}')
             # print(f'shape of action: {actions.shape}')
@@ -86,7 +94,7 @@ class TD3Agent(torch.nn.Module):
 
             with torch.no_grad():
                 noise_yaw = (
-                        torch.randn_like(actions[:, 0].unsqueeze(1)) * 0.1
+                        torch.randn_like(actions[:, 0].unsqueeze(1)) * 0.10
                 ).clamp(-0.25, 0.25).to(device)
                 # print(f'shape of noise_yaw: {noise_yaw.shape}')
 
@@ -104,7 +112,7 @@ class TD3Agent(torch.nn.Module):
                 # Compute the target Q value
                 target_Q1, target_Q2 = self.critic_target(next_states, next_actions)
                 target_Q = torch.min(target_Q1, target_Q2)
-                target_Q = rewards.unsqueeze(1) + dones.unsqueeze(1) * C.discount * target_Q.to(device)
+                target_Q = rewards.unsqueeze(1) + not_dones.unsqueeze(1) * C.discount * target_Q.to(device)
             # Get current Q estimates
             current_Q1, current_Q2 = self.critic(states, actions)
             # Compute critic loss
@@ -119,7 +127,7 @@ class TD3Agent(torch.nn.Module):
 
                 actions_v = torch.full((C.batch_size, 1), C.action_v).to(device)
                 actions_yaw = self.actor(states).to(device)
-                actions = torch.cat((actions_v, actions_yaw), dim=1).to(device)
+                actions = torch.cat((actions_v.detach(), actions_yaw), dim=1).to(device)
 
                 # Compute actor loss
                 actor_loss = -self.critic.Q1(states, actions).mean().to(device)
@@ -141,21 +149,21 @@ class TD3Agent(torch.nn.Module):
             return (None, None)
 
 
-    def save(self, filename):
-        torch.save(self.critic.state_dict(), filename + "_critic")
-        torch.save(self.critic_optimizer.state_dict(), filename + "_critic_optimizer")
-
-        torch.save(self.actor.state_dict(), filename + "_actor")
-        torch.save(self.actor_optimizer.state_dict(), filename + "_actor_optimizer")
-
-    def load(self, filename):
-        self.critic.load_state_dict(torch.load(filename + "_critic"))
-        self.critic_optimizer.load_state_dict(torch.load(filename + "_critic_optimizer"))
-        self.critic_target = copy.deepcopy(self.critic)
-
-        self.actor.load_state_dict(torch.load(filename + "_actor"))
-        self.actor_optimizer.load_state_dict(torch.load(filename + "_actor_optimizer"))
-        self.actor_target = copy.deepcopy(self.actor)
+    # def save(self, filename):
+    #     torch.save(self.critic.state_dict(), filename + "_critic")
+    #     torch.save(self.critic_optimizer.state_dict(), filename + "_critic_optimizer")
+    #
+    #     torch.save(self.actor.state_dict(), filename + "_actor")
+    #     torch.save(self.actor_optimizer.state_dict(), filename + "_actor_optimizer")
+    #
+    # def load(self, filename):
+    #     self.critic.load_state_dict(torch.load(filename + "_critic"))
+    #     self.critic_optimizer.load_state_dict(torch.load(filename + "_critic_optimizer"))
+    #     self.critic_target = copy.deepcopy(self.critic)
+    #
+    #     self.actor.load_state_dict(torch.load(filename + "_actor"))
+    #     self.actor_optimizer.load_state_dict(torch.load(filename + "_actor_optimizer"))
+    #     self.actor_target = copy.deepcopy(self.actor)
 
 
 class Actor(torch.nn.Module):
