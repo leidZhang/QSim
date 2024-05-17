@@ -1,11 +1,14 @@
-import sys
 import time
+from typing import Union
+from multiprocessing import Queue
+
 
 from gym import Env
 import numpy as np
 from pal.products.qcar import QCar
 
 from core.simulator import QLabSimulator
+from core.sensor import VirtualCSICamera
 from .exception import AnomalousEpisodeException
 from constants import MAX_LOOKAHEAD_INDICES, GOAL_THRESHOLD, DEFAULT_MAX_STEPS, MAX_TRAINING_STEPS, max_action, action_v
 
@@ -196,7 +199,6 @@ class QLabEnvironment(Env):
         observation, reward, info = self.init_step_params()
         # execute action
         action = self.execute_action(action) # real qcar action
-
 
         if self.privileged:
             # get ground truth state

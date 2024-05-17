@@ -10,7 +10,6 @@ class EpisodeMonitor:
         self.queue: Queue = Queue(10)
         self.start_orig: np.ndarray = start_orig
         self.accumulator: int = 0
-        print("aaa")
 
     def __call__(self, action: np.ndarray, orig: np.ndarray) -> None:
         result: int = 1
