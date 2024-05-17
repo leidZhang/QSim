@@ -9,7 +9,7 @@ import constants as C
 from torch.optim import Adam
 from core.data.data_TD3 import SequenceRolloutBuffer, MlflowEpisodeRepository
 
-device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+device = torch.device(C.cuda if torch.cuda.is_available() else "cpu")
 
 
 class TD3Agent(torch.nn.Module):
@@ -35,7 +35,7 @@ class TD3Agent(torch.nn.Module):
 
     def select_action(self, state, data_size):
         state = torch.FloatTensor(state.reshape(1, -1)).to(device)
-        action = self.actor(state).detach().cpu().data.numpy().flatten()
+        action_yaw = self.actor(state).detach().cpu().data.numpy().flatten()
         '''
         action type #1: <class 'numpy.ndarray'>
         action shape #1: (1,)
@@ -44,16 +44,16 @@ class TD3Agent(torch.nn.Module):
 
         # add noise
         with torch.no_grad():
-            action = torch.from_numpy(np.array(action))
-            epsilon = max(1 - data_size / 320_000, 0.04)
+            action_yaw = torch.from_numpy(np.array(action_yaw))
+            epsilon = max(1 - data_size / 640_000, 0.04)
             # epsilon = 0
-            rand_action = torch.rand(action.shape)
-            rand_action = rand_action * 2 - 1
+            rand_action_yaw = torch.rand(action_yaw.shape)
+            rand_action_yaw = rand_action_yaw * 2 - 1
             if random.uniform(0, 1) < epsilon:
-                action = rand_action
-            action = action.cpu().data.numpy().flatten()
+                action_yaw = rand_action_yaw
+            action_yaw = action_yaw.cpu().data.numpy().flatten()
 
-        action = np.concatenate((np.array([C.action_v]), action), axis=0)
+        action = np.concatenate((np.array([1.0]), action_yaw), axis=0)
         '''
         action type #2: <class 'numpy.ndarray'>
         action shape #2: (2,)
@@ -149,23 +149,203 @@ class TD3Agent(torch.nn.Module):
             return (None, None)
 
 
-    # def save(self, filename):
-    #     torch.save(self.critic.state_dict(), filename + "_critic")
-    #     torch.save(self.critic_optimizer.state_dict(), filename + "_critic_optimizer")
-    #
-    #     torch.save(self.actor.state_dict(), filename + "_actor")
-    #     torch.save(self.actor_optimizer.state_dict(), filename + "_actor_optimizer")
-    #
-    # def load(self, filename):
-    #     self.critic.load_state_dict(torch.load(filename + "_critic"))
-    #     self.critic_optimizer.load_state_dict(torch.load(filename + "_critic_optimizer"))
-    #     self.critic_target = copy.deepcopy(self.critic)
-    #
-    #     self.actor.load_state_dict(torch.load(filename + "_actor"))
-    #     self.actor_optimizer.load_state_dict(torch.load(filename + "_actor_optimizer"))
-    #     self.actor_target = copy.deepcopy(self.actor)
+# 1 hidden layer
+class Actor(torch.nn.Module):
+    def __init__(self, max_action):
+        super(Actor, self).__init__()
+
+        self.l1 = nn.Linear(C.state_dim, 256)
+        self.l2 = nn.Linear(256, 256)
+        self.l3 = nn.Linear(256, 1)
+
+        self.max_action = max_action
+
+    def forward(self, state):
+        state = state.to(device)
+        a = F.relu(self.l1(state))
+        a = F.relu(self.l2(a))
+        action = self.max_action * torch.tanh(self.l3(a))
+
+        return action
+
+class Critic(torch.nn.Module):
+    def __init__(self):
+        super(Critic, self).__init__()
+
+        self.l1 = nn.Linear(C.state_dim + C.action_dim, 256)
+        self.l2 = nn.Linear(256, 256)
+        self.l3 = nn.Linear(256, 1)
+
+        # Q2 architecture
+        self.l4 = nn.Linear(C.state_dim + C.action_dim, 256)
+        self.l5 = nn.Linear(256, 256)
+        self.l6 = nn.Linear(256, 1)
+
+    def forward(self, state, action):
+        state = state.to(device)
+        action = action.to(device)
+        sa = torch.cat([state, action], 1)
+
+        q1 = F.relu(self.l1(sa))
+        q1 = F.relu(self.l2(q1))
+        q1 = self.l3(q1)
+
+        q2 = F.relu(self.l4(sa))
+        q2 = F.relu(self.l5(q2))
+        q2 = self.l6(q2)
+        return q1, q2
+
+    def Q1(self, state, action):
+        state = state.to(device)
+        action = action.to(device)
+        sa = torch.cat([state, action], 1)
+
+        q1 = F.relu(self.l1(sa))
+        q1 = F.relu(self.l2(q1))
+        q1 = self.l3(q1)
+        return q1
 
 
+'''
+# 2
+class Actor(torch.nn.Module):
+    def __init__(self, max_action):
+        super(Actor, self).__init__()
+
+        self.l1 = nn.Linear(C.state_dim, 256)
+        self.l2 = nn.Linear(256, 256)
+        self.l3 = nn.Linear(256, 256)
+        self.l4 = nn.Linear(256, 1)
+
+        self.max_action = max_action
+
+    def forward(self, state):
+        state = state.to(device)
+        a = F.relu(self.l1(state))
+        a = F.relu(self.l2(a))
+        a = F.relu(self.l3(a))
+        action = self.max_action * torch.tanh(self.l4(a))
+
+        return action
+
+class Critic(torch.nn.Module):
+    def __init__(self):
+        super(Critic, self).__init__()
+
+        self.l1 = nn.Linear(C.state_dim + C.action_dim, 256)
+        self.l2 = nn.Linear(256, 256)
+        self.l3 = nn.Linear(256, 256)
+        self.l4 = nn.Linear(256, 1)
+
+        # Q2 architecture
+        self.l5 = nn.Linear(C.state_dim + C.action_dim, 256)
+        self.l6 = nn.Linear(256, 256)
+        self.l7 = nn.Linear(256, 256)
+        self.l8 = nn.Linear(256, 1)
+
+    def forward(self, state, action):
+        state = state.to(device)
+        action = action.to(device)
+        sa = torch.cat([state, action], 1)
+
+        q1 = F.relu(self.l1(sa))
+        q1 = F.relu(self.l2(q1))
+        q1 = F.relu(self.l3(q1))
+        q1 = self.l4(q1)
+
+        q2 = F.relu(self.l5(sa))
+        q2 = F.relu(self.l6(q2))
+        q2 = F.relu(self.l7(q2))
+        q2 = self.l8(q2)
+        return q1, q2
+
+    def Q1(self, state, action):
+        state = state.to(device)
+        action = action.to(device)
+        sa = torch.cat([state, action], 1)
+
+        q1 = F.relu(self.l1(sa))
+        q1 = F.relu(self.l2(q1))
+        q1 = F.relu(self.l3(q1))
+        q1 = self.l4(q1)
+        return q1
+
+'''
+'''
+# 3
+class Actor(torch.nn.Module):
+    def __init__(self, max_action):
+        super(Actor, self).__init__()
+
+        self.l1 = nn.Linear(C.state_dim, 256)
+        self.l2 = nn.Linear(256, 256)
+        self.l3 = nn.Linear(256, 256)
+        self.l4 = nn.Linear(256, 256)
+        self.l5 = nn.Linear(256, 1)
+
+        self.max_action = max_action
+
+    def forward(self, state):
+        state = state.to(device)
+        a = F.relu(self.l1(state))
+        a = F.relu(self.l2(a))
+        a = F.relu(self.l3(a))
+        a = F.relu(self.l4(a))
+        action = self.max_action * torch.tanh(self.l5(a))
+
+        return action
+
+class Critic(torch.nn.Module):
+    def __init__(self):
+        super(Critic, self).__init__()
+
+        self.l1 = nn.Linear(C.state_dim + C.action_dim, 256)
+        self.l2 = nn.Linear(256, 256)
+        self.l3 = nn.Linear(256, 256)
+        self.l4 = nn.Linear(256, 256)
+        self.l5 = nn.Linear(256, 1)
+
+        # Q2 architecture
+        self.l6 = nn.Linear(C.state_dim + C.action_dim, 256)
+        self.l7 = nn.Linear(256, 256)
+        self.l8 = nn.Linear(256, 256)
+        self.l9 = nn.Linear(256, 256)
+        self.l10 = nn.Linear(256, 1)
+
+    def forward(self, state, action):
+        state = state.to(device)
+        action = action.to(device)
+        sa = torch.cat([state, action], 1)
+
+        q1 = F.relu(self.l1(sa))
+        q1 = F.relu(self.l2(q1))
+        q1 = F.relu(self.l3(q1))
+        q1 = F.relu(self.l4(q1))
+        q1 = self.l5(q1)
+
+        q2 = F.relu(self.l6(sa))
+        q2 = F.relu(self.l7(q2))
+        q2 = F.relu(self.l8(q2))
+        q2 = F.relu(self.l9(q2))
+        q2 = self.l10(q2)
+        return q1, q2
+
+
+    def Q1(self, state, action):
+        state = state.to(device)
+        action = action.to(device)
+        sa = torch.cat([state, action], 1)
+
+        q1 = F.relu(self.l1(sa))
+        q1 = F.relu(self.l2(q1))
+        q1 = F.relu(self.l3(q1))
+        q1 = F.relu(self.l4(q1))
+        q1 = self.l5(q1)
+        return q1
+
+'''
+'''
+# 4
 class Actor(torch.nn.Module):
     def __init__(self, max_action):
         super(Actor, self).__init__()
@@ -176,7 +356,6 @@ class Actor(torch.nn.Module):
         self.l4 = nn.Linear(256, 256)
         self.l5 = nn.Linear(256, 256)
         self.l6 = nn.Linear(256, 1)
-        # self.l3 = nn.Linear(256, 1)
 
         self.max_action = max_action
 
@@ -188,16 +367,7 @@ class Actor(torch.nn.Module):
         a = F.relu(self.l4(a))
         a = F.relu(self.l5(a))
         action = self.max_action * torch.tanh(self.l6(a))
-        # action = self.max_action * torch.tanh(self.l3(a))
-        '''
-        action: tensor([[-0.0273]], grad_fn=<MulBackward0>)
-        action type #0: <class 'torch.Tensor'>
-        action shape #0: torch.Size([1, 1])
-        '''
 
-        # print(f'action: {action}')
-        # print(f'action type #0: {type(action)}')
-        # print(f'action shape #0: {action.shape}')
         return action
 
 class Critic(torch.nn.Module):
@@ -210,7 +380,6 @@ class Critic(torch.nn.Module):
         self.l4 = nn.Linear(256, 256)
         self.l5 = nn.Linear(256, 256)
         self.l6 = nn.Linear(256, 1)
-        # self.l3 = nn.Linear(256, 1)
 
         # Q2 architecture
         self.l7 = nn.Linear(C.state_dim + C.action_dim, 256)
@@ -219,9 +388,6 @@ class Critic(torch.nn.Module):
         self.l10 = nn.Linear(256, 256)
         self.l11 = nn.Linear(256, 256)
         self.l12 = nn.Linear(256, 1)
-        # self.l4 = nn.Linear(C.state_dim + C.action_dim, 256)
-        # self.l5 = nn.Linear(256, 256)
-        # self.l6 = nn.Linear(256, 1)
 
     def forward(self, state, action):
         state = state.to(device)
@@ -234,7 +400,6 @@ class Critic(torch.nn.Module):
         q1 = F.relu(self.l4(q1))
         q1 = F.relu(self.l5(q1))
         q1 = self.l6(q1)
-        # q1 = self.l3(q1)
 
         q2 = F.relu(self.l7(sa))
         q2 = F.relu(self.l8(q2))
@@ -242,7 +407,6 @@ class Critic(torch.nn.Module):
         q2 = F.relu(self.l10(q2))
         q2 = F.relu(self.l11(q2))
         q2 = self.l12(q2)
-        # q2 = self.l6(q2)
         return q1, q2
 
 
@@ -257,5 +421,5 @@ class Critic(torch.nn.Module):
         q1 = F.relu(self.l4(q1))
         q1 = F.relu(self.l5(q1))
         q1 = self.l6(q1)
-        # q1 = self.l3(q1)
         return q1
+'''

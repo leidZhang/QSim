@@ -1,3 +1,4 @@
+import sys
 import time
 from typing import Union
 from multiprocessing import Queue
@@ -38,7 +39,8 @@ class QLabEnvironment(Env):
         action type #3: <class 'numpy.ndarray'>
         action shape #3: (2,)
         '''
-        action[0] = action_v * (action[0] + 1) / 2 # 0.08 is the max speed of the car
+        # action[0] = action_v * (action[0] + 1) / 2  # 0.08 is the max speed of the car
+        action[0] = action[0] * action_v
         action[1] = 0.5 * action[1]  # 0.5 is the max steering angle of the car
 
         self.car.read_write_std(action[0], action[1])
@@ -82,6 +84,8 @@ class QLabEnvironment(Env):
     #     return reward, done
 
     def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state, dist_ix) -> tuple:
+        # sys.stdout.write(f"\rAction: {action}, Position: {ego_state[:2]}, Start: {self.start_orig}")
+        # sys.stdout.flush()
         self.detector(action=action, orig=ego_state[:2])
         done: bool = False
         reward: float = 0.0
@@ -263,7 +267,7 @@ class QLabEnvironment(Env):
         ego_state = self.simulator.get_actor_state('car')
         orig, yaw, rot = self.get_states(ego_state)
         self.episode_start: float = time.time()
-        # self.start_orig = orig
+        self.start_orig = orig
         self.detector: EpisodeMonitor = EpisodeMonitor(start_orig=orig)
         observation['waypoints'] = np.matmul(self.next_waypoints[:MAX_LOOKAHEAD_INDICES] - orig, rot) if self.privileged else None
 

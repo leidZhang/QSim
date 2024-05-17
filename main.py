@@ -14,6 +14,7 @@ from td3.trainer import Trainer
 from constants import PREFILL, MAX_TRAINING_STEPS, RUN_ID
 from td3.exceptions import InsufficientDataException, StopTrainingException
 from core.utils.tools import mlflow_init, configure_logging
+import constants as C
 
 def check_process(processes: List[Process]) -> None:
     for process in processes:
@@ -59,7 +60,7 @@ def start_trainer(
     trainer: Trainer = Trainer(
         mlruns_dir=mlruns_dir,
         run_id=run_id,
-        device=device,
+        device=C.cuda,
         qcar_pos=init_pos,
         waypoints=waypoints,
         prefill_steps=prefill_steps
@@ -143,7 +144,7 @@ def start_system(resume_run_id: str, init_pos: list, waypoints: np.ndarray) -> N
             init_pos=init_pos,
             waypoints=waypoints,
             resume=resume,
-            device="cuda:0",
+            device=C.cuda,
             prefill_steps=0,
         )
     )
