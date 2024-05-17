@@ -23,7 +23,7 @@ GOAL_THRESHOLD: int = 0.05
 
 
 # settings
-DEFAULT_MAX_STEPS: int = 2000
+DEFAULT_MAX_STEPS: int = 800
 batch_size = 4096
 PREFILL = 20000
 # RUN_ID = 'ec568c877dfc450a9379359cc314f466'
