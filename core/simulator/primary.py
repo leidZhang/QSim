@@ -13,7 +13,7 @@ import pal.resources.rtmodels as rtmodels
 from core.roadmap import ACCDirector
 from core.roadmap.constants import ACC_X_OFFSET, ACC_Y_OFFSET
 from .constants import QCAR_ACTOR_ID
-from .monitor import Monitor
+from ..qcar.monitor import Monitor
 
 
 class Simulator:

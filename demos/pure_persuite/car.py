@@ -9,7 +9,7 @@ from pal.products.qcar import QCar
 
 from core.environment.exception import AnomalousEpisodeException
 from core.sensor.sensor import VirtualCSICamera
-from core.simulator.monitor import Monitor
+from core.qcar.monitor import Monitor
 from core.policies.pure_persuit import PurePursuitPolicy
 
 
