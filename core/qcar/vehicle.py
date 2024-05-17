@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from typing import Union, Tuple
 
 import numpy as np
@@ -9,24 +10,102 @@ from core.base_policy import PolicyAdapter, BasePolicy
 from .monitor import Monitor
 
 
-class BaseCar: 
+class BaseCar:
+    """
+    The BaseCar class is an abstract class that defines the interface for both 
+    the physical and virtual cars
+
+    Attributes:
+    - throttle_coeff: float: The throttle coefficient of the car
+    - steering_coeff: float: The steering coefficient of the car
+
+    Methods:
+    - execute: Executes the action of the car
+    """
+
+    def __init__(self, throttle_coeff: float, steering_coeff: float) -> None:
+        """
+        Initializes the BaseCar object
+
+        Parameters:
+        - throttle_coeff: float: The throttle coefficient of the car
+        - steering_coeff: float: The steering coefficient of the car
+
+        Returns:
+        - None
+        """
+        self.throttle_coeff: float = throttle_coeff
+        self.steering_coeff: float = steering_coeff
+
+    @abstractmethod
+    def execute(self, *args) -> Tuple:
+        """
+        The execute method is an abstract method that executes the action of the car
+
+        Parameters:
+        - args: Any: The arguments of the car
+
+        Returns:
+        - Tuple: The output of the car
+        """
+        ...
+
+
+class VirtualCar(BaseCar): 
+    """
+    The VirtualCar class is a class that defines the interface for the virtual car that 
+    can get the action from any external agent, it can also get the ego state of the car
+    by communicating with the Quanser Interactive Labs
+
+    Attributes:
+    - actor_id: int: The id of the actor
+    - running_gear: QCar: The running gear of the car
+    - monitor: Monitor: The monitor of the car
+
+    Methods:
+    - get_ego_state: Gets the ego state of the car
+    - get_vehicle_state: Gets the state of the vehicle
+    - execute: Executes the action of the car
+    """
+    
     def __init__(self, actor_id, dt, throttle_coeff: float = 0.3, steering_coeff: float = 0.5) -> None:
+        """
+        Initializes the VirtualCar object
+
+        Parameters:
+        - actor_id: int: The id of the actor
+        - dt: float: The time gap between each step
+        - throttle_coeff: float: The throttle coefficient of the car
+        - steering_coeff: float: The steering coefficient of the car
+
+        Returns:
+        - None
+        """
         # basic attributes
+        super().__init__(throttle_coeff, steering_coeff)
         self.actor_id: int = actor_id
         self.running_gear: QCar = QCar(id=actor_id)
         self.monitor: Monitor = Monitor(160, actor_id, dt=dt)
-        self.throttle_coeff: float = throttle_coeff
-        self.steering_coeff: float = steering_coeff
-        # custom attributes
-        self.policy = None
-
-    def set_policy(self, policy: Union[PolicyAdapter, BasePolicy]) -> None: 
-        self.policy = policy
 
     def get_ego_state(self) -> np.ndarray:
+        """
+        Gets the ego state of the car
+
+        Returns:
+        - np.ndarray: The ego state of the car
+        """
         return self.monitor.get_state()
     
     def get_vehicle_state(self, ego_state: np.ndarray) -> Tuple[np.ndarray, float, np.ndarray]:
+        """
+        Gets the position, yaw and rotation of the vehicle
+
+        Parameters:
+        - ego_state: np.ndarray: The ego state of the car
+
+        Returns:
+        - Tuple[np.ndarray, float, np.ndarray]: The position, yaw and rotation of the vehicle
+        """
         orig: np.ndarray = ego_state[:2]
         yaw: float = -ego_state[2]
         rot: np.ndarray = np.array([
@@ -35,9 +114,73 @@ class BaseCar:
         ])
         return orig, yaw, rot
 
-    def execute(self, observation: dict) -> None: 
-        action, metrics = self.policy.execute(observation)
+    def execute(self, action: np.ndarray) -> Tuple[float, float]: 
+        """
+        The execute method executes the action of the car and returns the throttle and steering values
+
+        Parameters:
+        - action: np.ndarray: The action to be executed by the car, received from the external agent
+
+        Returns:
+        - Tuple[float, float]: The throttle and steering values of the car
+        """
         throttle: float = self.throttle_coeff * action[0]
         steering: float = self.steering_coeff * action[1]
         self.running_gear.read_write_std(throttle, steering)
-        return action, metrics
+        return throttle, steering
+    
+
+class VirtualAgentCar(VirtualCar): 
+    """
+    The VirtualAgentCar class is a class that defines the interface for the virtual car and 
+    also load a specific policy to execute the action
+
+    Attributes:
+    - policy: Union[BasePolicy, PolicyAdapter]: The policy to be loaded
+
+    Methods:
+    - set_policy: Sets the policy to be loaded
+    - execute: Executes the action of the car
+    """
+    
+    def __init__(self, actor_id, dt, throttle_coeff: float = 0.3, steering_coeff: float = 0.5) -> None:
+        """
+        Initializes the VirtualAgentCar object
+
+        Parameters:
+        - actor_id: int: The id of the actor
+        - dt: float: The time gap between each step
+        - throttle_coeff: float: The throttle coefficient of the car
+        - steering_coeff: float: The steering coefficient of the car
+
+        Returns:
+        - None
+        """
+        super().__init__(actor_id, dt, throttle_coeff, steering_coeff)
+        self.policy: Union[BasePolicy, PolicyAdapter] = None
+        
+    def set_policy(self, policy: Union[BasePolicy, PolicyAdapter]) -> None:
+        """
+        Sets the policy to be loaded
+
+        Parameters:
+        - policy: Union[BasePolicy, PolicyAdapter]: The policy to be loaded
+
+        Returns:
+        - None
+        """
+        self.policy = policy
+
+    def execute(self, observation: dict) -> Tuple[float, float]: 
+        """
+        The execute method executes the action of the car and returns the throttle and steering values
+
+        Parameters:
+        - observation: dict: The observation of the environment
+
+        Returns:
+        - Tuple[float, float]: The throttle and steering values of the car
+        """
+        action, _ = self.policy.execute(observation)
+        return super().execute(action)
+    
