@@ -206,6 +206,7 @@ class Critic(torch.nn.Module):
         return q1
 
 
+<<<<<<< HEAD
 '''
 # 2
 class Actor(torch.nn.Module):
@@ -346,6 +347,8 @@ class Critic(torch.nn.Module):
 '''
 '''
 # 4
+=======
+>>>>>>> main
 class Actor(torch.nn.Module):
     def __init__(self, max_action):
         super(Actor, self).__init__()
