@@ -161,4 +161,4 @@ cython_debug/
 
 /doc/umls/
 mlruns/
-constants.py
+.constants.py

@@ -6,6 +6,7 @@ from qvl.actor import QLabsActor
 from qvl.qlabs import QuanserInteractiveLabs
 from qvl.qlabs import CommModularContainer
 
+
 class Monitor:
     def __init__(self, class_id: int, actor_number: int, dt: float = 0.05) -> None:
         self.dt = dt

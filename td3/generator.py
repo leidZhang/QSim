@@ -11,11 +11,12 @@ from core.policies.network import NetworkPolicy
 from core.utils.tools import configure_logging, LogColorFormatter, load_checkpoint
 from core.utils.tools import mlflow_log_metrics
 from core.environment.wrappers import CollectionWrapper, ActionRewardResetWrapper
-from core.environment.primary import QLabEnvironment
+from core.environment.environment import QLabEnvironment
 from core.environment import AnomalousEpisodeException
 from core.data.data_TD3 import MlflowDataRepository, MlflowEpisodeRepository
 
 from .policy import TD3Agent
+from .environment import WaypointEnvironment
 from constants import PREFILL, METRIC_PREFIX, COOL_DOWN_TIME
 
 
@@ -32,7 +33,7 @@ class Generator:
         self.episode_num: int = 10000
         self.metrics_agg = defaultdict(list)
         self.mlruns_dir: str = mlruns_dir
-        base_env: QLabEnvironment = QLabEnvironment(dt=0.02, privileged=privileged)
+        base_env: QLabEnvironment = WaypointEnvironment(dt=0.02, privileged=privileged)
         self.env: CollectionWrapper = CollectionWrapper(ActionRewardResetWrapper(base_env, qcar_pos, waypoints))
         self.train_repository: MlflowEpisodeRepository = MlflowEpisodeRepository(train_repo)
         self.eval_repository: MlflowEpisodeRepository = MlflowEpisodeRepository(eval_repo)
@@ -76,7 +77,6 @@ class Generator:
     def run_episode(self, episdoe_steps: int, steps: int) -> tuple:
         metrics = defaultdict(list)
         observation, reward, done, info = self.env.reset()
-        start_time = time.time()
         while not done:
             if type(self.policy) is TD3Agent:
                 '''
@@ -155,17 +155,15 @@ class Generator:
         return accumulator
 
     def execute(self, run_id: str, resume: bool) -> tuple:
+        datas: list = []
         _, saved_data, _ = self.train_repository.count_steps()
         steps, episodes = self.prepare_session(run_id=run_id, resume=resume, saved_data=saved_data)
 
-        datas = []
         for _ in range(self.episode_num):
             try:
                 logging.info("Starting new episode...")
                 self.load_policy(run_id, saved_data) # problem here
                 episode_steps: int = 0
-                if isinstance(self.policy, NetworkPolicy):
-                    self.policy.reset_state()
                 info, episode_steps, steps, metrics = self.run_episode(episode_steps, steps)
                 episodes += 1
 

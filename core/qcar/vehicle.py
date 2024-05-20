@@ -4,10 +4,12 @@ from typing import Union, Tuple
 import numpy as np
 
 from pal.products.qcar import QCar
+from qvl.qlabs import QuanserInteractiveLabs
 
 # from core.sensor.sensor import VirtualCSICamera, VirtualRGBDCamera
 from core.base_policy import PolicyAdapter, BasePolicy
 from .monitor import Monitor
+from .constants import QCAR_ACTOR_ID
 
 
 class BaseCar:
@@ -68,13 +70,21 @@ class VirtualCar(BaseCar):
     - execute: Executes the action of the car
     """
     
-    def __init__(self, actor_id, dt, throttle_coeff: float = 0.3, steering_coeff: float = 0.5) -> None:
+    def __init__(
+        self, 
+        actor_id: int, 
+        dt: float, 
+        qlabs: QuanserInteractiveLabs,
+        throttle_coeff: float = 0.3, 
+        steering_coeff: float = 0.5
+    ) -> None:
         """
         Initializes the VirtualCar object
 
         Parameters:
         - actor_id: int: The id of the actor
         - dt: float: The time gap between each step
+        - qlabs: QuanserInteractiveLabs: The Quanser Interactive Labs object
         - throttle_coeff: float: The throttle coefficient of the car
         - steering_coeff: float: The steering coefficient of the car
 
@@ -83,9 +93,13 @@ class VirtualCar(BaseCar):
         """
         # basic attributes
         super().__init__(throttle_coeff, steering_coeff)
+        self.qlabs: QuanserInteractiveLabs = qlabs
         self.actor_id: int = actor_id
         self.running_gear: QCar = QCar(id=actor_id)
-        self.monitor: Monitor = Monitor(160, actor_id, dt=dt)
+        self.monitor: Monitor = Monitor(QCAR_ACTOR_ID, actor_id, dt=dt)
+
+    def halt(self) -> None: 
+        self.running_gear.read_write_std(0, 0)
 
     def get_ego_state(self) -> np.ndarray:
         """
@@ -94,9 +108,10 @@ class VirtualCar(BaseCar):
         Returns:
         - np.ndarray: The ego state of the car
         """
-        return self.monitor.get_state()
+        self.monitor.get_state(self.qlabs)
+        return self.monitor.state
     
-    def get_vehicle_state(self, ego_state: np.ndarray) -> Tuple[np.ndarray, float, np.ndarray]:
+    def cal_vehicle_state(self, ego_state: np.ndarray) -> Tuple[np.ndarray, float, np.ndarray]:
         """
         Gets the position, yaw and rotation of the vehicle
 
@@ -143,20 +158,21 @@ class VirtualAgentCar(VirtualCar):
     - execute: Executes the action of the car
     """
     
-    def __init__(self, actor_id, dt, throttle_coeff: float = 0.3, steering_coeff: float = 0.5) -> None:
+    def __init__(self, actor_id, dt, qlabs, throttle_coeff: float = 0.3, steering_coeff: float = 0.5) -> None:
         """
         Initializes the VirtualAgentCar object
 
         Parameters:
         - actor_id: int: The id of the actor
         - dt: float: The time gap between each step
+        - qlabs: QuanserInteractiveLabs: The Quanser Interactive Labs object
         - throttle_coeff: float: The throttle coefficient of the car
         - steering_coeff: float: The steering coefficient of the car
 
         Returns:
         - None
         """
-        super().__init__(actor_id, dt, throttle_coeff, steering_coeff)
+        super().__init__(actor_id, dt, qlabs, throttle_coeff, steering_coeff)
         self.policy: Union[BasePolicy, PolicyAdapter] = None
         
     def set_policy(self, policy: Union[BasePolicy, PolicyAdapter]) -> None:

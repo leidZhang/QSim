@@ -1,11 +1,10 @@
-import time
-from typing import Tuple, Union
+from typing import Union
 from multiprocessing import Queue
 
 import numpy as np
 from gym import Wrapper
 
-from .primary import QLabEnvironment
+from .environment import QLabEnvironment
 
 
 class ActionRewardResetWrapper(Wrapper):
@@ -31,12 +30,6 @@ class ActionRewardResetWrapper(Wrapper):
         observation["reset"] = np.array(True, dtype=bool)
 
         return observation, reward, done, info
-
-    def close_connection(self) -> None:
-        self.env.close_connection()
-
-    def reconnect(self) -> None:
-        self.env.reconnect()
 
 
 class CollectionWrapper(Wrapper):

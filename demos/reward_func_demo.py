@@ -1,6 +1,6 @@
 from core.environment import AnomalousEpisodeException
 from core.policies.keyboard import KeyboardPolicy
-from core.environment.primary import QLabEnvironment
+from core.environment.environment import QLabEnvironment
 
 from .override_demo import prepare_map_info
 
