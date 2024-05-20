@@ -27,6 +27,6 @@ DEFAULT_MAX_STEPS: int = 800
 batch_size = 4096
 PREFILL = 20000
 # RUN_ID = 'ec568c877dfc450a9379359cc314f466'
-RUN_ID = ''
+RUN_ID = 'c7ff20cb66624976a8f86dcf1e7ab837'
 action_v = 0.08
 cuda = "cuda:1"

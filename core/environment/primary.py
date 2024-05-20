@@ -66,19 +66,18 @@ class QLabEnvironment(Env):
         # FORWARD_REWARD V1
         pos = self.current_waypoint_index
         region_reward = [1, 4, 2]
-        waypoints_range = [(0, 332), (333, 446), (447, 625)]
 
         pointer = 0 + (1 if pos > 332 else 0) + (1 if pos > 446 else 0)
         forward_reward = region_reward[pointer] * (pos - self.pre_pos) * 0.125
         reward += forward_reward
 
-        if norm_dist[dist_ix] >= 0.25:
-            panelty = reward * (1 / norm_dist[dist_ix]) * 0.7
+        if norm_dist[dist_ix] > 0.05:
+            panelty = reward * (norm_dist[dist_ix] / 0.05) * 0.35
             reward -= panelty
         
         # Max boundary
         if norm_dist[dist_ix] >= 0.10:
-            reward -= 40.0
+            reward -= 50.0
             done = True
             self.car.read_write_std(0, 0)  # stop the car # stop the car
     
