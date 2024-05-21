@@ -123,7 +123,7 @@ class TD3Agent(torch.nn.Module):
             critic_loss.backward()
 
             # Gradient clipping
-            torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=100.0)
+            torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=1.0)
 
             self.critic_optimizer.step()
 
@@ -141,7 +141,7 @@ class TD3Agent(torch.nn.Module):
                 actor_loss.backward()
 
                 # Gradient clipping
-                torch.nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=100.0)
+                torch.nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=1.0)
 
                 self.actor_optimizer.step()
 
