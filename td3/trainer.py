@@ -88,10 +88,12 @@ class Trainer:
         metric_counter: int = 0
         if len(self.data) >= PREFILL:
             self.steps += 1
-            actor_loss, critic_loss = self.agent.learn(samples)
+            actor_loss, critic_loss, gradients = self.agent.learn(samples)
             if actor_loss is not None and critic_loss is not None:
                 self.metrics["actor_loss"] = actor_loss
                 self.metrics["critic_loss"] = critic_loss
+                self.metrics["actor_grad"] = gradients["actor"]
+                self.metrics["critic_grad"] = gradients["critic"]
                 metric_counter += 1
                 if metric_counter % 10 == 0:
                     print(self.metrics)
