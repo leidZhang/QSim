@@ -11,9 +11,9 @@ from torch.cuda.amp import GradScaler
 
 from core.utils.tools import configure_logging, mlflow_init, load_checkpoint, mlflow_log_metrics
 from core.environment.wrappers import CollectionWrapper, ActionRewardResetWrapper
-from .policy import TD3Agent
+from td3.policy import TD3Agent
 from constants import PREFILL, LOG_INTERVAL, SAVE_INTERVAL, MAX_TRAINING_STEPS, LOGBATCH_INTERVAL
-from .exceptions import InsufficientDataException, StopTrainingException
+from td3.exceptions import InsufficientDataException, StopTrainingException
 import constants as C
 
 
