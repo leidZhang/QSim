@@ -105,7 +105,7 @@ class Trainer:
             return
 
         # cal average value and max value
-        self.metrics = {f'train/{k}': np.array(v).mean() for k, v in self.metrics.items()}
+        self.metrics = {f'train/{k}': np.array(v.cpu()).mean() for k, v in self.metrics.items()}
         self.metrics.update({f'train/{k}_max': np.array(v).max() for k, v in self.metrics_max.items()})
         self.metrics['train/steps'] = self.steps
         self.metrics['_step'] = self.steps

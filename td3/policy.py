@@ -45,7 +45,7 @@ class TD3Agent(torch.nn.Module):
         # add noise
         with torch.no_grad():
             action_yaw = torch.from_numpy(np.array(action_yaw))
-            epsilon = max(1 - data_size / 1_000_000, 0.04)
+            epsilon = max(1 - data_size / 400_000, 0.04)
             # epsilon = 0
             rand_action_yaw = torch.rand(action_yaw.shape)
             rand_action_yaw = rand_action_yaw * 2 - 1
