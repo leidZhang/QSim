@@ -146,7 +146,7 @@ class Generator:
         # print(f"Current data step: {datas_steps}")
 
         # save data as npz
-        if np.random.rand() < 0: # 0.2
+        if np.random.rand() < 0.0: # 0.2
             self.eval_repository.save_data(data, episodes - data_episodes, episodes - 1, 0)
         else:
             self.train_repository.save_data(data, episodes - data_episodes, episodes - 1, 0)
