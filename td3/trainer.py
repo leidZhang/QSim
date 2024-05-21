@@ -120,16 +120,15 @@ class Trainer:
         # update time and steps
         self.last_time = time_stamp
         self.last_steps = self.steps
-        if self.steps % 400 == 0:
+        if self.steps % 400 == 0 and self.steps > 0:
             logging.info(
-                f"[steps{self.steps:06}]"
+                f"[steps{(self.steps - 400):06}]"
                 f"  actor_loss: {self.metrics.get('train/actor_loss', 0):.3f}"
                 f"  critic_loss: {self.metrics.get('train/critic_loss', 0):.3f}"
                 f"  fps: {self.metrics.get('train/fps', 0):.3f}"
             )
-        # skip first batch because the losses are very high and mess up y axis
-        if self.steps > LOG_INTERVAL:
-            mlflow_log_metrics(self.metrics, step=self.steps)
+            # skip first batch because the losses are very high and mess up y axis
+            mlflow_log_metrics(self.metrics, step=self.steps-400)
         # clear metrics and metric_max
         self.metrics = defaultdict(list)
         self.metrics_max = defaultdict(list)

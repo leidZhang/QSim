@@ -101,9 +101,10 @@ class Generator:
                 metrics[key].append(val)
 
             episdoe_steps += 1
-            steps += 1  # ???
+            steps += 1  
         self.env.step(np.zeros(2), {})  # stop the car
-        time.sleep(COOL_DOWN_TIME)
+        if type(self.policy) is TD3Agent:
+            time.sleep(COOL_DOWN_TIME)
         # print(metrics)
         return info, episdoe_steps, steps, metrics
 

@@ -25,8 +25,8 @@ GOAL_THRESHOLD: int = 0.05
 # settings
 DEFAULT_MAX_STEPS: int = 800
 batch_size = 4096
-PREFILL = 20000
+PREFILL = 5000
 # RUN_ID = 'ec568c877dfc450a9379359cc314f466'
-RUN_ID = 'e6544b1cd38b453381e8afa6187dcffb'
+RUN_ID = ''
 action_v = 1
 cuda = "cuda:1"
