@@ -53,9 +53,3 @@ class KeyboardController:
     def clear_input_buffer(self) -> None:
         while keyboard.read_event(suppress=True):
             pass
-
-
-class KeyboardPolicy(KeyboardController):
-    def execute(self) -> np.ndarray:
-        super().execute()
-        return np.array([self.state['x_signal'], self.state['y_signal']])
