@@ -1,9 +1,13 @@
-from typing import Tuple
+import time
+
 import numpy as np
 
 from qvl.qlabs import QuanserInteractiveLabs
+from pal.utilities.math import Calculus
 
 from core.qcar import VirtualCar
+from core.qcar.constants import WHEEL_RADIUS, ENCODER_COUNTS_PER_REV, PIN_TO_SPUR_RATIO
+from core.utils.tools import realtime_message_output, elapsed_time
 from constants import MAX_LOOKAHEAD_INDICES
 
 
@@ -16,6 +20,8 @@ class WaypointCar(VirtualCar):
             throttle_coeff: float = 0.3, 
             steering_coeff: float = 0.5
         ) -> None:
+        self.diff = Calculus().differentiator_variable(dt)
+        _ = next(self.diff)
         super().__init__(actor_id, dt, qlabs, throttle_coeff, steering_coeff)
         self.observation: dict = {}
 
@@ -29,8 +35,10 @@ class WaypointCar(VirtualCar):
 
     def update_state(self) -> None: 
         self.ego_state = self.get_ego_state()
-        orig, yaw, rot = self.cal_vehicle_state(self.ego_state)
-        local_waypoints: np.ndarray = np.roll(self.waypoints, -self.current_waypoint_index, axis=0)[:200]
+        orig, _, rot = self.cal_vehicle_state(self.ego_state)
+        local_waypoints: np.ndarray = np.roll(
+            self.waypoints, -self.current_waypoint_index, axis=0
+        )[:MAX_LOOKAHEAD_INDICES]
         self.norm_dist: np.ndarray = np.linalg.norm(local_waypoints - orig, axis=1)
         self.dist_ix: int = np.argmin(self.norm_dist)
         self.current_waypoint_index = (self.current_waypoint_index + self.dist_ix) % self.waypoints.shape[0]
@@ -42,7 +50,22 @@ class WaypointCar(VirtualCar):
         # add waypoints info to observation
         self.observation['waypoints'] = np.matmul(self.next_waypoints[:MAX_LOOKAHEAD_INDICES] - orig, rot)
 
+    def estimate_speed(self) -> float:
+        encoder_counts: np.ndarray = self.running_gear.motorEncoder
+        encoder_speed: float = self.diff.send((encoder_counts[0], self.monitor.dt))
+        return encoder_speed * (1 / (ENCODER_COUNTS_PER_REV * 4) * PIN_TO_SPUR_RATIO * 2 * np.pi * WHEEL_RADIUS)
+
     def execute(self, action: np.ndarray) -> np.ndarray:
+        start_time: float = time.time()
+        # execute the control
         throttle, steering = super().execute(action)
         self.update_state()
+        # calculate the estimated speed
+        linear_speed: float = self.estimate_speed()
+        # calculate the sleep time
+        execute_time: float = elapsed_time(start_time)
+        sleep_time: float = self.monitor.dt - execute_time
+        realtime_message_output(f"Estimated speed: {linear_speed:1.2f}m/s, Real speed: {self.ego_state[3]:1.2f}m/s")
+        time.sleep(sleep_time) if sleep_time > 0 else None
+        # return the car's action to the environment
         return np.array([throttle, steering])
