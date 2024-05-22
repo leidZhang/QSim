@@ -1,4 +1,3 @@
-import time
 from typing import Tuple
 
 import numpy as np
@@ -40,7 +39,7 @@ class WaypointEnvironment(QLabEnvironment):
     #         self.vehicle.halt()  # stop the car
     #
     #     return reward, done
-    
+
     def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state, dist_ix) -> tuple:
         # sys.stdout.write(f"\rAction: {action}, Position: {ego_state[:2]}, Start: {self.start_orig}")
         # sys.stdout.flush()
@@ -106,7 +105,7 @@ class WaypointEnvironment(QLabEnvironment):
         episode_done: bool = self.episode_steps >= self.max_episode_steps
         observation, reward, info = self.init_step_params()
         action: np.ndarray = self.vehicle.execute(action)
-        time.sleep(0.05)  # sleep for 0.05 seconds
+        # time.sleep(0.05)  # sleep for 0.05 seconds
 
         # privileged information
         if self.privileged:
@@ -121,14 +120,14 @@ class WaypointEnvironment(QLabEnvironment):
         far_index: int = (self.vehicle.current_waypoint_index + 49) % self.waypoint_sequence.shape[0]
         global_close: np.ndarray = self.waypoint_sequence[close_index]
         global_far: np.ndarray = self.waypoint_sequence[far_index]
-        observation['state'] = np.concatenate((ego_state, global_close, global_far)) 
+        observation['state'] = np.concatenate((ego_state, global_close, global_far))
         observation["waypoints"] = self.vehicle.observation["waypoints"]
-        
+
         self.episode_steps += 1
         self.pre_pos = self.vehicle.current_waypoint_index
         # print(f'reward: {reward}')
         return observation, reward, episode_done, info
-    
+
     def reset(self) -> Tuple[dict, float, bool, dict]:
         observation, reward, done, info = super().reset()
 

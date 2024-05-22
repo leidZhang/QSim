@@ -232,5 +232,5 @@ def load_npz(path, keys=None) -> Dict[str, np.ndarray]:
 
         return data
 
-if __name__ == "__main__":
-    pass
+def elapsed_time(start_time: float) -> float:
+    return time.time() - start_time
