@@ -33,7 +33,7 @@ class Generator:
         self.episode_num: int = 10000
         self.metrics_agg = defaultdict(list)
         self.mlruns_dir: str = mlruns_dir
-        base_env: QLabEnvironment = WaypointEnvironment(dt=0.02, privileged=privileged)
+        base_env: QLabEnvironment = WaypointEnvironment(dt=0.03, privileged=privileged)
         self.env: CollectionWrapper = CollectionWrapper(ActionRewardResetWrapper(base_env, qcar_pos, waypoints))
         self.train_repository: MlflowEpisodeRepository = MlflowEpisodeRepository(train_repo)
         self.eval_repository: MlflowEpisodeRepository = MlflowEpisodeRepository(eval_repo)
