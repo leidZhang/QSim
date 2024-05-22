@@ -164,7 +164,7 @@ class TraditionalEdgeFinder:
         # cv2.imshow("Largest Contour", self.image)
         return edge
     
-    def execute(self, original_image: np.ndarray) -> tuple: 
+    def execute(self, original_image: np.ndarray) -> tuple[float, float]: 
         """
         Executes the traditional edge finder.
 
