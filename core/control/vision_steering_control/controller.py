@@ -1,9 +1,7 @@
 import numpy as np
 
 from core.control.pid_controller import PIDController
-from .controller import SteeringPIDController
-from .edge_finder import TraditionalEdgeFinder
-from .constants import DEFAULT_SLOPE_OFFSET, DEFAULT_INTERCEPT_OFFSET
+from ..constants import DEFAULT_SLOPE_OFFSET, DEFAULT_INTERCEPT_OFFSET
 
 
 class SteeringPIDController(PIDController): 

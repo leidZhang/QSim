@@ -3,7 +3,7 @@ import numpy as np
 
 from hal.utilities.image_processing import ImageProcessing
 
-from .exceptions import NoImageException, NoContourException
+from .vision_steering_control.exceptions import NoImageException, NoContourException
 from .constants import HOUGH_ANGLE_LOWER_BOUND, HOUGH_ANGLE_UPPER_BOUND
 from .constants import EDGES_LOWER_BOUND, EDGES_UPPER_BOUND, HOUGH_CONFIDENT_THRESHOLD
 from .constants import THRESH_LOWER_BOUND, THRESH_UPPER_BOUND
