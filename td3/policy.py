@@ -45,12 +45,13 @@ class TD3Agent(torch.nn.Module):
         # add noise
         with torch.no_grad():
             action_yaw = torch.from_numpy(np.array(action_yaw))
-            epsilon = max(1 - data_size / 640_000, 0.04)
+            epsilon = max(1 - data_size / 400_000, 0.04)
             # epsilon = 0
             rand_action_yaw = torch.rand(action_yaw.shape)
             rand_action_yaw = rand_action_yaw * 2 - 1
             if random.uniform(0, 1) < epsilon:
                 action_yaw = rand_action_yaw
+
             action_yaw = action_yaw.cpu().data.numpy().flatten()
 
         action = np.concatenate((np.array([1.0]), action_yaw), axis=0)
@@ -65,6 +66,7 @@ class TD3Agent(torch.nn.Module):
         self.buffer.add(state, action, reward, next_state, done)
 
     def learn(self, samples):
+        gradients = {}
         if len(self.buffer) > C.batch_size:
             self.total_it += 1
             # Get samples from buffer and Convert to PyTorch tensors
@@ -120,6 +122,10 @@ class TD3Agent(torch.nn.Module):
             # Optimize the critic
             self.critic_optimizer.zero_grad()
             critic_loss.backward()
+
+            # Gradient clipping
+            gradients["critic"] = torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=100.0)
+
             self.critic_optimizer.step()
 
             # Delayed policy updates
@@ -134,6 +140,10 @@ class TD3Agent(torch.nn.Module):
                 # Optimize the actor
                 self.actor_optimizer.zero_grad()
                 actor_loss.backward()
+
+                # Gradient clipping
+                gradients["actor"] = torch.nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=100.0)
+
                 self.actor_optimizer.step()
 
                 # Update the frozen target models
@@ -142,11 +152,11 @@ class TD3Agent(torch.nn.Module):
 
                 for param, target_param in zip(self.actor.parameters(), self.actor_target.parameters()):
                     target_param.data.copy_(C.tau * param.data + (1 - C.tau) * target_param.data)
-                return (actor_loss.detach().cpu(), critic_loss.detach().cpu())
+                return (actor_loss.detach().cpu(), critic_loss.detach().cpu(), gradients)
             else:
-                return (None, critic_loss.detach().cpu())
+                return (None, critic_loss.detach().cpu(), gradients)
         else:
-            return (None, None)
+            return (None, None, None)
 
 
 # 1 hidden layer
@@ -206,7 +216,6 @@ class Critic(torch.nn.Module):
         return q1
 
 
-<<<<<<< HEAD
 '''
 # 2
 class Actor(torch.nn.Module):
@@ -347,8 +356,6 @@ class Critic(torch.nn.Module):
 '''
 '''
 # 4
-=======
->>>>>>> main
 class Actor(torch.nn.Module):
     def __init__(self, max_action):
         super(Actor, self).__init__()

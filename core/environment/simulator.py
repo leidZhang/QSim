@@ -12,8 +12,7 @@ import pal.resources.rtmodels as rtmodels
 
 from core.roadmap import ACCDirector
 from core.roadmap.constants import ACC_X_OFFSET, ACC_Y_OFFSET
-from .constants import QCAR_ACTOR_ID
-from ..qcar.monitor import Monitor
+from core.qcar.vehicle import VirtualCar
 
 
 class Simulator:
@@ -37,21 +36,18 @@ class QLabSimulator(Simulator):
         self.dt: float = dt
         self.qlabs: QuanserInteractiveLabs = QuanserInteractiveLabs()
         self.qlabs.open("localhost")
-        self.actors: Dict[str, QLabsActor] = {}
-        self.monitors: Dict[str, Monitor] = {
-            'car': Monitor(QCAR_ACTOR_ID, 0, dt=self.dt),
-        }
+        # self.actors: Dict[str, QLabsActor] = {}
+        # self.monitors: Dict[str, Monitor] = {
+        #     'car': Monitor(QCAR_ACTOR_ID, 0, dt=self.dt),
+        # }
+        self.vehicles: Dict[int, VirtualCar] = {}
         self.regions: Dict[str, np.ndarray] = {
             'stop_signs': None,
             'traffic_lights': None
         }
 
-    def init_actor_states(self) -> None:
-        """
-        Initialize the monitor state for each actors
-        """
-        for _, monitor in self.monitors.items():
-            monitor.get_position(self.qlabs)
+    # def add_vehicle(self, actor_id: int, throttle_coeff: float = 0.3, steering_coeff: float = 0.5) -> None:
+    #     return VirtualCar(actor_id, self.dt, self.qlabs, throttle_coeff, steering_coeff)
 
     def render_map(self, qcar_pos: list, qcar_view: int = 6) -> None:
         """
@@ -97,8 +93,8 @@ class QLabSimulator(Simulator):
         car.possess(qcar_view)
         time.sleep(1)
         QLabsRealTime().start_real_time_model(rtmodels.QCAR_STUDIO)
-        time.sleep(3) # wait for the state to change
-        self.init_actor_states()
+        time.sleep(2) # wait for the state to change
+        # self.init_actor_states()
 
     def set_waypoint_sequence(self, waypoints: np.ndarray) -> None:
         """
@@ -109,15 +105,14 @@ class QLabSimulator(Simulator):
         """
         self.waypoints: np.ndarray = waypoints
 
-    def get_actor_state(self, actor_name: str) -> np.ndarray:
-        """
-        Get the state of the actor
+    # def get_actor_state(self, actor_id: int) -> np.ndarray:
+    #     """
+    #     Get the state of the actor
 
-        Parameters:
-        - actor_name: str: The name of the actor
-        """
-        self.monitors[actor_name].get_state(self.qlabs)
-        return self.monitors[actor_name].state
+    #     Parameters:
+    #     - actor_name: int: The id of the actor
+    #     """
+    #     return self.vehicles[actor_id].get_ego_state()
 
     def set_regions(self) -> None:
         # set the regions for the stop signs and traffic lights

@@ -11,9 +11,9 @@ from torch.cuda.amp import GradScaler
 
 from core.utils.tools import configure_logging, mlflow_init, load_checkpoint, mlflow_log_metrics
 from core.environment.wrappers import CollectionWrapper, ActionRewardResetWrapper
-from .policy import TD3Agent
+from td3.policy import TD3Agent
 from constants import PREFILL, LOG_INTERVAL, SAVE_INTERVAL, MAX_TRAINING_STEPS, LOGBATCH_INTERVAL
-from .exceptions import InsufficientDataException, StopTrainingException
+from td3.exceptions import InsufficientDataException, StopTrainingException
 import constants as C
 
 
@@ -88,10 +88,12 @@ class Trainer:
         metric_counter: int = 0
         if len(self.data) >= PREFILL:
             self.steps += 1
-            actor_loss, critic_loss = self.agent.learn(samples)
+            actor_loss, critic_loss, gradients = self.agent.learn(samples)
             if actor_loss is not None and critic_loss is not None:
                 self.metrics["actor_loss"] = actor_loss
                 self.metrics["critic_loss"] = critic_loss
+                self.metrics["actor_grad"] = gradients["actor"]
+                self.metrics["critic_grad"] = gradients["critic"]
                 metric_counter += 1
                 if metric_counter % 10 == 0:
                     print(self.metrics)
@@ -103,7 +105,7 @@ class Trainer:
             return
 
         # cal average value and max value
-        self.metrics = {f'train/{k}': np.array(v).mean() for k, v in self.metrics.items()}
+        self.metrics = {f'train/{k}': np.array(v.cpu()).mean() for k, v in self.metrics.items()}
         self.metrics.update({f'train/{k}_max': np.array(v).max() for k, v in self.metrics_max.items()})
         self.metrics['train/steps'] = self.steps
         self.metrics['_step'] = self.steps
@@ -120,16 +122,15 @@ class Trainer:
         # update time and steps
         self.last_time = time_stamp
         self.last_steps = self.steps
-        if self.steps % 400 == 0:
+        if self.steps % 400 == 0 and self.steps > 0:
             logging.info(
-                f"[steps{self.steps:06}]"
+                f"[steps{(self.steps - 400):06}]"
                 f"  actor_loss: {self.metrics.get('train/actor_loss', 0):.3f}"
                 f"  critic_loss: {self.metrics.get('train/critic_loss', 0):.3f}"
                 f"  fps: {self.metrics.get('train/fps', 0):.3f}"
             )
-        # skip first batch because the losses are very high and mess up y axis
-        if self.steps > LOG_INTERVAL:
-            mlflow_log_metrics(self.metrics, step=self.steps)
+            # skip first batch because the losses are very high and mess up y axis
+            mlflow_log_metrics(self.metrics, step=self.steps-400)
         # clear metrics and metric_max
         self.metrics = defaultdict(list)
         self.metrics_max = defaultdict(list)

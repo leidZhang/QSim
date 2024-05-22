@@ -3,8 +3,8 @@ max_action = 0.5
 discount = 0.99
 state_dim = 10
 action_dim = 2
-lr = 4e-4
-tau = 0.006
+lr = 3e-4
+tau = 0.005
 observation_shape = (10,)
 buffer_update_rate = 2
 policy_freq = 2
@@ -23,9 +23,10 @@ GOAL_THRESHOLD: int = 0.05
 
 
 # settings
-DEFAULT_MAX_STEPS: int = 600
-batch_size = 4
-PREFILL = 10
-# RUN_ID = '4d2e229373de4830a5efc1bc79573e36'
+DEFAULT_MAX_STEPS: int = 2000
+batch_size = 2048
+PREFILL = 20000
+# RUN_ID = 'c63ae765f7f544b2a0b73b7234c43a02'
 RUN_ID = ''
 action_v = 0.08
+cuda = "cuda:1"
