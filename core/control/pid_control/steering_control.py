@@ -1,7 +1,7 @@
 import numpy as np
 
-from core.control.pid_controller import PIDController
-from ..constants import DEFAULT_SLOPE_OFFSET, DEFAULT_INTERCEPT_OFFSET
+from core.control.pid_control.pid_controller import PIDController
+from .constants import DEFAULT_SLOPE_OFFSET, DEFAULT_INTERCEPT_OFFSET
 
 
 class SteeringPIDController(PIDController): 
@@ -51,7 +51,7 @@ class SteeringPIDController(PIDController):
             intercept = self.intercept_offset
         # calculate the cross error
         self.cross_error: float = (intercept/-slope) - (self.intercept_offset / -self.slope_offset)
-        self.cross_err = self.cross_err / image_width
+        self.cross_error = self.cross_error / image_width
         # calculate the steering angle
         steering: float = super().execute()
 

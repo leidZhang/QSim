@@ -88,7 +88,7 @@ class PIDController(ABC):
         state: float = self.frequecy_filter.send((np.clip(raw_state, self.lower_bound, self.upper_bound), self.dt))
         self.prev_state = state # update the previous state
         # save the last cross error
-        self.prev_cross_err = self.cross_error
+        self.prev_cross_error = self.cross_error
         self.previous_derivative_term = derivetive_error
 
         return state

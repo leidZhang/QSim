@@ -3,10 +3,8 @@ from typing import Tuple
 import numpy as np
 
 from core.base_policy import BasePolicy
-from core.control.pid_controller import PIDController
 from core.control.edge_finder import TraditionalEdgeFinder
-from core.control.vision_steering_control import SteeringPIDController
-from core.control.close_loop_control import ThrottlePIDController
+from core.control.pid_control import ThrottlePIDController, SteeringPIDController, PIDController
 
 
 class VisionLaneFollowing(BasePolicy): 
@@ -24,7 +22,7 @@ class VisionLaneFollowing(BasePolicy):
     - execute: Executes the lane following
     """
 
-    def __init__(self, edge_finder: TraditionalEdgeFinder) -> None:
+    def __init__(self, expected_velocity: float, edge_finder: TraditionalEdgeFinder) -> None:
         """
         Initializes the VisionLaneFollowing object
 
@@ -35,6 +33,7 @@ class VisionLaneFollowing(BasePolicy):
         Returns:
         - None
         """
+        self.expected_velocity: float = expected_velocity # temporarly used the static speed
         self.edge_finder: TraditionalEdgeFinder = edge_finder # TraditionalEdgeFinder(image_width, image_height)
         self.steering_controller: PIDController = SteeringPIDController(upper_bound=0.5, lower_bound=-0.5)
         self.throttle_controller: PIDController = ThrottlePIDController(upper_bound=0.3, lower_bound=-0.3)
@@ -67,7 +66,7 @@ class VisionLaneFollowing(BasePolicy):
         """
         self.throttle_controller.setup(k_p, k_i, k_d)
 
-    def execute(self, image: np.ndarray, velocity: float) -> Tuple[np.ndarray, dict]:
+    def execute(self, image: np.ndarray, linear_speed: float) -> Tuple[np.ndarray, dict]:
         """
         The execute method to generate the steering and throttle values based on the image and velocity
 
@@ -82,5 +81,5 @@ class VisionLaneFollowing(BasePolicy):
         # get the steering and throttle values
         result: tuple = self.edge_finder.execute(image)
         steering: float = self.steering_controller.execute(result, image.shape[1])
-        throttle: float = self.throttle_controller.execute(velocity) # pwm
+        throttle: float = self.throttle_controller.execute(self.expected_velocity, linear_speed) # cal pwm
         return np.array([throttle, steering]), {}
