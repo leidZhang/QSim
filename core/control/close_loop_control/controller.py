@@ -1,5 +1,6 @@
 from core.control.pid_controller import PIDController
 
+
 class ThrottlePIDController(PIDController): 
     def __init__(self, upper_bound: float, lower_bound: float) -> None:
         super().__init__(upper_bound, lower_bound)

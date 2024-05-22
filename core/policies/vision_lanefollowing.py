@@ -3,7 +3,8 @@ from typing import Tuple
 import numpy as np
 
 from core.base_policy import BasePolicy
-from core.control.vision_steering_control import VisionSteeringController
+from core.control.vision_steering_control import TraditionalEdgeFinder
+from core.control.vision_steering_control import SteeringPIDController
 from core.control.close_loop_control import ThrottlePIDController
 
 
@@ -12,6 +13,7 @@ class VisionLaneFollowing(BasePolicy):
     The VisionLaneFollowing class is a class that generates the steering and throttle values for the car
 
     Attributes:
+    - edge_finder: TraditionalEdgeFinder: The edge finder of the car
     - steering_controller: VisionSteeringController: The steering controller of the car
     - throttle_controller: ThrottlePIDController: The throttle controller of the car
 
@@ -32,7 +34,8 @@ class VisionLaneFollowing(BasePolicy):
         Returns:
         - None
         """
-        self.steering_controller = VisionSteeringController(image_width=image_width, image_height=image_height)
+        self.edge_finder = TraditionalEdgeFinder(image_width=image_width, image_height=image_height)
+        self.steering_controller = SteeringPIDController(upper_bound=0.5, lower_bound=-0.5)
         self.throttle_controller = ThrottlePIDController(upper_bound=0.3, lower_bound=-0.3)
         
     def setup_steering(self, k_p: float, k_i: float, k_d: float) -> None: 
@@ -78,6 +81,7 @@ class VisionLaneFollowing(BasePolicy):
         image: np.ndarray = observation['image']
         velocity: float = observation['state'][3] # state[3] is the velocity
         # get the steering and throttle values
-        steering: float = self.steering_controller.execute(image)
+        result: tuple = self.edge_finder.execute(image)
+        steering: float = self.steering_controller.execute(result, image.shape[1])
         throttle: float = self.throttle_controller.execute(velocity) # pwm
         return np.array([throttle, steering]), {}
