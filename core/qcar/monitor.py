@@ -13,6 +13,7 @@ class Monitor:
         self.class_id: int = class_id
         self.actor_number: int = actor_number
         self.state: np.array = np.zeros(6)
+        self.last_state: np.array = np.zeros(6)
 
     def get_position(self, qlabs: QuanserInteractiveLabs) -> np.array:
         c: CommModularContainer = CommModularContainer()
@@ -34,15 +35,16 @@ class Monitor:
         yaw: float = self.state[2]
 
         # calc velocity
-        vx = (x - self.state[0]) / self.dt
-        vy = (y - self.state[1]) / self.dt
+        vx = (x - self.last_state[0]) / self.dt
+        vy = (y - self.last_state[1]) / self.dt
         v = np.hypot(vx, vy)
         # calc rate of turn
-        w = (yaw - self.state[2]) / self.dt
+        w = (yaw - self.last_state[2]) / self.dt
         # calc acceleration
-        a = (v - self.state[3]) / self.dt
+        a = (v - self.last_state[3]) / self.dt
         self.state = np.array([x, y, yaw, v, w, a])
 
     def get_state(self, qlabs: QuanserInteractiveLabs) -> None:
         self.get_position(qlabs)
         self.cal_motion()
+        self.last_state = self.state

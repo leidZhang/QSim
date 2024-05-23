@@ -1,6 +1,8 @@
 from typing import Any, Tuple
 from abc import ABC, abstractmethod
 
+import numpy as np
+
 
 class BasePolicy(ABC):
     """
@@ -27,7 +29,7 @@ class BasePolicy(ABC):
         ...
 
     @abstractmethod
-    def execute(self, *args) -> Tuple[dict, dict]: 
+    def execute(self, *args) -> Tuple[np.ndarray, dict]: 
         """
         The execute method is an abstract method that executes the policy
 
@@ -65,7 +67,7 @@ class PolicyAdapter(ABC):
         self.policy = policy
 
     @abstractmethod
-    def execute(self, *args) -> Tuple[dict, dict]:
+    def execute(self, *args) -> Tuple[np.ndarray, dict]:
         """
         The execute method is an abstract method that executes the policy
 

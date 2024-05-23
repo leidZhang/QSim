@@ -234,3 +234,7 @@ def load_npz(path, keys=None) -> Dict[str, np.ndarray]:
 
 def elapsed_time(start_time: float) -> float:
     return time.time() - start_time
+
+def realtime_message_output(message: str) -> None: 
+    sys.stdout.write(f'\r{message}')
+    sys.stdout.flush()
