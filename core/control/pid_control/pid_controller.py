@@ -1,12 +1,13 @@
 import time
-from abc import ABC
+from abc import ABC, abstractmethod
+from typing import Any
 
 import numpy as np
 
 from pal.utilities.math import Filter
 
 
-class PIDController(ABC): 
+class PIDController(ABC):
     """
     The PIDController class is an abstract class that implements the PID controller
 
@@ -22,9 +23,10 @@ class PIDController(ABC):
 
     Methods:
     - setup: Sets up the PID controller
+    - handle_cross_error: Sets up the cross error
     - execute: Executes the PID controller
     """
-    
+
     def __init__(self, upper_bound: float, lower_bound: float) -> None:
         """
         Initializes the PIDController object
@@ -42,7 +44,7 @@ class PIDController(ABC):
         self.prev_cross_error: float = 0.0
         self.prev_derivative_term: float = 0.0
         # state terms
-        self.prev_state: float = 0.0  
+        self.prev_state: float = 0.0
         self.upper_bound: float = upper_bound
         self.lower_bound: float = lower_bound
         # frequency filter
@@ -68,15 +70,28 @@ class PIDController(ABC):
         self.dt: float = 0.0
         self.start = time.time()
 
+    @abstractmethod
+    def handle_cross_error(self, *args) -> Any:
+        """
+        The abstract method to handle the cross error
+
+        Parameters:
+        - *args: The required input for the cross error
+
+        Returns:
+        - Any: Any required output related to the cross error
+        """
+        ...
+
     def execute(self) -> float:
         """
-        The base execute method to execute the PID controller, the calculation of 
+        The base execute method to execute the PID controller, the calculation of
         the cross error needs to be implemented by the child class
 
         Returns:
         - float: The state of the PID controller
         """
-        self.dt = time.time() - self.start 
+        self.dt = time.time() - self.start
         control_rate: float = 1 / self.dt
         self.frequecy_filter = Filter().low_pass_first_order_variable(control_rate-5, self.dt, self.prev_state)
         next(self.frequecy_filter)
@@ -89,7 +104,6 @@ class PIDController(ABC):
         self.prev_state = state # update the previous state
         # save the last cross error
         self.prev_cross_error = self.cross_error
-        self.previous_derivative_term = derivetive_error
+        self.prev_derivative_term = derivetive_error
 
         return state
-        
