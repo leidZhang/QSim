@@ -1,10 +1,8 @@
 import cv2
 
-from demos.keyboard_demo import run_keyboard
-# from demos.override_demo import run_override_demo
-from demos.pure_persuite.demo import start_test_mp
-from demos.reward_func_demo import run_reward_func_demo
-from core.qcar.sensor import VirtualCSICamera
+from demos.simulator_demo import simulator_demo
+from demos.close_loop.throttle_pid_demo import throttle_pid_demo
+from demos.close_loop.steering_pid_demo import steering_pid_demo
 
 if __name__ == "__main__":
-    start_test_mp()
+    steering_pid_demo()

@@ -36,7 +36,7 @@ class VisionLaneFollowing(BasePolicy):
         self.expected_velocity: float = expected_velocity # temporarly used the static speed
         self.edge_finder: EdgeFinder = edge_finder # TraditionalEdgeFinder(image_width, image_height)
         self.steering_controller: PIDController = SteeringPIDController(upper_bound=0.5, lower_bound=-0.5)
-        self.throttle_controller: PIDController = ThrottlePIDController(upper_bound=0.3, lower_bound=-0.3)
+        self.throttle_controller: PIDController = ThrottlePIDController(upper_bound=0.3, lower_bound=0)
 
     def setup_steering(self, k_p: float, k_i: float, k_d: float) -> None:
         """

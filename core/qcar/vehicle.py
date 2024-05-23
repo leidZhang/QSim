@@ -42,19 +42,6 @@ class BaseCar:
         self.throttle_coeff: float = throttle_coeff
         self.steering_coeff: float = steering_coeff
 
-    def estimate_speed(self, motor_tach: float) ->  None:
-        """
-        Calculate the linear speed based on the motor tach and print it out
-
-        Parameters:
-        - motor_tach: float: the motor tach of the car
-
-        Returns:
-        - None
-        """
-        sys.stdout.write(f"\rLinear speed: {motor_tach:1.2f} m/s {" " * 10}")
-        sys.stdout.flush()
-
     @abstractmethod
     def execute(self, *args) -> Tuple:
         """
@@ -215,3 +202,56 @@ class VirtualAgentCar(VirtualCar):
         """
         action, _ = self.policy.execute(observation)
         return super().execute(action)
+
+
+class PhysicalCar(BaseCar): 
+    """
+    The PhysicalCar class is a class that defines the interface for the physical car
+
+    Attributes:
+    - running_gear: QCar: The running gear of the car
+
+    Methods:
+    - handle_leds: Handles the LEDs of the car
+    """
+    
+    def __init__(self, throttle_coeff: float, steering_coeff: float) -> None:
+        """
+        Initializes the PhysicalCar object
+
+        Parameters:
+        - throttle_coeff: float: The throttle coefficient of the car
+        - steering_coeff: float: The steering coefficient of the car
+
+        Returns:
+        - None
+        """
+        super().__init__(throttle_coeff, steering_coeff)
+        self.running_gear: QCar = QCar()
+        self.leds = np.array([0, 0, 0, 0, 0, 0, 0, 0])
+
+    def handle_leds(self, throttle: float, steering: float) -> None:
+        """
+        The handle_leds method handles the LEDs of the car, when the
+        car is turning or reversing, the corresponding LEDs will be turned on
+
+        Parameters:
+        - throttle: float: The throttle value of the car
+        - steering: float: The steering value of the car
+
+        Returns:
+        - None
+        """
+        # steering indicator
+        if steering > 0.3: 
+            self.leds[0] = 1
+            self.leds[2] = 1
+        elif steering < -0.3:
+            self.leds[1] = 1
+            self.leds[3] = 1
+        else:
+            self.leds = np.array([0, 0, 0, 0, 0, 0, self.leds[6], self.leds[7]])
+        # reverse indicator
+        if throttle < 0: 
+            self.leds[5] = 1
+        

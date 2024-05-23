@@ -1,25 +1,30 @@
-from qvl.qlabs import QuanserInteractiveLabs
-from qvl.basic_shape import QLabsBasicShape
-from core.policies.pure_persuit import PurePursuitPolicy
-from core.environment import QLabEnvironment
-from core.roadmap import ACCRoadMap
+from typing import Tuple
 
-if __name__ == "__main__":
+from numpy import ndarray
+from qvl.qlabs import QuanserInteractiveLabs
+
+from core.roadmap import ACCRoadMap
+from core.environment import QLabEnvironment
+
+
+class DemoEnvironment(QLabEnvironment): # demo environment will do nothing
+    def handle_reward(self, *args) -> Tuple[float, bool]:
+        return 0.0, False
+    
+    def step(self, action: ndarray, metrics: ndarray) -> Tuple[dict, float, bool, dict]:
+        return None, 0.0, False, None
+    
+    def reset(self) -> Tuple[dict, float, bool, dict]:
+        return super().reset()
+
+def simulator_demo():
     roadmap: ACCRoadMap = ACCRoadMap()
     qlabs = QuanserInteractiveLabs()
-    node_id: int = 24
+    node_id: int = 4
     x_pos, y_pose, angle = roadmap.nodes[node_id].pose
-    waypoint_sequence = roadmap.generate_path([10, 4, 14, 20, 22, 10])
+    waypoint_sequence = roadmap.generate_path([4, 14, 20, 22, 10])
 
-    simulator: QLabEnvironment = QLabEnvironment(dt=0.05, privileged=True)
+    simulator: QLabEnvironment = DemoEnvironment(dt=0.05, privileged=True)
     simulator.setup(initial_state=[x_pos, y_pose, angle], sequence=waypoint_sequence)
-    policy: PurePursuitPolicy = PurePursuitPolicy(max_lookahead_distance=0.75)
-
-    num_episodes = 10000
-    for episode in range(1, num_episodes+1):
-        observation, reward, done, info = simulator.reset()
-        while not done:
-            action, metrics = policy(observation)
-            observation, reward, done, info = simulator.step(action, metrics)
-            print(f"action: {action}, step_reward: {reward}, done: {done}")
-        print(f"Episode {episode} completed")
+    simulator.reset()
+    
