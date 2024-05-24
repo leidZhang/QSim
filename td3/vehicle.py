@@ -59,13 +59,14 @@ class WaypointCar(VirtualCar):
         start_time: float = time.time()
         # execute the control
         throttle, steering = super().execute(action)
+        # print(f'steering: {steering}')
         self.update_state()
         # calculate the estimated speed
         linear_speed: float = self.estimate_speed()
         # calculate the sleep time
         execute_time: float = elapsed_time(start_time)
         sleep_time: float = self.monitor.dt - execute_time
-        realtime_message_output(f"Estimated speed: {linear_speed:1.2f}m/s, Real speed: {self.ego_state[3]:1.2f}m/s")
+        # realtime_message_output(f"Estimated speed: {linear_speed:1.2f}m/s, Real speed: {self.ego_state[3]:1.2f}m/s")
         time.sleep(sleep_time) if sleep_time > 0 else None
         # return the car's action to the environment
         return np.array([throttle, steering])

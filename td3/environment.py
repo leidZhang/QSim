@@ -41,7 +41,7 @@ class WaypointEnvironment(QLabEnvironment):
     #
     #     return reward, done
     
-    def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state, dist_ix) -> tuple:
+    def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state, dist_ix, global_close, global_far) -> tuple:
         # sys.stdout.write(f"\rAction: {action}, Position: {ego_state[:2]}, Start: {self.start_orig}")
         # sys.stdout.flush()
         self.detector(action=action, orig=ego_state[:2])
@@ -76,31 +76,62 @@ class WaypointEnvironment(QLabEnvironment):
 
         self.prev_dist = norm_dist[dist_ix]  # Update the previous distance
 
-        # Max boundary
+
+
+
+        # # cos_v1v2 reward
+        # orig, yaw, rot = self.vehicle.cal_vehicle_state(ego_state)
+        # # print(f'yaw:{yaw}')
+        # # orig: np.ndarray = ego_state[:2]
+        # # yaw: float = -ego_state[2]
+        # # rot: np.ndarray = np.array([
+        # #     [np.cos(yaw), np.sin(yaw)],
+        # #     [-np.sin(yaw), np.cos(yaw)]
+        # # ])
+        #
+        # steering_angle = action[1]
+        # offset: np.ndarray = np.array([0.0, 0.35])
+        # ego_point: np.ndarray = orig + np.matmul(offset, rot)
+        # # print(f'global_far {global_far}')
+        # # print(f'ego_point {ego_point}')
+        # v1: np.ndarray = global_far - ego_point
+        # # print(f'v1 {v1}')
+        # v2: np.ndarray = np.matmul(np.array([np.sin(steering_angle), np.cos(steering_angle)]), rot) - ego_point
+        # # print(f'v2 {v2}')
+        #
+        # norm_v1: float = np.linalg.norm(v1)
+        # # print(f'norm_v1 {norm_v1}')
+        # unit_v1: np.ndarray = v1 / norm_v1
+        # # print(f'unit_v1 {unit_v1}')
+        # norm_v2: float = np.linalg.norm(v2)
+        # unit_v2: np.ndarray = v2 / norm_v2
+        # cos_v1v2: float = np.dot(unit_v1, unit_v2)
+        # # print(f'cos_v1v2 {cos_v1v2}')
+        #
+        # angle_reward = cos_v1v2
+        # # print(f"angle_reward: {angle_reward}")
+        #
+        # reward += angle_reward
+
+        # # Max boundary
         if norm_dist[dist_ix] >= 0.10:
-            max_boundary_reward = -44
+            # max_boundary_reward = -44
             # print(f'max_boundary_reward {max_boundary_reward}')
-            reward += max_boundary_reward
+            # reward += max_boundary_reward
             done = True
             self.vehicle.halt()  # stop the car
 
-        # # Boundary reward
-        # b05_reward = -max(0.0, 4 * (norm_dist[dist_ix] - 0.05))
-        # reward += b05_reward
-        # print(f"0.05 Boundary Reward: {b05_reward}")
-        # b20_reward = -max(0.0, 8 * (norm_dist[dist_ix] - 0.2))
-        # reward += b20_reward
-        # print(f"0.20 Boundary Reward: {b20_reward}")
-
-        # (no reward) Check if the command is not properly executed by the car
-        # if abs(action[0]) >= 0.045 and np.array_equal(self.start_orig, ego_state[:2]):
-        #     raise AnomalousEpisodeException("Anomalous episode detected!")
-
         # (no reward) Reach goal
+
         if (np.linalg.norm(self.goal - ego_state[:2]) < GOAL_THRESHOLD and len(self.vehicle.next_waypoints) < 201):
             done = True  # stop episode after this step
             self.vehicle.halt()  # stop the car
-        return np.tanh(reward), done
+
+        # reward = np.tanh(reward)
+        # print(f"reward: {reward}")
+        return reward, done
+
+
 
     def step(self, action: np.ndarray, metrics: dict) -> Tuple[dict, float, bool, dict]:
         episode_done: bool = self.episode_steps >= self.max_episode_steps
@@ -108,19 +139,22 @@ class WaypointEnvironment(QLabEnvironment):
         action: np.ndarray = self.vehicle.execute(action)
         # time.sleep(0.05)  # sleep for 0.05 seconds
 
+        # extra obs info
+        close_index: int = self.vehicle.current_waypoint_index
+        far_index: int = (self.vehicle.current_waypoint_index + 39) % self.waypoint_sequence.shape[0]
+        global_close: np.ndarray = self.waypoint_sequence[close_index]
+        global_far: np.ndarray = self.waypoint_sequence[far_index]
+        # print(f'global_far: {global_far}')
+
         # privileged information
         if self.privileged:
             ego_state: np.ndarray = self.vehicle.ego_state
             norm_dist: np.ndarray = self.vehicle.norm_dist
             dist_ix: int = self.vehicle.dist_ix
-            reward, reward_done = self.handle_reward(action, norm_dist, ego_state, dist_ix)
+            reward, reward_done = self.handle_reward(action, norm_dist, ego_state, dist_ix, global_close, global_far)
             episode_done = episode_done or reward_done
 
         # handle observation
-        close_index: int = self.vehicle.current_waypoint_index
-        far_index: int = (self.vehicle.current_waypoint_index + 49) % self.waypoint_sequence.shape[0]
-        global_close: np.ndarray = self.waypoint_sequence[close_index]
-        global_far: np.ndarray = self.waypoint_sequence[far_index]
         observation['state'] = np.concatenate((ego_state, global_close, global_far)) 
         observation["waypoints"] = self.vehicle.observation["waypoints"]
         
@@ -153,3 +187,48 @@ class WaypointEnvironment(QLabEnvironment):
         self.detector: EpisodeMonitor = EpisodeMonitor(start_orig=self.start_orig)
 
         return observation, reward, done, info
+
+    def spawn_on_waypoints(waypoint_sequence: np.ndarray, waypoint_angles: list, actor: QLabsActor,
+                           waypoint_num: int = 0, add_deviate: bool = False) -> None:
+        """
+        Spawns an actor at a specified waypoint with an optional deviation applied.
+
+        This function positions an actor at a given waypoint from a sequence. If 'add_deviate' is True,
+        it applies a random deviation to the actor's position and orientation before spawning.
+
+        Parameters:
+        - waypoint_sequence (np.ndarray): An array of waypoints, each containing x and y coordinates.
+        - waypoint_angles (list): A list of angles corresponding to the orientation at each waypoint.
+        - actor (QLabsActor): The actor to be spawned.
+        - waypoint_num (int, optional): The index of the waypoint where the actor will be spawned. Defaults to 0.
+        - add_deviate (bool, optional): Whether to apply a random deviation to the position and orientation. Defaults to False.
+
+        Raises:
+        - Exception: If 'waypoint_sequence' or 'actor' is None.
+
+        Note:
+        The function assumes that 'waypoint_sequence' and 'waypoint_angles' are of the same length and that 'waypoint_num' is within
+        the valid range of indices for 'waypoint_sequence'.
+        """
+        if waypoint_sequence is None or actor is None:
+            raise Exception("parameters cannot be None")
+
+        x_position: float = waypoint_sequence[waypoint_num][0]
+        y_position: float = waypoint_sequence[waypoint_num][1]
+        orientation: float = waypoint_angles[waypoint_num]
+        ## add random deviate
+        # if add_deviate:
+        #     deviated_position: list = get_deviate_state([x_position, y_position, orientation])
+        #     x_position = deviated_position[0]
+        #     y_position = deviated_position[1]
+        #     orientation = deviated_position[2]
+
+        # spawn actor on the road map
+        actor.spawn_id(
+            actorNumber=0,
+            location=[x_position, y_position, 0],
+            rotation=[0, 0, orientation],
+            scale=[.1, .1, .1],
+            configuration=0,
+            waitForConfirmation=True
+        )

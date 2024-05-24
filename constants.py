@@ -3,11 +3,11 @@ max_action = 0.5
 discount = 0.99
 state_dim = 10
 action_dim = 2
-lr = 3e-4
+lr = 1e-4  # 3e-4
 tau = 0.005
 observation_shape = (10,)
 buffer_update_rate = 2
-policy_freq = 2
+policy_freq = 10  # 2
 # generator constants
 METRIC_PREFIX: str = 'agent'
 COOL_DOWN_TIME: float = 3.0
@@ -24,9 +24,11 @@ GOAL_THRESHOLD: int = 0.05
 
 # settings
 DEFAULT_MAX_STEPS: int = 2000
+# batch_size = 2048
+# PREFILL = 10000
 batch_size = 2048
 PREFILL = 10000
-# RUN_ID = 'c63ae765f7f544b2a0b73b7234c43a02'
+# RUN_ID = '1edfead4d1bc4c2ca91f3102741027d1'
 RUN_ID = ''
 action_v = 0.08
 cuda = "cuda:1"
