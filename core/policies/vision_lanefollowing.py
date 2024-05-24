@@ -1,3 +1,4 @@
+import math
 from typing import Tuple
 
 import numpy as np
@@ -81,5 +82,6 @@ class VisionLaneFollowing(BasePolicy):
         # get the steering and throttle values
         result: tuple = self.edge_finder.execute(image)
         steering: float = self.steering_controller.execute(result, image.shape[1])
-        throttle: float = self.throttle_controller.execute(self.expected_velocity, linear_speed) # cal pwm
+        velocity: float = self.expected_velocity * abs(math.cos(2.7 * steering))
+        throttle: float = self.throttle_controller.execute(velocity, linear_speed) # cal pwm
         return np.array([throttle, steering]), {}

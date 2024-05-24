@@ -1,18 +1,53 @@
 import time
 import math
-from typing import Tuple
+from typing import Tuple, Dict
 
 import numpy as np
 
 from core.qcar.vehicle import PhysicalCar
 from pal.utilities.math import Calculus
 
+from core.base_policy import BasePolicy
 from core.qcar.sensor import VirtualCSICamera
 from core.utils.tools import realtime_message_output, elapsed_time
+from core.policies.vision_lanefollowing import VisionLaneFollowing
 from core.control.edge_finder import EdgeFinder, TraditionalEdgeFinder
 from core.control.edge_finder import NoImageException, NoContourException
 from core.control.pid_control import ThrottlePIDController, PIDController, SteeringPIDController
 from core.qcar.constants import WHEEL_RADIUS, ENCODER_COUNTS_PER_REV, PIN_TO_SPUR_RATIO
+
+
+class VisionPIDTestCar(PhysicalCar):
+    def __init__(self, throttle_coeff: float, steering_coeff: float) -> None:
+        super().__init__(throttle_coeff, steering_coeff)
+        self.diff = Calculus().differentiator_variable(0.03)
+        _ = next(self.diff)
+        self.front_csi: VirtualCSICamera = VirtualCSICamera(id=3)
+
+    def setup(self, expected_velocity: float, pid_gains: Dict[list]) -> None: 
+        steering_gains: list = pid_gains['steering']
+        throttle_gains: list = pid_gains['throttle']
+        edge_finder: EdgeFinder = TraditionalEdgeFinder()
+        self.policy: BasePolicy = VisionLaneFollowing(edge_finder=edge_finder, expected_velocity=expected_velocity)
+        self.policy.setup_steering(k_p=steering_gains[0], k_i=steering_gains[1], k_d=steering_gains[2])
+        self.policy.setup_throttle(k_p=throttle_gains[0], k_i=throttle_gains[1], k_d=throttle_gains[2])
+
+    def estimate_speed(self) -> float:
+        encoder_counts: np.ndarray = self.running_gear.motorEncoder
+        encoder_speed: float = self.diff.send((encoder_counts[0], 0.03))
+        return encoder_speed * (1 / (ENCODER_COUNTS_PER_REV * 4) * PIN_TO_SPUR_RATIO * 2 * np.pi * WHEEL_RADIUS)
+    
+    def execute(self) -> None: 
+        try: 
+            image: np.ndarray = self.front_csi.read_image()
+            if image is not None: 
+                linear_speed: float = self.estimate_speed()
+                action, _ = self.policy.execute(image, linear_speed)
+                throttle: float = action[0]
+                steering: float = action[1]
+                self.running_gear.read_write_std(throttle=action[0], steering=action[1], LEDs=self.leds)
+        except NoContourException:
+            print("No contour detected")
 
 
 class ThrottlePIDTestCar(PhysicalCar): # test frequency is 30Hz
