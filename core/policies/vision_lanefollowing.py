@@ -73,7 +73,7 @@ class VisionLaneFollowing(BasePolicy):
 
         Parameters:
         - image: np.ndarray: The image from the front csi camera
-        - velocity: float: The velocity of the car, calculated from the encoder
+        - linear_speed: float: The velocity of the car, calculated from the encoder
 
         Returns:
         - Tuple[np.ndarray, dict]: The action and an empty info dictionary (as required by the
