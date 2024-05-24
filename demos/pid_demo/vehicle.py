@@ -20,32 +20,33 @@ from core.qcar.constants import WHEEL_RADIUS, ENCODER_COUNTS_PER_REV, PIN_TO_SPU
 class VisionPIDTestCar(PhysicalCar):
     def __init__(self, throttle_coeff: float, steering_coeff: float) -> None:
         super().__init__(throttle_coeff, steering_coeff)
-        self.diff = Calculus().differentiator_variable(0.03)
+        self.diff = Calculus().differentiator_variable(0.015)
         _ = next(self.diff)
         self.front_csi: VirtualCSICamera = VirtualCSICamera(id=3)
+        self.reduce_coeff: float = 1.0
 
-    def setup(self, expected_velocity: float, pid_gains: Dict[list]) -> None: 
+    def setup(self, expected_velocity: float, pid_gains: Dict[str, list]) -> None: 
         steering_gains: list = pid_gains['steering']
         throttle_gains: list = pid_gains['throttle']
-        edge_finder: EdgeFinder = TraditionalEdgeFinder()
+        edge_finder: EdgeFinder = TraditionalEdgeFinder(image_width=820, image_height=410)
         self.policy: BasePolicy = VisionLaneFollowing(edge_finder=edge_finder, expected_velocity=expected_velocity)
         self.policy.setup_steering(k_p=steering_gains[0], k_i=steering_gains[1], k_d=steering_gains[2])
         self.policy.setup_throttle(k_p=throttle_gains[0], k_i=throttle_gains[1], k_d=throttle_gains[2])
 
     def estimate_speed(self) -> float:
-        encoder_counts: np.ndarray = self.running_gear.motorEncoder
-        encoder_speed: float = self.diff.send((encoder_counts[0], 0.03))
-        return encoder_speed * (1 / (ENCODER_COUNTS_PER_REV * 4) * PIN_TO_SPUR_RATIO * 2 * np.pi * WHEEL_RADIUS)
+        return float(self.running_gear.motorTach)
     
-    def execute(self) -> None: 
+    def execute(self, history: list) -> None: 
         try: 
             image: np.ndarray = self.front_csi.read_image()
             if image is not None: 
                 linear_speed: float = self.estimate_speed()
-                action, _ = self.policy.execute(image, linear_speed)
-                throttle: float = action[0]
-                steering: float = action[1]
+                action, _ = self.policy.execute(image, linear_speed, self.reduce_coeff)
                 self.running_gear.read_write_std(throttle=action[0], steering=action[1], LEDs=self.leds)
+                message: str = f"\rThrottle: {action[0]:1.4f}, Steering: {action[1]:1.4f} {' ' * 10}"
+                realtime_message_output(message)
+                if history is not None:
+                    history.append(action[0])
         except NoContourException:
             print("No contour detected")
 

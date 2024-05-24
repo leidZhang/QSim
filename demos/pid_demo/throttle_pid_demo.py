@@ -8,7 +8,7 @@ from core.utils.tools import plot_data_in_list
 
 def throttle_pid_demo():
     simulator_demo() # prepare the map
-    car: PhysicalCar = ThrottlePIDTestCar(0.3, 0.5)
+    car: PhysicalCar = ThrottlePIDTestCar(1, 1)
     car.setup(k_p=0.204, k_i=1.85, k_d=0.0008) # 0.208
     car.throttle_control.start = time.time()
     time.sleep(0.03)

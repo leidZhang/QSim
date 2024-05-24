@@ -17,10 +17,9 @@ class DemoEnvironment(QLabEnvironment): # demo environment will do nothing
     def reset(self) -> Tuple[dict, float, bool, dict]:
         return super().reset()
 
-def simulator_demo():
+def simulator_demo(node_id: int = 4) -> None:
     roadmap: ACCRoadMap = ACCRoadMap()
     qlabs = QuanserInteractiveLabs()
-    node_id: int = 4
     x_pos, y_pose, angle = roadmap.nodes[node_id].pose
     waypoint_sequence = roadmap.generate_path([4, 14, 20, 22, 10])
 

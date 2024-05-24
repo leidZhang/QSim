@@ -8,7 +8,7 @@ from core.qcar.vehicle import PhysicalCar
 
 def steering_pid_demo() -> None: 
     simulator_demo() # prepare the map
-    car: PhysicalCar = VSPIDTestCar(0.3, 0.5)
+    car: PhysicalCar = VSPIDTestCar(1, 1)
     car.setup(-1.0163443448, -0.000, -0.19878977558)
     car.steering_control.start = time.time()
     try: 

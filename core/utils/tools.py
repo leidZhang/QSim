@@ -11,6 +11,7 @@ from pathlib import Path
 from collections import defaultdict
 from typing import Dict, List, Union
 
+import matplotlib
 import matplotlib.pyplot as plt
 from mlflow.store.artifact.artifact_repo import ArtifactRepository
 
@@ -254,6 +255,7 @@ def plot_data_in_dict(data_dict: Union[defaultdict, dict], title: str, x_label: 
     plt.show()
 
 def plot_data_in_list(data_list: list, title: str, x_label: str, y_label: str) -> None: 
+    # matplotlib.use('TkAgg')
     x_axis: list = list(range(len(data_list)))
     y_axis: list = data_list
 

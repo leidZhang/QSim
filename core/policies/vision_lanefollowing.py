@@ -1,4 +1,5 @@
 import math
+import time
 from typing import Tuple
 
 import numpy as np
@@ -67,7 +68,11 @@ class VisionLaneFollowing(BasePolicy):
         """
         self.throttle_controller.setup(k_p, k_i, k_d)
 
-    def execute(self, image: np.ndarray, linear_speed: float) -> Tuple[np.ndarray, dict]:
+    def reset_start_time(self) -> None: 
+        self.steering_controller.start = time.time()
+        self.throttle_controller.start = time.time()
+
+    def execute(self, image: np.ndarray, linear_speed: float, reduce_coeff: float) -> Tuple[np.ndarray, dict]:
         """
         The execute method to generate the steering and throttle values based on the image and velocity
 
@@ -82,6 +87,6 @@ class VisionLaneFollowing(BasePolicy):
         # get the steering and throttle values
         result: tuple = self.edge_finder.execute(image)
         steering: float = self.steering_controller.execute(result, image.shape[1])
-        velocity: float = self.expected_velocity * abs(math.cos(2.7 * steering))
-        throttle: float = self.throttle_controller.execute(velocity, linear_speed) # cal pwm
+        throttle: float = self.throttle_controller.execute(self.expected_velocity, linear_speed)
+        throttle = throttle * abs(math.cos(2.7 * steering)) * reduce_coeff # cal real pwm
         return np.array([throttle, steering]), {}
