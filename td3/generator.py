@@ -1,13 +1,13 @@
 import time
 import logging
 from datetime import datetime
+from typing import Dict
 from collections import defaultdict
 
 import numpy as np
 from mlflow import set_tracking_uri
 
 from core.policies.pure_persuit import PurePursuitPolicy
-from core.policies.network import NetworkPolicy
 from core.utils.tools import configure_logging, LogColorFormatter, load_checkpoint
 from core.utils.tools import mlflow_log_metrics
 from core.environment.wrappers import CollectionWrapper, ActionRewardResetWrapper
@@ -26,7 +26,7 @@ class Generator:
         mlruns_dir: str,
         train_repo: str,
         eval_repo: str,
-        qcar_pos: list,
+        nodes: Dict[str, np.ndarray],
         waypoints: np.ndarray,
         privileged: bool = True
     ) -> None:
@@ -34,7 +34,7 @@ class Generator:
         self.metrics_agg = defaultdict(list)
         self.mlruns_dir: str = mlruns_dir
         base_env: QLabEnvironment = WaypointEnvironment(dt=0.03, privileged=privileged)
-        self.env: CollectionWrapper = CollectionWrapper(ActionRewardResetWrapper(base_env, qcar_pos, waypoints))
+        self.env: CollectionWrapper = CollectionWrapper(ActionRewardResetWrapper(base_env, nodes, waypoints))
         self.train_repository: MlflowEpisodeRepository = MlflowEpisodeRepository(train_repo)
         self.eval_repository: MlflowEpisodeRepository = MlflowEpisodeRepository(eval_repo)
         set_tracking_uri(self.mlruns_dir)
@@ -49,7 +49,7 @@ class Generator:
                 self.policy = TD3Agent(train_repo)
                 status: bool = load_checkpoint(self.policy, self.mlruns_dir, run_id, map_location='cpu')
                 logging.info(f"Generator model checkpoint load status: {status}")
-            else: 
+            else:
                 self.policy = PurePursuitPolicy(max_lookahead_distance=0.5)
         else:
             self.policy = PurePursuitPolicy(max_lookahead_distance=0.5)
@@ -101,7 +101,7 @@ class Generator:
                 metrics[key].append(val)
 
             episdoe_steps += 1
-            steps += 1  
+            steps += 1
         self.env.step(np.zeros(2), {})  # stop the car
         if type(self.policy) is TD3Agent:
             time.sleep(COOL_DOWN_TIME)

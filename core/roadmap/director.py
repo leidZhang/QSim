@@ -7,7 +7,7 @@ import pal.resources.rtmodels as rtmodels
 from .builder import ACCMapBuilder
 
 
-class ACCDirector: 
+class ACCDirector:
     """
     The Director class responsible for directing the building of the map for the ACC2024 competition
 
@@ -18,7 +18,7 @@ class ACCDirector:
     Methods:
     - build_map: Builds the map for the competition
     """
-    
+
     def __init__(self, qlabs: QuanserInteractiveLabs) -> None:
         """
         Initializes the ACCDirector object
@@ -29,7 +29,7 @@ class ACCDirector:
         self.qlabs: QuanserInteractiveLabs = qlabs
         self.builder: ACCMapBuilder = ACCMapBuilder(self.qlabs)
 
-    def build_map(self, position: list) -> dict:
+    def build_map(self) -> dict:
         """
         Builds the map for the competition
 
@@ -46,12 +46,10 @@ class ACCDirector:
         stop_signs: list = self.builder.build_stop_sign()
         self.builder.build_crosswalk()
         traffic_lights: list = self.builder.build_traffic_light()
-        car: QLabsQCar = self.builder.build_car(position)
+        car: QLabsQCar = self.builder.preapare_car_spawn()
         QLabsRealTime().start_real_time_model(rtmodels.QCAR_STUDIO)
         return {
             "stop_signs": stop_signs,
             "traffic_lights": traffic_lights,
-            "car": car
+            "cars": [car]
         }
-
-    

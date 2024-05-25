@@ -40,7 +40,7 @@ class WaypointEnvironment(QLabEnvironment):
     #         self.vehicle.halt()  # stop the car
     #
     #     return reward, done
-    
+
     def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state, dist_ix, global_close, global_far) -> tuple:
         # sys.stdout.write(f"\rAction: {action}, Position: {ego_state[:2]}, Start: {self.start_orig}")
         # sys.stdout.flush()
@@ -75,9 +75,6 @@ class WaypointEnvironment(QLabEnvironment):
         self.pre_pos = pos
 
         self.prev_dist = norm_dist[dist_ix]  # Update the previous distance
-
-
-
 
         # # cos_v1v2 reward
         # orig, yaw, rot = self.vehicle.cal_vehicle_state(ego_state)
@@ -131,8 +128,6 @@ class WaypointEnvironment(QLabEnvironment):
         # print(f"reward: {reward}")
         return reward, done
 
-
-
     def step(self, action: np.ndarray, metrics: dict) -> Tuple[dict, float, bool, dict]:
         episode_done: bool = self.episode_steps >= self.max_episode_steps
         observation, reward, info = self.init_step_params()
@@ -155,22 +150,28 @@ class WaypointEnvironment(QLabEnvironment):
             episode_done = episode_done or reward_done
 
         # handle observation
-        observation['state'] = np.concatenate((ego_state, global_close, global_far)) 
+        observation['state'] = np.concatenate((ego_state, global_close, global_far))
         observation["waypoints"] = self.vehicle.observation["waypoints"]
-        
+
         self.episode_steps += 1
         self.pre_pos = self.vehicle.current_waypoint_index
         # print(f'reward: {reward}')
         return observation, reward, episode_done, info
-    
+
+    def handle_spawn_pos(self, waypoint_index: int=0) -> Tuple[list, list]:
+        # can also call self.spawn_on_node here
+        return self.spawn_on_waypoints(waypoint_index)
+
     def reset(self) -> Tuple[dict, float, bool, dict]:
-        observation, reward, done, info = super().reset()
+        waypoint_index: int = 380 # change index here
+        location, orientation = self.handle_spawn_pos(waypoint_index=waypoint_index)
+        observation, reward, done, info = super().reset(location, orientation)
 
         # init vehicles, assign proper coeff for throttle and steering if you want
         qlabs: QuanserInteractiveLabs = self.simulator.qlabs
         dt: float = self.simulator.dt
         self.vehicle: WaypointCar = WaypointCar(actor_id=0, dt=dt, qlabs=qlabs, throttle_coeff=0.08)
-        self.vehicle.setup(self.waypoint_sequence)
+        self.vehicle.setup(self.waypoint_sequence, waypoint_index)
         # init episode params
         self.prev_dist_ix: int = 0
         ego_state: np.ndarray = self.vehicle.ego_state
@@ -187,48 +188,3 @@ class WaypointEnvironment(QLabEnvironment):
         self.detector: EpisodeMonitor = EpisodeMonitor(start_orig=self.start_orig)
 
         return observation, reward, done, info
-
-    def spawn_on_waypoints(waypoint_sequence: np.ndarray, waypoint_angles: list, actor: QLabsActor,
-                           waypoint_num: int = 0, add_deviate: bool = False) -> None:
-        """
-        Spawns an actor at a specified waypoint with an optional deviation applied.
-
-        This function positions an actor at a given waypoint from a sequence. If 'add_deviate' is True,
-        it applies a random deviation to the actor's position and orientation before spawning.
-
-        Parameters:
-        - waypoint_sequence (np.ndarray): An array of waypoints, each containing x and y coordinates.
-        - waypoint_angles (list): A list of angles corresponding to the orientation at each waypoint.
-        - actor (QLabsActor): The actor to be spawned.
-        - waypoint_num (int, optional): The index of the waypoint where the actor will be spawned. Defaults to 0.
-        - add_deviate (bool, optional): Whether to apply a random deviation to the position and orientation. Defaults to False.
-
-        Raises:
-        - Exception: If 'waypoint_sequence' or 'actor' is None.
-
-        Note:
-        The function assumes that 'waypoint_sequence' and 'waypoint_angles' are of the same length and that 'waypoint_num' is within
-        the valid range of indices for 'waypoint_sequence'.
-        """
-        if waypoint_sequence is None or actor is None:
-            raise Exception("parameters cannot be None")
-
-        x_position: float = waypoint_sequence[waypoint_num][0]
-        y_position: float = waypoint_sequence[waypoint_num][1]
-        orientation: float = waypoint_angles[waypoint_num]
-        ## add random deviate
-        # if add_deviate:
-        #     deviated_position: list = get_deviate_state([x_position, y_position, orientation])
-        #     x_position = deviated_position[0]
-        #     y_position = deviated_position[1]
-        #     orientation = deviated_position[2]
-
-        # spawn actor on the road map
-        actor.spawn_id(
-            actorNumber=0,
-            location=[x_position, y_position, 0],
-            rotation=[0, 0, orientation],
-            scale=[.1, .1, .1],
-            configuration=0,
-            waitForConfirmation=True
-        )

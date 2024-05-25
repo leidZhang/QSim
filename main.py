@@ -1,10 +1,8 @@
 import os
 import time
 import logging
+from typing import List, Dict
 from multiprocessing import Process
-
-import mlflow
-from typing import List
 
 import numpy as np
 
@@ -33,7 +31,7 @@ def start_generator(
     mlruns_dir: str,
     train_repo: str,
     eval_repo: str,
-    init_pos: list,
+    nodes: Dict[str, np.ndarray],
     waypoints: np.ndarray,
     resume: bool = False,
     privileged: bool = True
@@ -41,7 +39,7 @@ def start_generator(
     generator: Generator = Generator(
         mlruns_dir=mlruns_dir,
         train_repo=train_repo,
-        qcar_pos=init_pos,
+        nodes=nodes,
         waypoints=waypoints,
         eval_repo=eval_repo,
         privileged=privileged
@@ -85,15 +83,19 @@ def start_trainer(
         if not stop_training:
             trainer.execute(True)
 
-def prepare_map_info(node_id: int = 24) -> tuple:
+def prepare_map_info(node_sequence: list) -> tuple:
     roadmap: ACCRoadMap = ACCRoadMap()
-    x_pos, y_pose, angle = roadmap.nodes[node_id].pose
+    # x_pos, y_pose, angle = roadmap.nodes[node_id].pose
     # waypoint_sequence = roadmap.generate_path([10, 4, 14, 20, 22, 10])
+    nodes: Dict[str, np.ndarray] = {}
+    for node_id in node_sequence:
+        pose: np.ndarray = roadmap.nodes[node_id].pose
+        nodes[node_id] = pose # x, y, angle
 
-    waypoint_sequence = roadmap.generate_path([4, 14, 20])
-    return [x_pos, y_pose, angle], waypoint_sequence
+    waypoint_sequence = roadmap.generate_path(node_sequence)
+    return nodes, waypoint_sequence
 
-def start_system(resume_run_id: str, init_pos: list, waypoints: np.ndarray) -> None:
+def start_system(resume_run_id: str, nodes: Dict[str, np.ndarray], waypoints: np.ndarray) -> None:
     # setup mlflow directory
     root_directory: str = os.getcwd() # get the absolute directory
     mlflow_directory: str = os.path.join(root_directory, 'mlruns')
@@ -128,7 +130,7 @@ def start_system(resume_run_id: str, init_pos: list, waypoints: np.ndarray) -> N
             run_id=designated_run_id,
             train_repo=train_repo,
             eval_repo=eval_repo,
-            init_pos=init_pos,
+            nodes=nodes,
             waypoints=waypoints,
             resume=resume,
             privileged=True
@@ -141,7 +143,7 @@ def start_system(resume_run_id: str, init_pos: list, waypoints: np.ndarray) -> N
         kwargs=dict(
             mlruns_dir=mlflow_directory,
             run_id=designated_run_id,
-            init_pos=init_pos,
+            init_pos=None,
             waypoints=waypoints,
             resume=resume,
             device=C.cuda,
@@ -163,5 +165,5 @@ def start_system(resume_run_id: str, init_pos: list, waypoints: np.ndarray) -> N
 if __name__ == '__main__':
     # fill with file name of your experiment, set to '' to start new experiment
     resume_run_id = RUN_ID
-    init_pos, waypoints = prepare_map_info(node_id=4)
-    start_system(resume_run_id=resume_run_id, init_pos=init_pos, waypoints=waypoints)
+    nodes, waypoints = prepare_map_info(node_sequence=[4, 14, 20])
+    start_system(resume_run_id=resume_run_id, nodes=nodes, waypoints=waypoints)
