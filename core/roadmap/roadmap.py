@@ -1,15 +1,17 @@
-import numpy as np 
+from typing import Dict, Union, Tuple
 
-from hal.utilities.path_planning import RoadMap
+import numpy as np
 
-from .constants import X_OFFSET, Y_OFFSET, ACC_SCALE 
+from hal.utilities.path_planning import RoadMap, RoadMapNode
+
+from .constants import X_OFFSET, Y_OFFSET, ACC_SCALE
 from .constants import NODE_POSES_RIGHT_COMMON
-from .constants import NODE_POSES_RIGHT_LARGE_MAP 
-from .constants import EDGE_CONFIGS_RIGHT_COMMON 
-from .constants import EDGE_CONFIGS_RIGHT_LARGE_MAP 
+from .constants import NODE_POSES_RIGHT_LARGE_MAP
+from .constants import EDGE_CONFIGS_RIGHT_COMMON
+from .constants import EDGE_CONFIGS_RIGHT_LARGE_MAP
 
 
-class ACCRoadMap(RoadMap): 
+class ACCRoadMap(RoadMap):
     """
     The road map class for the ACC2024 competition
 
@@ -17,27 +19,27 @@ class ACCRoadMap(RoadMap):
     - generate_random_cycle: Generates a random cycle from a given starting node
     - generate_path: Generates a path from a given sequence of nodes
     """
-    
-    def __init__(self) -> None: 
+
+    def __init__(self) -> None:
         """
         Initializes the ACCRoadMap object
         """
-        # parent class initialization 
+        # parent class initialization
         super().__init__()
-        # read nodes and edges 
-        node_positions: list = NODE_POSES_RIGHT_COMMON + NODE_POSES_RIGHT_LARGE_MAP 
-        edges: list = EDGE_CONFIGS_RIGHT_COMMON + EDGE_CONFIGS_RIGHT_LARGE_MAP  
-        # add scaled nodes to acc map 
-        for position in node_positions: 
-            position[0] = ACC_SCALE * (position[0] - X_OFFSET) 
-            position[1] = ACC_SCALE * (Y_OFFSET - position[1]) 
-            self.add_node(position) 
-        # add scaled edge to acc map 
-        for edge in edges: 
-            edge[2] = edge[2] * ACC_SCALE 
-            self.add_edge(*edge) 
+        # read nodes and edges
+        node_positions: list = NODE_POSES_RIGHT_COMMON + NODE_POSES_RIGHT_LARGE_MAP
+        edges: list = EDGE_CONFIGS_RIGHT_COMMON + EDGE_CONFIGS_RIGHT_LARGE_MAP
+        # add scaled nodes to acc map
+        for position in node_positions:
+            position[0] = ACC_SCALE * (position[0] - X_OFFSET)
+            position[1] = ACC_SCALE * (Y_OFFSET - position[1])
+            self.add_node(position)
+        # add scaled edge to acc map
+        for edge in edges:
+            edge[2] = edge[2] * ACC_SCALE
+            self.add_edge(*edge)
 
-    def generate_random_cycle(self, start, min_length=3) -> list:
+    def generate_random_cycle(self, start: int, min_length:int = 3) -> list:
         """
         Generates a random cycle from a given starting node
 
@@ -63,23 +65,40 @@ class ACCRoadMap(RoadMap):
                         continue
                     fringe.append((next_node, path + [next_node]))
 
-        start_node = self.nodes[start]
-        cycles = [[start_node] + path for path in dfs(start_node) if len(path) > min_length]
-        num_cycles = len(cycles)
-
+        start_node: RoadMapNode = self.nodes[start]
+        cycles: list = [[start_node] + path for path in dfs(start_node) if len(path) > min_length]
+        num_cycles: int = len(cycles)
         return cycles[np.random.randint(num_cycles)]
 
-    def generate_path(self, sequence: np.ndarray) -> np.array:
+    def generate_path(self, node_sequence: Union[np.ndarray, list]) -> np.array:
         """
         Wraps the generated path as a numpy array object
 
         Parameters:
-        - sequence: np.ndarray: The sequence of nodes
+        - node_sequence: Union[np.ndarray, list]: The sequence of nodes
 
         Returns:
         - np.array: The path as a numpy array
         """
-        if type(sequence) == np.ndarray:
-            sequence = sequence.tolist()
+        if type(node_sequence) == np.ndarray:
+            node_sequence = node_sequence.tolist()
 
-        return np.array(super().generate_path(sequence)).transpose(1, 0) #[N, (x, y)]
+        return np.array(super().generate_path(node_sequence)).transpose(1, 0) #[N, (x, y)]
+
+    def prepare_map_info(self, node_sequence: list) -> Tuple[dict, np.ndarray]:
+        """
+        Provide the position informations related to the node sequence
+
+        Parameters:
+        - node_sequence: Union[np.ndarray, list]: The sequence of nodes
+
+        Returns:
+        - Tuple[dict, np.ndarray]: The list of nodes' and waypoints' position
+        """
+        node_dict: Dict[str, np.ndarray] = {}
+        for node_id in node_sequence:
+            pose: np.ndarray = self.nodes[node_id].pose
+            node_dict[node_id] = pose # x, y, angle
+
+        waypoint_sequence = self.generate_path(node_sequence)
+        return node_dict, waypoint_sequence

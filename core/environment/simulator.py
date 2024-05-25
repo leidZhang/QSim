@@ -36,11 +36,6 @@ class QLabSimulator(Simulator):
         """
         self.dt: float = dt
         self.qlabs: QuanserInteractiveLabs = QuanserInteractiveLabs()
-        self.qlabs.open("localhost")
-        # self.actors: Dict[str, QLabsActor] = {}
-        # self.monitors: Dict[str, Monitor] = {
-        #     'car': Monitor(QCAR_ACTOR_ID, 0, dt=self.dt),
-        # }
         self.vehicles: Dict[int, VirtualCar] = {}
         self.regions: Dict[str, np.ndarray] = {
             'stop_signs': None,
@@ -58,8 +53,9 @@ class QLabSimulator(Simulator):
         - qcar_pos: list: The position of the car
         - qcar_view: int: The view of the car
         """
+        self.qlabs.open("localhost")
         director: ACCDirector = ACCDirector(self.qlabs)
-        self.actors: dict = director.build_map()
+        self.actors: Dict[str, QLabsActor] = director.build_map()
         self.set_regions()
         time.sleep(2) # cool down time for the car to spawn
         # self.init_actor_states()
