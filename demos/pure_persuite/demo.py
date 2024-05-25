@@ -18,7 +18,7 @@ from core.roadmap import ACCRoadMap
 from core.roadmap import ACCDirector
 from core.environment.exception import AnomalousEpisodeException
 from demos.override_demo import prepare_map_info
-from .car import PPCar, PPCarMP, PPCarCan
+from .vehicle import PPCar, PPCarMP, PPCarCan
 
 def generate_car(car: QLabsQCar, location: list[float], rotation: list[float]) -> None:
     QLabsRealTime().terminate_all_real_time_models()
