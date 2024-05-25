@@ -33,6 +33,7 @@ class Monitor:
         x: float = self.state[0]
         y: float = self.state[1]
         yaw: float = self.state[2]
+        # print(f'yaw: {yaw}')
 
         # calc velocity
         vx = (x - self.last_state[0]) / self.dt

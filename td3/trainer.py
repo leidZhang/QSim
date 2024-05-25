@@ -92,8 +92,9 @@ class Trainer:
             if actor_loss is not None and critic_loss is not None:
                 self.metrics["actor_loss"] = actor_loss
                 self.metrics["critic_loss"] = critic_loss
-                self.metrics["actor_grad"] = gradients["actor"]
-                self.metrics["critic_grad"] = gradients["critic"]
+                if gradients["actor"] is not None and gradients["critic"] is not None:
+                    self.metrics["actor_grad"] = gradients["actor"]
+                    self.metrics["critic_grad"] = gradients["critic"]
                 metric_counter += 1
                 if metric_counter % 10 == 0:
                     print(self.metrics)
@@ -105,7 +106,9 @@ class Trainer:
             return
 
         # cal average value and max value
-        self.metrics = {f'train/{k}': np.array(v.cpu()).mean() for k, v in self.metrics.items()}
+        # self.metrics = {f'train/{k}': np.array(v.cpu()).mean() for k, v in self.metrics.items()}
+        self.metrics = {f'train/{k}': np.array(v.cpu()).mean() if v is not None else None for k, v in
+                        self.metrics.items()}
         self.metrics.update({f'train/{k}_max': np.array(v).max() for k, v in self.metrics_max.items()})
         self.metrics['train/steps'] = self.steps
         self.metrics['_step'] = self.steps
