@@ -18,7 +18,7 @@ from core.qcar.vehicle import VirtualCar
 
 class Simulator:
     @abstractmethod
-    def build_map(self, *args) -> None:
+    def render_map(self, *args) -> None:
         ...
 
     @abstractmethod
