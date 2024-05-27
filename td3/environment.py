@@ -83,7 +83,7 @@ class WaypointEnvironment(QLabEnvironment):
         # print(f"0.05 Boundary Reward: {b05_reward}")
         reward += b05_reward
 
-        print(f'B/F: {"{:.2%}".format(-b05_reward / forward_reward)}')
+        # print(f'B/F: {"{:.2%}".format(-b05_reward / forward_reward)}')
 
         self.pre_pos = pos
 
