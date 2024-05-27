@@ -79,9 +79,11 @@ class WaypointEnvironment(QLabEnvironment):
         # print(f"FORWARD_REWARD REWARD {forward_reward}")
         reward += forward_reward
 
-        b05_reward = -max(0.0, 4.6 * (pos - self.pre_pos) * (norm_dist[dist_ix] + 0.3) ** 4)
+        b05_reward = -max(0.0, 1.3 * (pos - self.pre_pos) * (norm_dist[dist_ix] - 0.031))
         # print(f"0.05 Boundary Reward: {b05_reward}")
         reward += b05_reward
+
+        print(f'B/F: {"{:.2%}".format(-b05_reward / forward_reward)}')
 
         self.pre_pos = pos
 
@@ -178,21 +180,21 @@ class WaypointEnvironment(QLabEnvironment):
         start_index: int = random.randint(420, 750) # change index here
         # waypoint_index = 420
         self.goal = self.waypoint_sequence[start_index + 400]
-        location, orientation = self.handle_spawn_pos(waypoint_index=waypoint_index)
+        location, orientation = self.handle_spawn_pos(waypoint_index=start_index)
         observation, reward, done, info = super().reset(location, orientation)
 
         # init vehicles, assign proper coeff for throttle and steering if you want
         qlabs: QuanserInteractiveLabs = self.simulator.qlabs
         dt: float = self.simulator.dt
         self.vehicle: WaypointCar = WaypointCar(actor_id=0, dt=dt, qlabs=qlabs, throttle_coeff=0.08)
-        self.vehicle.setup(self.waypoint_sequence, waypoint_index)
+        self.vehicle.setup(self.waypoint_sequence, start_index)
         # init episode params
         self.prev_dist_ix: int = 0
         ego_state: np.ndarray = self.vehicle.ego_state
         self.start_orig: np.ndarray = ego_state[:2]
         self.prev_dist = np.inf # set previous distance to infinity
         self.last_orig: np.ndarray = self.start_orig
-        self.pre_pos = 0
+        self.pre_pos = self.vehicle.current_waypoint_index
         # init observations
         global_close: np.ndarray = self.waypoint_sequence[0]
         global_far: np.ndarray = self.waypoint_sequence[49]
