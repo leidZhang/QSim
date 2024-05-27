@@ -22,7 +22,7 @@ def vision_pid_demo() -> None:
     car.policy.reset_start_time() # reset the start time
     start_time: float = time.time()
     try: 
-        while True: 
+        while time.time() - start_time < 10: 
             car.execute(history=history)
     except KeyboardInterrupt:
         print("Interrupted!")

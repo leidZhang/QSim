@@ -87,6 +87,6 @@ class VisionLaneFollowing(BasePolicy):
         # get the steering and throttle values
         result: tuple = self.edge_finder.execute(image)
         steering: float = self.steering_controller.execute(result, image.shape[1])
+        self.expected_velocity = self.expected_velocity * abs(math.cos(2.7 * steering)) * reduce_coeff
         throttle: float = self.throttle_controller.execute(self.expected_velocity, linear_speed)
-        throttle = throttle * abs(math.cos(2.7 * steering)) * reduce_coeff # cal real pwm
         return np.array([throttle, steering]), {}
