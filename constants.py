@@ -32,3 +32,4 @@ PREFILL = 10000
 RUN_ID = ''
 action_v = 0.08
 cuda = "cuda:1"
+# start_point = 1700
