@@ -3,11 +3,11 @@ max_action = 0.5
 discount = 0.99
 state_dim = 10
 action_dim = 2
-lr = 1e-4  # 3e-4
-tau = 0.005
+lr = 4e-4  # 3e-4
+tau = 0.006
 observation_shape = (10,)
 buffer_update_rate = 2
-policy_freq = 10  # 2
+policy_freq = 4  # 2
 # generator constants
 METRIC_PREFIX: str = 'agent'
 COOL_DOWN_TIME: float = 3.0

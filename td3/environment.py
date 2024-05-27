@@ -175,9 +175,9 @@ class WaypointEnvironment(QLabEnvironment):
         return self.spawn_on_waypoints(waypoint_index)
 
     def reset(self) -> Tuple[dict, float, bool, dict]:
-        waypoint_index: int = random.randint(420, 750) # change index here
+        start_index: int = random.randint(420, 750) # change index here
         # waypoint_index = 420
-        self.goal = self.waypoint_sequence[waypoint_index + 400]
+        self.goal = self.waypoint_sequence[start_index + 400]
         location, orientation = self.handle_spawn_pos(waypoint_index=waypoint_index)
         observation, reward, done, info = super().reset(location, orientation)
 
