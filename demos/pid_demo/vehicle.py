@@ -20,8 +20,6 @@ from core.qcar.constants import WHEEL_RADIUS, ENCODER_COUNTS_PER_REV, PIN_TO_SPU
 class VisionPIDTestCar(PhysicalCar):
     def __init__(self, throttle_coeff: float, steering_coeff: float) -> None:
         super().__init__(throttle_coeff, steering_coeff)
-        self.diff = Calculus().differentiator_variable(0.015)
-        _ = next(self.diff)
         self.front_csi: VirtualCSICamera = VirtualCSICamera(id=3)
         self.reduce_coeff: float = 1.0
 
@@ -36,17 +34,16 @@ class VisionPIDTestCar(PhysicalCar):
     def estimate_speed(self) -> float:
         return float(self.running_gear.motorTach)
     
-    def execute(self, history: list) -> None: 
+    def execute(self, history: Dict[str, list]) -> None: 
         try: 
             image: np.ndarray = self.front_csi.read_image()
             if image is not None: 
                 linear_speed: float = self.estimate_speed()
                 action, _ = self.policy.execute(image, linear_speed, self.reduce_coeff)
                 self.running_gear.read_write_std(throttle=action[0], steering=action[1], LEDs=self.leds)
-                message: str = f"\rThrottle: {action[0]:1.4f}, Steering: {action[1]:1.4f} {' ' * 10}"
-                realtime_message_output(message)
                 if history is not None:
-                    history.append(action[0])
+                    history['observed'].append(self.running_gear.motorTach)
+                    history['desired'].append(self.policy.reference_velocity)
         except NoContourException:
             print("No contour detected")
 
@@ -100,5 +97,6 @@ class VSPIDTestCar(PhysicalCar):
                 steering: float = self.steering_control.execute(input=result, image_width=image.shape[1])
                 throttle: float = 0.18 * abs(math.cos(2.7 * steering))
                 self.running_gear.read_write_std(throttle=throttle, steering=steering, LEDs=self.leds)
+                realtime_message_output(f'Speed: {self.running_gear.motorTach}')
         except NoContourException:
             print("No contour detected")

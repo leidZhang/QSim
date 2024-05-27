@@ -4,7 +4,6 @@ from demos.simulator_demo import simulator_demo
 
 from .vehicle import ThrottlePIDTestCar
 from core.qcar.vehicle import PhysicalCar
-from core.utils.tools import plot_data_in_list
 
 def throttle_pid_demo():
     simulator_demo() # prepare the map
@@ -20,4 +19,4 @@ def throttle_pid_demo():
             throttle: float = round(car.throttle, 4)
             throttle_history.append(throttle)
     except KeyboardInterrupt:
-        plot_data_in_list(throttle_history, "Throttle PID Test", "Time", "PWM")
+        pass

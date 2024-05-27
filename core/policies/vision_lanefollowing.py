@@ -7,6 +7,7 @@ import numpy as np
 from core.base_policy import BasePolicy
 from core.control.edge_finder import EdgeFinder
 from core.control.pid_control import ThrottlePIDController, SteeringPIDController, PIDController
+from core.utils.tools import realtime_message_output    
 
 
 class VisionLaneFollowing(BasePolicy):
@@ -87,6 +88,9 @@ class VisionLaneFollowing(BasePolicy):
         # get the steering and throttle values
         result: tuple = self.edge_finder.execute(image)
         steering: float = self.steering_controller.execute(result, image.shape[1])
-        self.expected_velocity = self.expected_velocity * abs(math.cos(2.7 * steering)) * reduce_coeff
-        throttle: float = self.throttle_controller.execute(self.expected_velocity, linear_speed)
+        self.reference_velocity = self.expected_velocity * abs(math.cos(2.7 * steering)) * reduce_coeff
+
+        throttle: float = self.throttle_controller.execute(self.reference_velocity, linear_speed)
+        realtime_message_output(f'Expected: {self.reference_velocity:1.4f}, Measured:{linear_speed:1.4f}')
+
         return np.array([throttle, steering]), {}
