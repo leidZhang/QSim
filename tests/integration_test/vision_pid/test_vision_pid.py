@@ -2,12 +2,15 @@ import time
 import pytest
 from typing import Dict, List, Generator
 
-from tests.integration_test.test_environment import prepare_test_environment
+import matplotlib.pyplot as plt
+
+from core.utils.tools import plot_data_in_dict
+from tests.integration_test.peformance_environment import prepare_test_environment
 from .pid_vehicle import VisionPIDTestCar
 from .constants import STEERING_DEFAULT_K_I, STEERING_DEFAULT_K_P, STEERING_DEFAULT_K_D
 from .constants import THROTTLE_DEFAULT_K_P, THROTTLE_DEFAULT_K_I, THROTTLE_DEFAULT_K_D
 
-def run_vision_pid_test(expected_velocity: float, duration: float=10.5) -> Dict[str, List[float]]:
+def run_vision_pid(expected_velocity: float, duration: float=10.3) -> Dict[str, List[float]]:
     """
     Runs the Vision PID test for a given duration and logs desired and observed velocities.
 
@@ -41,7 +44,7 @@ def run_vision_pid_test(expected_velocity: float, duration: float=10.5) -> Dict[
     
     return history
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def setup_environment() -> Generator[None, None, None]:
     """
     Fixture to set up the test environment before running tests.
@@ -55,11 +58,15 @@ def test_vision_pid() -> None:
     Tests the Vision PID control system.
     """
     test_speed: float = 2.00
-    expected_max_speed: float = 2.20
-    history = run_vision_pid_test(expected_velocity=test_speed)
-    input_max_speed = max(history['observed'])
+    expected_max_speed: float = 2.16
+    history = run_vision_pid(expected_velocity=test_speed, duration=10.0)
+    input_max_speed = round(max(history['observed']), 2)
+
+    plot_data_in_dict(history, title="Vision PID Test", x_label="Time (s)", y_label="Speed (m/s)")
 
     assert len(history['desired']) > 0, "No desired velocities logged."
     assert len(history['observed']) > 0, "No observed velocities logged."
     assert input_max_speed <= expected_max_speed, \
         f"Observed max speed {input_max_speed}m/s exceeds expected max speed {expected_max_speed}m/s."
+
+    
