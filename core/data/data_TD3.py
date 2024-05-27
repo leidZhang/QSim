@@ -433,10 +433,10 @@ class SequenceRolloutBuffer:
             self.buffer_set.add(file)
             for t in range(episode['state'].shape[0] - 1):
                 state = episode["state"][t]
+                action = episode["action"][t + 1]
                 next_state = episode["state"][t + 1]
-                action = episode["action"][t]
-                reward = episode["reward"][t]
-                done = episode["terminal"][t]
+                reward = episode["reward"][t + 1]
+                done = episode["terminal"][t + 1]
                 self.add(state, action, reward, next_state, done)
 
         while not waste_queue.empty(): # for resume

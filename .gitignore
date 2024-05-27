@@ -162,3 +162,5 @@ cython_debug/
 /doc/umls/
 mlruns/
 .constants.py
+assets/
+*.html

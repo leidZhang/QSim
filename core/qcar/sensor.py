@@ -7,8 +7,8 @@ from pal.utilities.vision import Camera3D
 from pal.products.qcar import QCarGPS 
 
 from core.template import ServiceModule
-from core.settings import CSI_CAMERA_SETTING
-from core.settings import RGBD_CAMERA_SETTING
+from .constants import CSI_CAMERA_SETTING
+from .constants import RGBD_CAMERA_SETTING
 
 
 class VirtualCSICamera(ServiceModule): # wrapper class, implement more functions if needed 

@@ -1,3 +1,4 @@
+import sys
 from abc import abstractmethod
 from typing import Union, Tuple
 
@@ -9,12 +10,13 @@ from qvl.qlabs import QuanserInteractiveLabs
 # from core.sensor.sensor import VirtualCSICamera, VirtualRGBDCamera
 from core.base_policy import PolicyAdapter, BasePolicy
 from .monitor import Monitor
-from .constants import QCAR_ACTOR_ID
+from .constants import QCAR_ACTOR_ID, ENCODER_COUNTS_PER_REV
+from .constants import PIN_TO_SPUR_RATIO, WHEEL_RADIUS
 
 
 class BaseCar:
     """
-    The BaseCar class is an abstract class that defines the interface for both 
+    The BaseCar class is an abstract class that defines the interface for both
     the physical and virtual cars
 
     Attributes:
@@ -22,6 +24,7 @@ class BaseCar:
     - steering_coeff: float: The steering coefficient of the car
 
     Methods:
+    - estimate_speed: Estimate the car's speed based on the motor tach
     - execute: Executes the action of the car
     """
 
@@ -53,9 +56,9 @@ class BaseCar:
         ...
 
 
-class VirtualCar(BaseCar): 
+class VirtualCar(BaseCar):
     """
-    The VirtualCar class is a class that defines the interface for the virtual car that 
+    The VirtualCar class is a class that defines the interface for the virtual car that
     can get the action from any external agent, it can also get the ego state of the car
     by communicating with the Quanser Interactive Labs
 
@@ -69,13 +72,13 @@ class VirtualCar(BaseCar):
     - get_vehicle_state: Gets the state of the vehicle
     - execute: Executes the action of the car
     """
-    
+
     def __init__(
-        self, 
-        actor_id: int, 
-        dt: float, 
+        self,
+        actor_id: int,
+        dt: float,
         qlabs: QuanserInteractiveLabs,
-        throttle_coeff: float = 0.3, 
+        throttle_coeff: float = 0.3,
         steering_coeff: float = 0.5
     ) -> None:
         """
@@ -98,7 +101,7 @@ class VirtualCar(BaseCar):
         self.running_gear: QCar = QCar(id=actor_id)
         self.monitor: Monitor = Monitor(QCAR_ACTOR_ID, actor_id, dt=dt)
 
-    def halt(self) -> None: 
+    def halt(self) -> None:
         self.running_gear.read_write_std(0, 0)
 
     def get_ego_state(self) -> np.ndarray:
@@ -110,7 +113,7 @@ class VirtualCar(BaseCar):
         """
         self.monitor.get_state(self.qlabs)
         return self.monitor.state
-    
+
     def cal_vehicle_state(self, ego_state: np.ndarray) -> Tuple[np.ndarray, float, np.ndarray]:
         """
         Gets the position, yaw and rotation of the vehicle
@@ -129,7 +132,7 @@ class VirtualCar(BaseCar):
         ])
         return orig, yaw, rot
 
-    def execute(self, action: np.ndarray) -> Tuple[float, float]: 
+    def execute(self, action: np.ndarray) -> Tuple[float, float]:
         """
         The execute method executes the action of the car and returns the throttle and steering values
 
@@ -143,11 +146,11 @@ class VirtualCar(BaseCar):
         steering: float = self.steering_coeff * action[1]
         self.running_gear.read_write_std(throttle, steering)
         return throttle, steering
-    
 
-class VirtualAgentCar(VirtualCar): 
+
+class VirtualAgentCar(VirtualCar):
     """
-    The VirtualAgentCar class is a class that defines the interface for the virtual car and 
+    The VirtualAgentCar class is a class that defines the interface for the virtual car and
     also load a specific policy to execute the action
 
     Attributes:
@@ -157,7 +160,7 @@ class VirtualAgentCar(VirtualCar):
     - set_policy: Sets the policy to be loaded
     - execute: Executes the action of the car
     """
-    
+
     def __init__(self, actor_id, dt, qlabs, throttle_coeff: float = 0.3, steering_coeff: float = 0.5) -> None:
         """
         Initializes the VirtualAgentCar object
@@ -174,7 +177,7 @@ class VirtualAgentCar(VirtualCar):
         """
         super().__init__(actor_id, dt, qlabs, throttle_coeff, steering_coeff)
         self.policy: Union[BasePolicy, PolicyAdapter] = None
-        
+
     def set_policy(self, policy: Union[BasePolicy, PolicyAdapter]) -> None:
         """
         Sets the policy to be loaded
@@ -187,7 +190,7 @@ class VirtualAgentCar(VirtualCar):
         """
         self.policy = policy
 
-    def execute(self, observation: dict) -> Tuple[float, float]: 
+    def execute(self, observation: dict) -> Tuple[float, float]:
         """
         The execute method executes the action of the car and returns the throttle and steering values
 
@@ -199,4 +202,56 @@ class VirtualAgentCar(VirtualCar):
         """
         action, _ = self.policy.execute(observation)
         return super().execute(action)
+
+
+class PhysicalCar(BaseCar): 
+    """
+    The PhysicalCar class is a class that defines the interface for the physical car
+
+    Attributes:
+    - running_gear: QCar: The running gear of the car
+
+    Methods:
+    - handle_leds: Handles the LEDs of the car
+    """
     
+    def __init__(self, throttle_coeff: float, steering_coeff: float) -> None:
+        """
+        Initializes the PhysicalCar object
+
+        Parameters:
+        - throttle_coeff: float: The throttle coefficient of the car
+        - steering_coeff: float: The steering coefficient of the car
+
+        Returns:
+        - None
+        """
+        super().__init__(throttle_coeff, steering_coeff)
+        self.running_gear: QCar = QCar()
+        self.leds = np.array([0, 0, 0, 0, 0, 0, 0, 0])
+
+    def handle_leds(self, throttle: float, steering: float) -> None:
+        """
+        The handle_leds method handles the LEDs of the car, when the
+        car is turning or reversing, the corresponding LEDs will be turned on
+
+        Parameters:
+        - throttle: float: The throttle value of the car
+        - steering: float: The steering value of the car
+
+        Returns:
+        - None
+        """
+        # steering indicator
+        if steering > 0.3: 
+            self.leds[0] = 1
+            self.leds[2] = 1
+        elif steering < -0.3:
+            self.leds[1] = 1
+            self.leds[3] = 1
+        else:
+            self.leds = np.array([0, 0, 0, 0, 0, 0, self.leds[6], self.leds[7]])
+        # reverse indicator
+        if throttle < 0: 
+            self.leds[5] = 1
+        

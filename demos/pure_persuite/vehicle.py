@@ -8,7 +8,7 @@ from qvl.qlabs import QuanserInteractiveLabs
 from pal.products.qcar import QCar
 
 from core.environment.exception import AnomalousEpisodeException
-from core.sensor.sensor import VirtualCSICamera
+from core.qcar.sensor import VirtualCSICamera
 from core.qcar.monitor import Monitor
 from core.policies.pure_persuit import PurePursuitPolicy
 
@@ -96,16 +96,16 @@ class PPCarMP(PPCar, MPCar):
         self.transmit_action(action, shm_name, step_event)
 
 
-class PPCarCan(PPCar, MPCar): 
+class PPCarCan(PPCar, MPCar):
     def __init__(self, qlabs: QuanserInteractiveLabs, waypoint_sequence: np.ndarray) -> None:
         super().__init__(qlabs, waypoint_sequence)
         self.front_csi = VirtualCSICamera()
 
     def transmit_action(
-            self, action: np.ndarray, 
-            image: np.ndarray, 
-            shm_name_image: str, 
-            shm_name_action: str, 
+            self, action: np.ndarray,
+            image: np.ndarray,
+            shm_name_image: str,
+            shm_name_action: str,
             step_event
         ) -> None:
         if not step_event.is_set():

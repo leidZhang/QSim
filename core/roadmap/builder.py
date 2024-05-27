@@ -11,6 +11,8 @@ from qvl.qcar import QLabsQCar
 from qvl.basic_shape import QLabsBasicShape
 
 from .constants import ACC_X_OFFSET, ACC_Y_OFFSET
+from core.qcar.constants import QCAR_ACTOR_ID
+
 
 class ACCMapBuilder:
     """
@@ -105,38 +107,23 @@ class ACCMapBuilder:
         traffic_lights[1].set_state(QLabsTrafficLight.STATE_RED)
         return traffic_lights
 
-    def build_car(self, position: list) -> tuple:
+    def preapare_car_spawn(self) -> QLabsQCar:
         """
-        Spawn the qcar at the specified position of the map
-
-        Parameters:
-        - position: list: The position of the car
+        Prepare the qcar spawn at the specified position of the map
 
         Returns:
-        - tuple: The car, position, and orientation of the car
+        - None
         """
         car: QLabsQCar = QLabsQCar(self.qlab)
         basic_shape: QLabsBasicShape = QLabsBasicShape(self.qlab)
-        car_position: list = [position[0], position[1], 0.0]
-        car_orientation: list = [0, 0, position[2]]
-
-        # car.spawn_id(
-        #     actorNumber=0,
-        #     location=car_position,
-        #     rotation=car_orientation,
-        #     scale=[.1, .1, .1],
-        #     configuration=0,
-        #     waitForConfirmation=True
-        # )
-
         basic_shape.spawn_id_and_parent_with_relative_transform(
             actorNumber=102, location=[1.15, 0, 1.8],
             rotation=[0, 0, 0], scale=[.65, .65, .1],
             configuration=basic_shape.SHAPE_SPHERE,
-            parentClassID=car.ID_QCAR,
+            parentClassID=QCAR_ACTOR_ID,
             parentActorNumber=2,
             parentComponent=1,
             waitForConfirmation=True
         )
         basic_shape.set_material_properties(color=[0.4,0,0], roughness=0.4, metallic=True, waitForConfirmation=True)
-        return (car, car_position, car_orientation)
+        return car

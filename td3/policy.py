@@ -70,16 +70,16 @@ class TD3Agent(torch.nn.Module):
         if len(self.buffer) > C.batch_size:
             self.total_it += 1
             # Get samples from buffer and Convert to PyTorch tensors
-            states = torch.FloatTensor(samples['states']).to(device)
-            actions = torch.FloatTensor(samples['actions']).to(device)
-            rewards = torch.FloatTensor(samples['rewards']).to(device)
-            next_states = torch.FloatTensor(samples['next_states']).to(device)
-            dones = torch.FloatTensor(samples['dones']).to(device)
+            states = torch.from_numpy(samples['states']).to(device)
+            actions = torch.from_numpy(samples['actions']).to(device)
+            rewards = torch.from_numpy(samples['rewards']).to(device)
+            next_states = torch.from_numpy(samples['next_states']).to(device)
+            dones = torch.from_numpy(samples['dones']).to(device)
             # print(f'dones: {dones}')
             # print(f'shape of dones: {dones.shape}')
             # print(f'type of action: {type(actions)}')
 
-            not_dones = 1. - dones
+            not_dones = ~dones
             # print(f'not_dones: {not_dones}')
             # print(f'shape of not_dones: {not_dones.shape}')
             # print(f'type of not_dones: {type(not_dones)}')
@@ -124,7 +124,7 @@ class TD3Agent(torch.nn.Module):
             critic_loss.backward()
 
             # Gradient clipping
-            gradients["critic"] = torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=100.0)
+            gradients["critic"] = torch.nn.utils.clip_grad_norm_(self.critic.parameters(), 1.0)
 
             self.critic_optimizer.step()
 
@@ -142,7 +142,8 @@ class TD3Agent(torch.nn.Module):
                 actor_loss.backward()
 
                 # Gradient clipping
-                gradients["actor"] = torch.nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=100.0)
+                gradients["actor"] = torch.nn.utils.clip_grad_norm_(self.actor.parameters(), 1.0)
+                # torch.nn.utils.clip_grad_value_(self.actor.parameters(), clip_value=10.0)
 
                 self.actor_optimizer.step()
 

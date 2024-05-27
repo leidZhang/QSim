@@ -1,7 +1,8 @@
 import time
+from abc import abstractmethod
+from typing import List, Dict
 
 import numpy as np
-from typing import List, Dict
 
 from qvl.qlabs import QuanserInteractiveLabs
 from qvl.traffic_light import QLabsTrafficLight
@@ -16,12 +17,12 @@ from core.qcar.vehicle import VirtualCar
 
 
 class Simulator:
-    @classmethod
-    def build_map(self, qcar_pos: list, qcar_view: int = 6) -> None:
+    @abstractmethod
+    def render_map(self, *args) -> None:
         ...
 
-    @classmethod
-    def reset_map(self, qcar_pos: list, qcar_view: int = 6) -> None:
+    @abstractmethod
+    def reset_map(self,  *args) -> None:
         ...
 
 
@@ -35,11 +36,6 @@ class QLabSimulator(Simulator):
         """
         self.dt: float = dt
         self.qlabs: QuanserInteractiveLabs = QuanserInteractiveLabs()
-        self.qlabs.open("localhost")
-        # self.actors: Dict[str, QLabsActor] = {}
-        # self.monitors: Dict[str, Monitor] = {
-        #     'car': Monitor(QCAR_ACTOR_ID, 0, dt=self.dt),
-        # }
         self.vehicles: Dict[int, VirtualCar] = {}
         self.regions: Dict[str, np.ndarray] = {
             'stop_signs': None,
@@ -49,7 +45,7 @@ class QLabSimulator(Simulator):
     # def add_vehicle(self, actor_id: int, throttle_coeff: float = 0.3, steering_coeff: float = 0.5) -> None:
     #     return VirtualCar(actor_id, self.dt, self.qlabs, throttle_coeff, steering_coeff)
 
-    def render_map(self, qcar_pos: list, qcar_view: int = 6) -> None:
+    def render_map(self) -> None:
         """
         Renders the map for the simulation
 
@@ -57,14 +53,14 @@ class QLabSimulator(Simulator):
         - qcar_pos: list: The position of the car
         - qcar_view: int: The view of the car
         """
+        self.qlabs.open("localhost")
         director: ACCDirector = ACCDirector(self.qlabs)
-        self.actors = director.build_map(qcar_pos)
-        self.actors['car'][0].possess(qcar_view)
+        self.actors: Dict[str, QLabsActor] = director.build_map()
         self.set_regions()
         time.sleep(2) # cool down time for the car to spawn
         # self.init_actor_states()
 
-    def reset_map(self, qcar_view: int = 6) -> None:
+    def reset_map(self, location: list, orientation: float, qcar_view: int = 6) -> None:
         """
         Resets the actors in the map
 
@@ -73,15 +69,13 @@ class QLabSimulator(Simulator):
         """
         QLabsRealTime().terminate_all_real_time_models()
         # delete the old car
-        car: QLabsQCar = self.actors['car'][0]
+        car: QLabsQCar = self.actors['cars'][0]
         car.destroy()
         # reset traffic light states
         traffic_lights: List[QLabsTrafficLight] = self.actors['traffic_lights']
         traffic_lights[0].set_state(QLabsTrafficLight.STATE_RED)
         traffic_lights[1].set_state(QLabsTrafficLight.STATE_GREEN)
         # spawn a new car
-        location = self.actors['car'][1]
-        orientation = self.actors['car'][2]
         car.spawn_id(
             actorNumber=0,
             location=location,
@@ -104,15 +98,6 @@ class QLabSimulator(Simulator):
         - waypoints: np.ndarray: The waypoints for the simulation
         """
         self.waypoints: np.ndarray = waypoints
-
-    # def get_actor_state(self, actor_id: int) -> np.ndarray:
-    #     """
-    #     Get the state of the actor
-
-    #     Parameters:
-    #     - actor_name: int: The id of the actor
-    #     """
-    #     return self.vehicles[actor_id].get_ego_state()
 
     def set_regions(self) -> None:
         # set the regions for the stop signs and traffic lights

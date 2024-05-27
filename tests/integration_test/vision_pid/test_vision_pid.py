@@ -1,0 +1,65 @@
+import time
+import pytest
+from typing import Dict, List, Generator
+
+from tests.integration_test.test_environment import prepare_test_environment
+from .pid_vehicle import VisionPIDTestCar
+from .constants import STEERING_DEFAULT_K_I, STEERING_DEFAULT_K_P, STEERING_DEFAULT_K_D
+from .constants import THROTTLE_DEFAULT_K_P, THROTTLE_DEFAULT_K_I, THROTTLE_DEFAULT_K_D
+
+def run_vision_pid_test(expected_velocity: float, duration: float=10.5) -> Dict[str, List[float]]:
+    """
+    Runs the Vision PID test for a given duration and logs desired and observed velocities.
+
+    Args:
+        duration (float): The duration to run the test in seconds.
+
+    Returns:
+        Dict[str, List[float]]: A dictionary containing lists of desired and observed velocities.
+    """
+    history = {'desired': [], 'observed': []}
+
+    prepare_test_environment(node_id=24)  # prepare the map
+    car = VisionPIDTestCar(1, 1)
+    pid_gains = {
+        'steering': [STEERING_DEFAULT_K_P, STEERING_DEFAULT_K_I, STEERING_DEFAULT_K_D],
+        'throttle': [THROTTLE_DEFAULT_K_P, THROTTLE_DEFAULT_K_I, THROTTLE_DEFAULT_K_D]
+    }
+
+    car.setup(expected_velocity=expected_velocity, pid_gains=pid_gains)
+    car.policy.reset_start_time()  # reset the start time
+    start_time = time.time()
+    try:
+        while time.time() - start_time < duration:
+            car.execute()
+            history['desired'].append(car.policy.reference_velocity)
+            history['observed'].append(car.estimate_speed())
+    except KeyboardInterrupt:
+        print("Interrupted!")
+    finally:
+        car.running_gear.read_write_std(0, 0)
+    
+    return history
+
+@pytest.fixture
+def setup_environment() -> Generator[None, None, None]:
+    """
+    Fixture to set up the test environment before running tests.
+    Returns some data if needed.
+    """
+    prepare_test_environment(node_id=24)
+    yield
+
+def test_vision_pid() -> None:
+    """
+    Tests the Vision PID control system.
+    """
+    test_speed: float = 2.00
+    expected_max_speed: float = 2.20
+    history = run_vision_pid_test(expected_velocity=test_speed)
+    input_max_speed = max(history['observed'])
+
+    assert len(history['desired']) > 0, "No desired velocities logged."
+    assert len(history['observed']) > 0, "No observed velocities logged."
+    assert input_max_speed <= expected_max_speed, \
+        f"Observed max speed {input_max_speed}m/s exceeds expected max speed {expected_max_speed}m/s."

@@ -1,0 +1,8 @@
+# best PID gains for steering?
+STEERING_DEFAULT_K_P: float = -1.0163443448
+STEERING_DEFAULT_K_I: float = -0.000
+STEERING_DEFAULT_K_D: float = -0.19878977558
+# PID gains for throttle 
+THROTTLE_DEFAULT_K_P: float = 12.985
+THROTTLE_DEFAULT_K_I: float = 2.8945
+THROTTLE_DEFAULT_K_D: float = 0.189561

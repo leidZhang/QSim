@@ -8,7 +8,11 @@ import logging
 import tempfile
 import numpy as np
 from pathlib import Path
-from typing import Dict, List
+from collections import defaultdict
+from typing import Dict, List, Union
+
+import matplotlib
+import matplotlib.pyplot as plt
 from mlflow.store.artifact.artifact_repo import ArtifactRepository
 
 class LogColorFormatter(logging.Formatter):
@@ -238,3 +242,17 @@ def elapsed_time(start_time: float) -> float:
 def realtime_message_output(message: str) -> None: 
     sys.stdout.write(f'\r{message}')
     sys.stdout.flush()
+
+def plot_data_in_dict(data_lists: dict, title: str, x_label: str, y_label: str) -> None: 
+    for label, data_list in data_lists.items():
+        x_axis: list = list(range(len(data_list)))
+        y_axis: list = data_list
+        plt.plot(x_axis, y_axis, label=label)
+    
+    plt.title(title)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.legend()
+
+    plt.show()
+    
