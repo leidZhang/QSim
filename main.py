@@ -165,5 +165,5 @@ def start_system(resume_run_id: str, nodes: Dict[str, np.ndarray], waypoints: np
 if __name__ == '__main__':
     # fill with file name of your experiment, set to '' to start new experiment
     resume_run_id = RUN_ID
-    nodes, waypoints = prepare_map_info(node_sequence=[4, 14, 20])
+    nodes, waypoints = prepare_map_info(node_sequence=[10, 4, 14, 20, 22, 10])
     start_system(resume_run_id=resume_run_id, nodes=nodes, waypoints=waypoints)

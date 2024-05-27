@@ -9,6 +9,7 @@ from core.environment import QLabEnvironment
 from core.environment.detector import EpisodeMonitor
 from .vehicle import WaypointCar
 from constants import GOAL_THRESHOLD
+import random
 
 
 class WaypointEnvironment(QLabEnvironment):
@@ -54,6 +55,7 @@ class WaypointEnvironment(QLabEnvironment):
         # FORWARD_REWARD V1
         pos = self.vehicle.current_waypoint_index
         # print(f'POS: {pos}')
+        '''
         region_reward = [1, 4, 2]
         waypoints_range = [(0, 332), (333, 446), (447, 625)]
 
@@ -71,6 +73,15 @@ class WaypointEnvironment(QLabEnvironment):
                 reward += b05_reward
 
                 # print(f'B/F: {"{:.2%}".format(((-b05_reward  / forward_reward)- 0.31) / 0.67)}')
+        '''
+
+        forward_reward = (pos - self.pre_pos) * 0.125
+        # print(f"FORWARD_REWARD REWARD {forward_reward}")
+        reward += forward_reward
+
+        b05_reward = -max(0.0, 4.6 * (pos - self.pre_pos) * (norm_dist[dist_ix] + 0.3) ** 4)
+        # print(f"0.05 Boundary Reward: {b05_reward}")
+        reward += b05_reward
 
         self.pre_pos = pos
 
@@ -110,7 +121,8 @@ class WaypointEnvironment(QLabEnvironment):
         #
         # reward += angle_reward
 
-        # # Max boundary
+
+        # Max boundary
         if norm_dist[dist_ix] >= 0.10:
             # max_boundary_reward = -44
             # print(f'max_boundary_reward {max_boundary_reward}')
@@ -119,8 +131,8 @@ class WaypointEnvironment(QLabEnvironment):
             self.vehicle.halt()  # stop the car
 
         # (no reward) Reach goal
-
-        if (np.linalg.norm(self.goal - ego_state[:2]) < GOAL_THRESHOLD and len(self.vehicle.next_waypoints) < 201):
+        # end_point =
+        if np.linalg.norm(self.goal - ego_state[:2]) < GOAL_THRESHOLD:
             done = True  # stop episode after this step
             self.vehicle.halt()  # stop the car
 
@@ -163,7 +175,9 @@ class WaypointEnvironment(QLabEnvironment):
         return self.spawn_on_waypoints(waypoint_index)
 
     def reset(self) -> Tuple[dict, float, bool, dict]:
-        waypoint_index: int = 380 # change index here
+        waypoint_index: int = random.randint(420, 750) # change index here
+        # waypoint_index = 420
+        self.goal = self.waypoint_sequence[waypoint_index + 400]
         location, orientation = self.handle_spawn_pos(waypoint_index=waypoint_index)
         observation, reward, done, info = super().reset(location, orientation)
 
