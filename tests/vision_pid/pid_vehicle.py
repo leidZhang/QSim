@@ -24,9 +24,6 @@ class VisionPIDTestCar(PhysicalCar):
         self.policy: BasePolicy = VisionLaneFollowing(edge_finder=edge_finder, expected_velocity=expected_velocity)
         self.policy.setup_steering(k_p=steering_gains[0], k_i=steering_gains[1], k_d=steering_gains[2])
         self.policy.setup_throttle(k_p=throttle_gains[0], k_i=throttle_gains[1], k_d=throttle_gains[2])
-
-    def estimate_speed(self) -> float:
-        return float(self.running_gear.motorTach)
     
     def execute(self) -> None: 
         try: 

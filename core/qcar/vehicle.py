@@ -1,4 +1,4 @@
-import sys
+import time
 from abc import abstractmethod
 from typing import Union, Tuple
 
@@ -213,6 +213,7 @@ class PhysicalCar(BaseCar):
 
     Methods:
     - handle_leds: Handles the LEDs of the car
+    - estimate_speed: Estimates the speed of the car
     """
     
     def __init__(self, throttle_coeff: float, steering_coeff: float) -> None:
@@ -254,4 +255,27 @@ class PhysicalCar(BaseCar):
         # reverse indicator
         if throttle < 0: 
             self.leds[5] = 1
+    
+    def estimate_speed(self) -> float:
+        """
+        The estimate_speed method estimates the speed of the car based on the motor tach
+
+        Returns:
+        - float: The estimated speed of the car
+        """
+        return float(self.running_gear.motorTach)
+    
+    def halt_car(self, steering: float = 0.0, halt_time: float = 1.0) -> None: 
+        """
+        Halts the QCar.
+
+        Parameters:
+        - steering (float): The steering value for the QCar.
+        - halt_time (float): The halt time for the QCar.
+
+        Returns:
+        - None
+        """
+        self.running_gear.read_write_std(throttle=0, steering=steering, LEDs=self.leds)
+        time.sleep(halt_time)
         

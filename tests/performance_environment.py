@@ -16,10 +16,15 @@ class PerformanceTestEnvironment(QLabEnvironment): # demo environment will do no
     
     def reset(self, location: list, orientation: list) -> Tuple[dict, float, bool, dict]:
         return super().reset(location=location, orientation=orientation)
+    
+def destroy_map() -> int:
+    qlabs = QuanserInteractiveLabs()
+    qlabs.open('localhost')
+    qlabs.destroy_all_spawned_actors()
+    qlabs.close()
 
 def prepare_test_environment(node_id: int = 4) -> None:
     roadmap: ACCRoadMap = ACCRoadMap()
-    qlabs = QuanserInteractiveLabs()
     x_pos, y_pose, angle = roadmap.nodes[node_id].pose
     waypoint_sequence = roadmap.generate_path([4, 14, 20, 22, 10])
 

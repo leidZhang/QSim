@@ -7,7 +7,6 @@ import numpy as np
 from core.base_policy import BasePolicy
 from core.control.edge_finder import EdgeFinder
 from core.control.pid_control import ThrottlePIDController, SteeringPIDController, PIDController
-from core.utils.tools import realtime_message_output    
 
 
 class VisionLaneFollowing(BasePolicy):
@@ -22,6 +21,8 @@ class VisionLaneFollowing(BasePolicy):
     Methods:
     - setup_steering: Sets up the steering controller
     - setup_throttle: Sets up the throttle controller
+    - reset_start_time: Resets the start time of the controllers
+    - reset_delta_t: Resets the delta time of the controllers
     - execute: Executes the lane following
     """
 
@@ -71,10 +72,20 @@ class VisionLaneFollowing(BasePolicy):
         self.throttle_controller.setup(k_p, k_i, k_d)
 
     def reset_start_time(self) -> None: 
+        """
+        Resets the start time of the controllers
+        """
         self.steering_controller.start = time.time()
         self.throttle_controller.start = time.time()
 
-    def execute(self, image: np.ndarray, linear_speed: float, reduce_coeff: float) -> Tuple[np.ndarray, dict]:
+    def reset_delta_t(self) -> None: 
+        """
+        Resets the delta time of the controllers
+        """
+        self.steering_controller.dt = 0.0
+        self.throttle_controller.dt = 0.0
+
+    def execute(self, image: np.ndarray, linear_speed: float, reduce_factor: float) -> Tuple[np.ndarray, dict]:
         """
         The execute method to generate the steering and throttle values based on the image and velocity
 
@@ -88,10 +99,9 @@ class VisionLaneFollowing(BasePolicy):
         """
         # get the steering and throttle values
         result: tuple = self.edge_finder.execute(image)
-        steering: float = self.steering_controller.execute(result, image.shape[1])
-        self.reference_velocity = self.expected_velocity * abs(math.cos(2.7 * steering)) * reduce_coeff
+        self.steering: float = self.steering_controller.execute(result, image.shape[1])
+        self.reference_velocity = self.expected_velocity * abs(math.cos(2.7 * self.steering)) * reduce_factor
+        self.throttle: float = self.throttle_controller.execute(self.reference_velocity, linear_speed)
+        # realtime_message_output(f'Expected: {self.reference_velocity:1.4f}, Measured:{linear_speed:1.4f}')
 
-        throttle: float = self.throttle_controller.execute(self.reference_velocity, linear_speed)
-        realtime_message_output(f'Expected: {self.reference_velocity:1.4f}, Measured:{linear_speed:1.4f}')
-
-        return np.array([throttle, steering]), {}
+        return np.array([self.throttle, self.steering]), {}
