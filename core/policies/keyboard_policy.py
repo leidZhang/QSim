@@ -1,7 +1,7 @@
 import numpy as np
 
 from typing import Tuple
-from core.base_policy import BasePolicy
+from core.policies.base_policy import BasePolicy
 from core.control.keyboard import KeyboardController
 
 

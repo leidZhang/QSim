@@ -4,7 +4,7 @@ import numpy as np
 
 from core.qcar.vehicle import PhysicalCar
 
-from core.base_policy import BasePolicy
+from core.policies.base_policy import BasePolicy
 from core.qcar.sensor import VirtualCSICamera
 from core.policies.vision_lanefollowing import VisionLaneFollowing
 from core.control.edge_finder import EdgeFinder, TraditionalEdgeFinder

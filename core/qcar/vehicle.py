@@ -8,7 +8,7 @@ from pal.products.qcar import QCar
 from qvl.qlabs import QuanserInteractiveLabs
 
 # from core.sensor.sensor import VirtualCSICamera, VirtualRGBDCamera
-from core.base_policy import PolicyAdapter, BasePolicy
+from core.policies.base_policy import PolicyAdapter, BasePolicy
 from .monitor import Monitor
 from .constants import QCAR_ACTOR_ID, ENCODER_COUNTS_PER_REV
 from .constants import PIN_TO_SPUR_RATIO, WHEEL_RADIUS

@@ -4,7 +4,7 @@ from typing import Tuple
 
 import numpy as np
 
-from core.base_policy import BasePolicy
+from core.policies.base_policy import BasePolicy
 from core.control.edge_finder import EdgeFinder
 from core.control.pid_control import ThrottlePIDController, SteeringPIDController, PIDController
 

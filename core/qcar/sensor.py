@@ -6,12 +6,11 @@ from pal.utilities.vision import Camera2D
 from pal.utilities.vision import Camera3D 
 from pal.products.qcar import QCarGPS 
 
-from core.template import ServiceModule
 from .constants import CSI_CAMERA_SETTING
 from .constants import RGBD_CAMERA_SETTING
 
 
-class VirtualCSICamera(ServiceModule): # wrapper class, implement more functions if needed 
+class VirtualCSICamera: # wrapper class, implement more functions if needed 
     def __init__(self, id=3) -> None: 
         self.id = id 
         self.camera: Camera2D = Camera2D(
@@ -39,7 +38,7 @@ class VirtualCSICamera(ServiceModule): # wrapper class, implement more functions
         return self.camera.imageData
 
 
-class VirtualRGBDCamera(ServiceModule): 
+class VirtualRGBDCamera: 
     def __init__(self) -> None: 
         self.camera = Camera3D(
             mode=RGBD_CAMERA_SETTING['mode'], 
@@ -70,11 +69,11 @@ class VirtualRGBDCamera(ServiceModule):
                 return self.camera.imageBufferDepthM
 
 
-class VirtualLidar(ServiceModule): 
+class VirtualLidar: 
     def __init__(self) -> None: 
         pass # will start implementation after the error -15 fixed 
 
-class VirtualGPS(ServiceModule): 
+class VirtualGPS: 
     def __init__(self) -> None: 
         self.gps = QCarGPS() 
         self.speed_vector = None

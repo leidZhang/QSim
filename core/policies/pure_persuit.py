@@ -7,7 +7,7 @@ from core.models.torch.model import Model
 from core.data.preprocessor import Preprocessor
 from core.policies.network import NetworkPolicy
 from core.utils.aggregation_utils import map_structure
-from core.base_policy import PolicyAdapter
+from core.policies.base_policy import PolicyAdapter
 from constants import action_v
 
 class PurePursuitPolicy:
