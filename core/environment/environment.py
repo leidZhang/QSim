@@ -12,11 +12,13 @@ from constants import DEFAULT_MAX_STEPS
 
 
 class QLabEnvironment(Env):
-    def __init__(self, dt: float = 0.05, action_size: int = 2, privileged: bool = False) -> None:
+    def __init__(self, dt: float = 0.05, action_size: int = 2, privileged: bool = False, offsets: Tuple[float] = (0, 0)) -> None:
+        self.dt: float = dt
         self.action_size: int = action_size
+        self.offsets: Tuple[float] = offsets
         self.privileged: bool = privileged
         self.max_episode_steps: int = DEFAULT_MAX_STEPS
-        self.simulator: QLabSimulator = QLabSimulator(dt)
+        self.simulator: QLabSimulator = QLabSimulator(offsets=self.offsets)
 
     def setup(self, nodes: Dict[str, np.ndarray], sequence: np.ndarray) -> None:
         self.simulator.render_map()
@@ -35,6 +37,13 @@ class QLabEnvironment(Env):
         reward: float = 0.0
         info: dict = {}
         return observation, reward, info
+    
+    def recover_state_info(self, state: np.ndarray, recover_indices: list) -> np.ndarray:
+        recovered_state: np.ndarray = state.copy()
+        for index in recover_indices:
+            recovered_state[index] -= self.offsets[0]
+            recovered_state[index + 1] -= self.offsets[1]
+        return recovered_state
 
     def cal_waypoint_angle(self, delta_x: float, delta_y: float) -> float:
         if delta_x < 0 and delta_y == 0:

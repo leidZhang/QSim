@@ -1,5 +1,5 @@
 import math
-from typing import List
+from typing import List, Tuple
 
 from qvl.qlabs import QuanserInteractiveLabs
 from qvl.walls import QLabsWalls
@@ -31,7 +31,7 @@ class ACCMapBuilder:
     - build_car: Builds the car for the map
     """
 
-    def __init__(self, qlab: QuanserInteractiveLabs) -> None:
+    def __init__(self, qlab: QuanserInteractiveLabs, offsets: Tuple[float]) -> None:
         """
         Initializes the ACCMapBuilder object
 
@@ -40,6 +40,7 @@ class ACCMapBuilder:
         """
         self.qlab: QuanserInteractiveLabs = qlab
         self.scale: float = [0.1, 0.1, 0.1]
+        self.offsets: Tuple[float] = offsets
 
     def build_walls(self) -> None:
         """
@@ -48,26 +49,44 @@ class ACCMapBuilder:
         walls: QLabsWalls = QLabsWalls(self.qlab)
         walls.set_enable_dynamics(False)
         for y in range (5):
-            walls.spawn_degrees(location=[-2.4 + ACC_X_OFFSET, (-y*1.0) + 2.55 + ACC_Y_OFFSET, 0.001], rotation=[0, 0, 0])
+            walls.spawn_degrees(
+                location=[-2.4 + ACC_X_OFFSET + self.offsets[0], (-y * 1.0) + 2.55 + ACC_Y_OFFSET + self.offsets[1], 0.001], 
+                rotation=[0, 0, 0]
+            )
 
         for x in range (5):
-            walls.spawn_degrees(location=[-1.9+x + ACC_X_OFFSET, 3.05 + ACC_Y_OFFSET, 0.001], rotation=[0, 0, 90])
+            walls.spawn_degrees(
+                location=[-1.9 + x + ACC_X_OFFSET + self.offsets[0], 3.05 + ACC_Y_OFFSET + self.offsets[1], 0.001], 
+                rotation=[0, 0, 90]
+            )   
 
         for y in range (6):
-            walls.spawn_degrees(location=[2.4+ ACC_X_OFFSET, (-y*1.0) + 2.55 + ACC_Y_OFFSET, 0.001], rotation=[0, 0, 0])
+            walls.spawn_degrees(
+                location=[2.4+ ACC_X_OFFSET + self.offsets[0], (-y * 1.0) + 2.55 + ACC_Y_OFFSET + self.offsets[1], 0.001], 
+                rotation=[0, 0, 0]
+            )
 
         for x in range (5):
-            walls.spawn_degrees(location=[-1.9+x+ ACC_X_OFFSET, -3.05 + ACC_Y_OFFSET, 0.001], rotation=[0, 0, 90])
+            walls.spawn_degrees(
+                location=[-1.9 + x + ACC_X_OFFSET + self.offsets[0], -3.05 + ACC_Y_OFFSET + self.offsets[1], 0.001], 
+                rotation=[0, 0, 90]
+            )
 
-        walls.spawn_degrees(location=[-2.03 + ACC_X_OFFSET, -2.275 + ACC_Y_OFFSET, 0.001], rotation=[0, 0, 48])
-        walls.spawn_degrees(location=[-1.575+ ACC_X_OFFSET, -2.7 + ACC_Y_OFFSET, 0.001], rotation=[0, 0, 48])
+        walls.spawn_degrees(
+            location=[-2.03 + ACC_X_OFFSET + self.offsets[0], -2.275 + ACC_Y_OFFSET + self.offsets[1], 0.001], 
+            rotation=[0, 0, 48]
+        )
+        walls.spawn_degrees(
+            location=[-1.575+ ACC_X_OFFSET + self.offsets[0], -2.7 + ACC_Y_OFFSET + self.offsets[1], 0.001], 
+            rotation=[0, 0, 48]
+        )
 
     def build_floor(self) -> None:
         """
         Builds the floor of the map
         """
         flooring: QLabsFlooring = QLabsFlooring(self.qlab)
-        flooring.spawn(location=[ACC_X_OFFSET, ACC_Y_OFFSET, 0.0], rotation=[0, 0, -math.pi/2])
+        flooring.spawn(location=[ACC_X_OFFSET + self.offsets[0], ACC_Y_OFFSET + self.offsets[1], 0.0], rotation=[0, 0, -math.pi/2])
 
     def build_stop_sign(self) -> None:
         """
@@ -75,8 +94,8 @@ class ACCMapBuilder:
         """
         stop_signs: list = []
         stop_sign: QLabsStopSign = QLabsStopSign(self.qlab)
-        stop_sign_1 = stop_sign.spawn_degrees([2.25 + ACC_X_OFFSET, 1.5 + ACC_Y_OFFSET, 0.05], [0, 0, -90], [0.1, 0.1, 0.1], False)[1]
-        stop_sign_2 = stop_sign.spawn_degrees([-1.3 + ACC_X_OFFSET, 2.9 + ACC_Y_OFFSET, 0.05], [0, 0, -15], [0.1, 0.1, 0.1], False)[1]
+        stop_sign_1 = stop_sign.spawn_degrees([2.25 + ACC_X_OFFSET + self.offsets[0], 1.5 + ACC_Y_OFFSET + self.offsets[1], 0.05], [0, 0, -90], [0.1, 0.1, 0.1], False)[1]
+        stop_sign_2 = stop_sign.spawn_degrees([-1.3 + ACC_X_OFFSET + self.offsets[0], 2.9 + ACC_Y_OFFSET + self.offsets[1], 0.05], [0, 0, -15], [0.1, 0.1, 0.1], False)[1]
         stop_signs.append(stop_sign_1)
         stop_signs.append(stop_sign_2)
         return stop_signs
@@ -86,12 +105,12 @@ class ACCMapBuilder:
         Builds the crosswalk of the map
         """
         crosswalk: QLabsCrosswalk = QLabsCrosswalk(self.qlab)
-        crosswalk.spawn_degrees (location =[-2 + ACC_X_OFFSET, -1.475 + ACC_Y_OFFSET, 0.01],
+        crosswalk.spawn_degrees (location =[-2 + ACC_X_OFFSET + self.offsets[0], -1.475 + ACC_Y_OFFSET + self.offsets[1], 0.01],
                 rotation=[0,0,0], scale = [0.1,0.1,0.075],
                 configuration = 0)
         spline: QLabsBasicShape = QLabsBasicShape(self.qlab)
-        spline.spawn_degrees([2.05 + ACC_X_OFFSET, -1.5 + ACC_Y_OFFSET, 0.01], [0, 0, 0], [0.27, 0.02, 0.001], False)
-        spline.spawn_degrees([-2.075 + ACC_X_OFFSET, ACC_Y_OFFSET, 0.01], [0, 0, 0], [0.27, 0.02, 0.001], False)
+        spline.spawn_degrees([2.05 + ACC_X_OFFSET + self.offsets[0], -1.5 + ACC_Y_OFFSET + self.offsets[1], 0.01], [0, 0, 0], [0.27, 0.02, 0.001], False)
+        spline.spawn_degrees([-2.075 + ACC_X_OFFSET + self.offsets[0], ACC_Y_OFFSET + self.offsets[1], 0.01], [0, 0, 0], [0.27, 0.02, 0.001], False)
 
     def build_traffic_light(self) -> list:
         """
@@ -99,9 +118,9 @@ class ACCMapBuilder:
         """
         traffic_lights: List[QLabsTrafficLight] = [QLabsTrafficLight(self.qlab)] * 2
 
-        traffic_lights[0].spawn_degrees([2.3 + ACC_X_OFFSET, ACC_Y_OFFSET, 0], [0, 0, 0], scale=[.1, .1, .1],
+        traffic_lights[0].spawn_degrees([2.3 + ACC_X_OFFSET + self.offsets[0], ACC_Y_OFFSET + self.offsets[1], 0], [0, 0, 0], scale=[.1, .1, .1],
                                         configuration=0, waitForConfirmation=True)
-        traffic_lights[1].spawn_degrees([-2.3 + ACC_X_OFFSET, -1 + ACC_Y_OFFSET, 0], [0, 0, 180],
+        traffic_lights[1].spawn_degrees([-2.3 + ACC_X_OFFSET + self.offsets[0], -1 + ACC_Y_OFFSET + self.offsets[1], 0], [0, 0, 180],
                                               scale=[.1, .1, .1], configuration=0, waitForConfirmation=True)
         traffic_lights[0].set_state(QLabsTrafficLight.STATE_GREEN)
         traffic_lights[1].set_state(QLabsTrafficLight.STATE_RED)

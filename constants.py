@@ -20,7 +20,7 @@ QCAR_POS: list = []
 # env constants
 MAX_LOOKAHEAD_INDICES: int = 200
 GOAL_THRESHOLD: int = 0.05
-
+RECOVER_INDICES: list = [0, 6, 8]
 
 # settings
 DEFAULT_MAX_STEPS: int = 2000
@@ -29,7 +29,7 @@ DEFAULT_MAX_STEPS: int = 2000
 batch_size: int = 2048
 PREFILL: int = 10000
 # RUN_ID = '1edfead4d1bc4c2ca91f3102741027d1'
-RUN_ID: str = ''
+RUN_ID: str = 'c633fd0e5d8041f6843e74a9330fef60'
 action_v: float = 0.08
 cuda: str = "cuda:1"
 # start_point = 1700

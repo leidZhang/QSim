@@ -1,7 +1,7 @@
 import os
 import time
 import logging
-from typing import List, Dict
+from typing import List, Dict, Tuple
 from multiprocessing import Process
 
 import numpy as np
@@ -34,12 +34,14 @@ def start_generator(
     nodes: Dict[str, np.ndarray],
     waypoints: np.ndarray,
     resume: bool = False,
+    offset: Tuple[float, float] = (0, 0),
     privileged: bool = True
 ) -> None:
     generator: Generator = Generator(
         mlruns_dir=mlruns_dir,
         train_repo=train_repo,
         nodes=nodes,
+        offset=offset,
         waypoints=waypoints,
         eval_repo=eval_repo,
         privileged=privileged
@@ -95,7 +97,21 @@ def prepare_map_info(node_sequence: list) -> tuple:
     waypoint_sequence = roadmap.generate_path(node_sequence)
     return nodes, waypoint_sequence
 
-def start_system(resume_run_id: str, nodes: Dict[str, np.ndarray], waypoints: np.ndarray) -> None:
+def add_offset_to_map(nodes: Dict[str, np.ndarray], waypoint_sequence: np.ndarray, offset: Tuple[float, float]) -> Dict[str, np.ndarray]:
+    new_nodes: Dict[str, np.ndarray] = {}
+    # add offset to nodes
+    for node_id, pose in nodes.items():
+        new_pose: np.ndarray = np.array([pose[0]+offset[0], pose[1]+offset[1], pose[2]])
+        new_nodes[node_id] = new_pose
+    # add offset to waypoints
+    for waypoint in waypoint_sequence:
+        waypoint[0] += offset[0]
+        waypoint[1] += offset[1]
+    
+    return new_nodes, waypoint_sequence
+
+
+def start_system(resume_run_id: str, nodes: Dict[str, np.ndarray], waypoints: np.ndarray, offset: Tuple[float, float]) -> None:
     # setup mlflow directory
     root_directory: str = os.getcwd() # get the absolute directory
     mlflow_directory: str = os.path.join(root_directory, 'mlruns')
@@ -129,6 +145,7 @@ def start_system(resume_run_id: str, nodes: Dict[str, np.ndarray], waypoints: np
             mlruns_dir=mlflow_directory,
             run_id=designated_run_id,
             train_repo=train_repo,
+            offset=offset,
             eval_repo=eval_repo,
             nodes=nodes,
             waypoints=waypoints,
@@ -165,5 +182,7 @@ def start_system(resume_run_id: str, nodes: Dict[str, np.ndarray], waypoints: np
 if __name__ == '__main__':
     # fill with file name of your experiment, set to '' to start new experiment
     resume_run_id = RUN_ID
+    offset: Tuple[float, float] = (8, 8)
     nodes, waypoints = prepare_map_info(node_sequence=[10, 4, 14, 20, 22, 10])
-    start_system(resume_run_id=resume_run_id, nodes=nodes, waypoints=waypoints)
+    nodes, waypoints = add_offset_to_map(nodes=nodes, waypoint_sequence=waypoints, offset=offset)
+    start_system(resume_run_id=resume_run_id, nodes=nodes, waypoints=waypoints, offset=offset)

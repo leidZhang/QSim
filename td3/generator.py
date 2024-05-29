@@ -1,7 +1,7 @@
 import time
 import logging
 from datetime import datetime
-from typing import Dict
+from typing import Dict, Tuple
 from collections import defaultdict
 
 import numpy as np
@@ -27,13 +27,14 @@ class Generator:
         train_repo: str,
         eval_repo: str,
         nodes: Dict[str, np.ndarray],
+        offset: Tuple[float, float],
         waypoints: np.ndarray,
         privileged: bool = True
     ) -> None:
         self.episode_num: int = 10000
         self.metrics_agg = defaultdict(list)
         self.mlruns_dir: str = mlruns_dir
-        base_env: QLabEnvironment = WaypointEnvironment(dt=0.03, privileged=privileged)
+        base_env: QLabEnvironment = WaypointEnvironment(dt=0.03, privileged=privileged, offsets=offset)
         self.env: CollectionWrapper = CollectionWrapper(ActionRewardResetWrapper(base_env, nodes, waypoints))
         self.train_repository: MlflowEpisodeRepository = MlflowEpisodeRepository(train_repo)
         self.eval_repository: MlflowEpisodeRepository = MlflowEpisodeRepository(eval_repo)

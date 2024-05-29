@@ -1,5 +1,5 @@
 import time
-from typing import Tuple
+from typing import Tuple, List
 
 import numpy as np
 
@@ -8,7 +8,7 @@ from qvl.qlabs import QuanserInteractiveLabs
 from core.environment import QLabEnvironment
 from core.environment.detector import EpisodeMonitor
 from .vehicle import WaypointCar
-from constants import GOAL_THRESHOLD
+from constants import GOAL_THRESHOLD, RECOVER_INDICES
 import random
 
 
@@ -162,7 +162,8 @@ class WaypointEnvironment(QLabEnvironment):
             episode_done = episode_done or reward_done
 
         # handle observation
-        observation['state'] = np.concatenate((ego_state, global_close, global_far))
+        state_info: np.ndarray = np.concatenate((ego_state, global_close, global_far))
+        observation['state'] = self.recover_state_info(state_info, RECOVER_INDICES)
         observation["waypoints"] = self.vehicle.observation["waypoints"]
 
         self.episode_steps += 1
@@ -173,7 +174,7 @@ class WaypointEnvironment(QLabEnvironment):
     def handle_spawn_pos(self, waypoint_index: int=0) -> Tuple[list, list]:
         # can also call self.spawn_on_node here
         return self.spawn_on_waypoints(waypoint_index)
-
+        
     def reset(self) -> Tuple[dict, float, bool, dict]:
         waypoint_index: int = random.randint(420, 750) # change index here
         # waypoint_index = 420
@@ -183,8 +184,7 @@ class WaypointEnvironment(QLabEnvironment):
 
         # init vehicles, assign proper coeff for throttle and steering if you want
         qlabs: QuanserInteractiveLabs = self.simulator.qlabs
-        dt: float = self.simulator.dt
-        self.vehicle: WaypointCar = WaypointCar(actor_id=0, dt=dt, qlabs=qlabs, throttle_coeff=0.08)
+        self.vehicle: WaypointCar = WaypointCar(actor_id=0, dt=self.dt, qlabs=qlabs, throttle_coeff=0.08)
         self.vehicle.setup(self.waypoint_sequence, waypoint_index)
         # init episode params
         self.prev_dist_ix: int = 0
@@ -192,11 +192,12 @@ class WaypointEnvironment(QLabEnvironment):
         self.start_orig: np.ndarray = ego_state[:2]
         self.prev_dist = np.inf # set previous distance to infinity
         self.last_orig: np.ndarray = self.start_orig
-        self.pre_pos = 0
+        self.pre_pos = self.waypoint_sequence[waypoint_index]
         # init observations
         global_close: np.ndarray = self.waypoint_sequence[0]
         global_far: np.ndarray = self.waypoint_sequence[49]
-        observation['state'] = np.concatenate((ego_state, global_close, global_far))
+        state_info: np.ndarray = np.concatenate((ego_state, global_close, global_far))
+        observation['state'] = self.recover_state_info(state_info, RECOVER_INDICES)
         observation['waypoints'] = self.vehicle.observation['waypoints'] if self.privileged else None
         # init fault tolerance
         self.detector: EpisodeMonitor = EpisodeMonitor(start_orig=self.start_orig)

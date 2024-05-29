@@ -1,3 +1,4 @@
+from typing import Tuple
 # quanser imports
 from qvl.qlabs import QuanserInteractiveLabs
 from qvl.real_time import QLabsRealTime
@@ -19,7 +20,7 @@ class ACCDirector:
     - build_map: Builds the map for the competition
     """
 
-    def __init__(self, qlabs: QuanserInteractiveLabs) -> None:
+    def __init__(self, qlabs: QuanserInteractiveLabs, offsets: Tuple[float]) -> None:
         """
         Initializes the ACCDirector object
 
@@ -27,7 +28,7 @@ class ACCDirector:
         - qlabs: QuanserInteractiveLabs: The QuanserInteractiveLabs object
         """
         self.qlabs: QuanserInteractiveLabs = qlabs
-        self.builder: ACCMapBuilder = ACCMapBuilder(self.qlabs)
+        self.builder: ACCMapBuilder = ACCMapBuilder(self.qlabs, offsets)
 
     def build_map(self) -> dict:
         """

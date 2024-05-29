@@ -40,6 +40,9 @@ class TraditionalEdgeFinder(EdgeFinder):
         - image_width: int: The width of the image
         - image_height: int: The height of the image
 
+        Raises:
+        - Exception: If no CUDA devices are found.
+
         Returns:
         - None
         """

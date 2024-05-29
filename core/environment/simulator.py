@@ -1,6 +1,6 @@
 import time
 from abc import abstractmethod
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
 import numpy as np
 
@@ -27,14 +27,15 @@ class Simulator:
 
 
 class QLabSimulator(Simulator):
-    def __init__(self, dt:float = 0.05) -> None:
+    def __init__(self, offsets: Tuple[float], qcar_id: int = 0) -> None:
         """
         Initializes the QLabSimulator object
 
         Parameters:
         - dt: float: The time step of the simulation
         """
-        self.dt: float = dt
+        self.qcar_id: int = qcar_id
+        self.offsets: Tuple[float] = offsets
         self.qlabs: QuanserInteractiveLabs = QuanserInteractiveLabs()
         self.vehicles: Dict[int, VirtualCar] = {}
         self.regions: Dict[str, np.ndarray] = {
@@ -54,7 +55,7 @@ class QLabSimulator(Simulator):
         - qcar_view: int: The view of the car
         """
         self.qlabs.open("localhost")
-        director: ACCDirector = ACCDirector(self.qlabs)
+        director: ACCDirector = ACCDirector(self.qlabs, self.offsets)
         self.actors: Dict[str, QLabsActor] = director.build_map()
         self.set_regions()
         time.sleep(2) # cool down time for the car to spawn
@@ -77,14 +78,14 @@ class QLabSimulator(Simulator):
         traffic_lights[1].set_state(QLabsTrafficLight.STATE_GREEN)
         # spawn a new car
         car.spawn_id(
-            actorNumber=0,
+            actorNumber=self.qcar_id,
             location=location,
             rotation=orientation,
             scale=[.1, .1, .1],
             configuration=0,
             waitForConfirmation=True
         )
-        car.possess(qcar_view)
+        # car.possess(qcar_view)
         time.sleep(1)
         QLabsRealTime().start_real_time_model(rtmodels.QCAR_STUDIO)
         time.sleep(2) # wait for the state to change
@@ -103,25 +104,25 @@ class QLabSimulator(Simulator):
         # set the regions for the stop signs and traffic lights
         self.regions['stop_signs'] = np.stack([
             np.array([
-                [2.1 + ACC_X_OFFSET - (0.25 / 2), 1.15 + ACC_Y_OFFSET - (0.45 / 2)],
-                [2.1 + ACC_X_OFFSET + (0.25 / 2), 1.15 + ACC_Y_OFFSET + (0.45 / 2)]],
+                [2.1 + ACC_X_OFFSET - (0.25 / 2) + self.offsets[0], 1.15 + ACC_Y_OFFSET - (0.45 / 2) + self.offsets[1]],
+                [2.1 + ACC_X_OFFSET + (0.25 / 2) + self.offsets[0], 1.15 + ACC_Y_OFFSET + (0.45 / 2) + self.offsets[1]]],
                 dtype=np.float32
             ),
             np.array([
-                [-0.95 + ACC_X_OFFSET - (0.45 / 2), 2.75 + ACC_Y_OFFSET - (0.25 / 2)],
-                [-0.95 + ACC_X_OFFSET + (0.45 / 2), 2.75 + ACC_Y_OFFSET + (0.25 / 2)]],
+                [-0.95 + ACC_X_OFFSET - (0.45 / 2) + self.offsets[0], 2.75 + ACC_Y_OFFSET - (0.25 / 2) + self.offsets[1]],
+                [-0.95 + ACC_X_OFFSET + (0.45 / 2) + self.offsets[0], 2.75 + ACC_Y_OFFSET + (0.25 / 2) + self.offsets[1]]],
                 dtype=np.float32
             )
         ])
         self.regions['traffic_lights'] = np.stack([
             np.array([
-                [-2.075 + ACC_X_OFFSET - (0.45 / 2), 0.35 + ACC_Y_OFFSET - (0.25 / 2)],
-                [-2.075 + ACC_X_OFFSET + (0.45 / 2), 0.35 + ACC_Y_OFFSET + (0.25 / 2)]],
+                [-2.075 + ACC_X_OFFSET - (0.45 / 2) + self.offsets[0], 0.35 + ACC_Y_OFFSET - (0.25 / 2) + self.offsets[1]],
+                [-2.075 + ACC_X_OFFSET + (0.45 / 2) + self.offsets[0], 0.35 + ACC_Y_OFFSET + (0.25 / 2) + self.offsets[1]]],
                 dtype=np.float32
             ),
             np.array([
-                [2.1 + ACC_X_OFFSET - (0.25 / 2), -1.85 + ACC_Y_OFFSET - (0.45 / 2)],
-                [2.1 + ACC_X_OFFSET + (0.25 / 2), -1.85 + ACC_Y_OFFSET + (0.45 / 2)]],
+                [2.1 + ACC_X_OFFSET - (0.25 / 2) + self.offsets[0], -1.85 + ACC_Y_OFFSET - (0.45 / 2) + self.offsets[1]],
+                [2.1 + ACC_X_OFFSET + (0.25 / 2) + self.offsets[0], -1.85 + ACC_Y_OFFSET + (0.45 / 2) + self.offsets[1]]],
                 dtype=np.float32
             )
         ])
