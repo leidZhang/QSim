@@ -16,7 +16,7 @@ class WaypointEnvironment(QLabEnvironment):
     # def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state: np.ndarray, dist_ix: int) -> tuple:
     #     # reset this episode if there's communication issue
     #     self.detector(action=action, orig=ego_state[:2])
-    #
+    
     #     # init params
     #     done: bool = False
     #     reward: float = 0.0
@@ -30,7 +30,7 @@ class WaypointEnvironment(QLabEnvironment):
     #     if norm_dist[dist_ix] > 0.05:
     #         panelty = reward * (norm_dist[dist_ix] / 0.05) * 0.35
     #         reward -= panelty
-    #
+    
     #     # end conditions
     #     if norm_dist[dist_ix] >= 0.10:
     #         reward -= 50.0
@@ -39,7 +39,7 @@ class WaypointEnvironment(QLabEnvironment):
     #     if (np.linalg.norm(self.goal - ego_state[:2]) < GOAL_THRESHOLD and len(self.vehicle.next_waypoints) < 201):
     #         done = True # stop episode after this step
     #         self.vehicle.halt()  # stop the car
-    #
+    
     #     return reward, done
 
     def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state, dist_ix, global_close, global_far) -> tuple:
@@ -192,7 +192,7 @@ class WaypointEnvironment(QLabEnvironment):
         self.start_orig: np.ndarray = ego_state[:2]
         self.prev_dist = np.inf # set previous distance to infinity
         self.last_orig: np.ndarray = self.start_orig
-        self.pre_pos = self.waypoint_sequence[waypoint_index]
+        self.pre_pos: int = waypoint_index
         # init observations
         global_close: np.ndarray = self.waypoint_sequence[0]
         global_far: np.ndarray = self.waypoint_sequence[49]
