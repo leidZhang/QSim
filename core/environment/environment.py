@@ -99,5 +99,5 @@ class QLabEnvironment(Env):
         ...
 
     @abstractmethod
-    def step(self, action: np.ndarray, metrics: np.ndarray) -> Tuple[dict, float, bool, dict]:
+    def step(self, action: np.ndarray, metrics: np.ndarray, *args) -> Tuple[dict, float, bool, dict]:
         ...

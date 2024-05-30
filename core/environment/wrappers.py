@@ -13,8 +13,8 @@ class ActionRewardResetWrapper(Wrapper):
         self.action_size: int = env.action_size
         self.env.setup(nodes, waypoints)
 
-    def step(self, action: Union[np.ndarray, Queue], metrics: np.ndarray) -> tuple:
-        observation, reward, done, info = self.env.step(action=action, metrics=metrics)
+    def step(self, action: np.ndarray, metrics: np.ndarray, compare_action: np.ndarray) -> tuple:
+        observation, reward, done, info = self.env.step(action=action, metrics=metrics, compare_action=compare_action)
         observation["action"] = np.array(action, dtype=np.float32)
         observation["reward"] = np.array(reward, dtype=np.float32)
         observation["terminal"] = np.array(done, dtype=bool)
@@ -38,8 +38,8 @@ class CollectionWrapper(Wrapper):
         self.paddings: dict = paddings
         self.episode: list = []
 
-    def step(self, action: Union[np.ndarray, Queue], metrics: np.ndarray) -> tuple:
-        observation, reward, done, info = self.env.step(action=action, metrics=metrics)
+    def step(self, action: np.ndarray, metrics: np.ndarray, compare_action: np.ndarray) -> tuple:
+        observation, reward, done, info = self.env.step(action=action, metrics=metrics, compare_action=compare_action)
         self.episode.append(observation.copy())  # copy obs dict as a item and add it to self.episode list
         if not done:
             return observation, reward, done, info
