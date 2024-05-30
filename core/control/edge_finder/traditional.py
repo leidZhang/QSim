@@ -40,35 +40,29 @@ class TraditionalEdgeFinder(EdgeFinder):
         - image_width: int: The width of the image
         - image_height: int: The height of the image
 
-        Raises:
-        - Exception: If no CUDA devices are found.
-
         Returns:
         - None
         """
         super().__init__(image_width=image_width, image_height=image_height)
         self.prev_x1: int = 0
 
-    def preprocess_image(self, image: np.ndarray) -> np.ndarray:
+    def preprocess_image(self, image: np.ndarray) -> None:
         """
         Preprocesses the input image for line following.
 
-        Parameters:
-            image (np.ndarray): Input image for line following.
-
         Returns:
-            np.ndarray: Preprocessed image for line following.
+        - np.ndarray: Preprocessed image for line following.
+
+        Raises:
+        - NoImageException: If the input image is None.
         """
         # check if the image is None
         if image is None:
             raise NoImageException()
         # crop the image
-        self.image: np.ndarray = image.copy()
         self.image = image[220:360, 100:]
         # convert the image to grayscale
-        gray_image: np.ndarray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
-
-        return gray_image
+        self.image: np.ndarray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
 
     def get_line_params(self, line: np.ndarray) -> Tuple[int, int, int, int]:
         """
@@ -95,20 +89,20 @@ class TraditionalEdgeFinder(EdgeFinder):
             return x1, y1, x2, y2
         return None
 
-    def get_houghline_image(self, grey_image: np.ndarray) -> np.ndarray:
+    def get_houghline_image(self) -> None:
         """
         Gets the Hough line image from the input image.
 
-        Parameters:
-        - grey_image (np.ndarray): Greyscale image for line following.
-
         Returns:
         - np.ndarray: Hough line image for line following.
+
+        Raises:
+        - NoImageException: If the input image is None.
         """
-        if grey_image is None:
+        if self.image is None:
             raise NoImageException()
         edges: np.ndarray = cv2.Canny(
-            grey_image,
+            self.image,
             EDGES_LOWER_BOUND,
             EDGES_UPPER_BOUND,
             apertureSize=3
@@ -117,7 +111,7 @@ class TraditionalEdgeFinder(EdgeFinder):
         lines: np.ndarray = cv2.HoughLines(edges, 1, np.pi/180, HOUGH_CONFIDENT_THRESHOLD)
         if lines is None:
             # cv2.imshow("HoughLine", grey_image)
-            return grey_image
+            return 
         # calculate the line parameters
         for line in lines:
             result: tuple = self.get_line_params(line)
@@ -131,27 +125,25 @@ class TraditionalEdgeFinder(EdgeFinder):
             np_params = np.array(params, dtype=int)
             x1, y1, x2, y2 = map(int, np.mean(np_params, axis=1))
             self.prev_x1 = x1 # update prev x1
-            cv2.line(grey_image, (x1, y1), (x2, y2), (0, 0, 255), 3)
             cv2.line(self.image, (x1, y1), (x2, y2), (0, 0, 255), 3)
         else:
             self.prev_x1 = 0 # there is a sudden edge change
         # cv2.imshow("HoughLine", self.image)
-        return grey_image
 
-    def find_contours(self, image: np.ndarray) -> np.ndarray:
+    def find_contours(self) -> np.ndarray:
         """
         Finds the contours in the input image.
 
-        Parameters:
-        - image (np.ndarray): Input image for line following.
-
         Returns:
         - np.ndarray: Contours found in the input image.
+
+        Raises:
+        - NoImageException: If the input image is None.
         """
-        if image is None:
+        if self.image is None:
             raise NoImageException()
         # gaussian blur the image
-        blurred_image: np.ndarray = cv2.GaussianBlur(image, (9, 9), 0)
+        blurred_image: np.ndarray = cv2.GaussianBlur(self.image, (9, 9), 0)
         blurred_image = ImageProcessing.image_filtering_open(blurred_image)
         # threshold the image
         thresh: np.ndarray = cv2.threshold(
@@ -165,18 +157,20 @@ class TraditionalEdgeFinder(EdgeFinder):
 
         return contours
 
-    def get_edge_image(self, image: np.ndarray, contours: np.ndarray) -> np.ndarray:
+    def get_slope_and_intercept(self, contours: np.ndarray) -> np.ndarray:
         """
         Gets the edge image from the input image and contours.
 
         Prameters:
-        - image (np.ndarray): Input image for line following.
         - contours (np.ndarray): Contours found in the input image.
 
         Returns:
-        - np.ndarray: Edge image for line following.
+        - Tuple: The slope and intercept of the detected edge.
+
+        Raises:
+        - NoContourException: If the contours are None or empty.
         """
-        if image is None or contours is None or len(contours) == 0:
+        if self.image is None or contours is None or len(contours) == 0:
             raise NoContourException()
         # find the largest contour
         largest_contour: np.ndarray = max(contours, key=cv2.contourArea)
@@ -184,15 +178,16 @@ class TraditionalEdgeFinder(EdgeFinder):
         # draw the largest contour on the image
         hull: np.ndarray = cv2.convexHull(largest_contour)
         # draw the hull on the image
-        mask: np.ndarray = np.zeros_like(image)
+        mask: np.ndarray = np.zeros_like(self.image)
         cv2.fillPoly(mask, [hull], (255, 255, 255))
         # cv2.imshow("Mask", mask)
         # Calculate the difference between adjacent pixels
         diff: np.ndarray = cv2.Sobel(mask, cv2.CV_64F, 1, 1, ksize=15)
         edge: np.ndarray = cv2.threshold(diff, 0, 255, cv2.THRESH_BINARY)[1] # fine tune the threshold
+
         # cv2.imshow("Edge", edge)
         # cv2.imshow("Largest Contour", self.image)
-        return edge
+        return ImageProcessing.find_slope_intercept_from_binary(binary=edge)
 
     def execute(self, original_image: np.ndarray) -> Tuple[float, float]:
         """
@@ -204,10 +199,7 @@ class TraditionalEdgeFinder(EdgeFinder):
         Returns:
         - Tuple: The slope and intercept of the detected edge.
         """
-        grey_image: np.ndarray = self.preprocess_image(original_image)
-        houghline_image: np.ndarray = self.get_houghline_image(grey_image)
-        contours: np.ndarray = self.find_contours(houghline_image)
-        edge_image: np.ndarray = self.get_edge_image(houghline_image, contours)
-        result: tuple = ImageProcessing.find_slope_intercept_from_binary(binary=edge_image)
-
-        return result
+        self.preprocess_image(original_image)
+        self.get_houghline_image()
+        contours: np.ndarray = self.find_contours()
+        return self.get_slope_and_intercept(contours)
