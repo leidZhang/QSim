@@ -2,6 +2,7 @@ import time
 import pytest
 from typing import Dict, List, Generator
 
+import cv2
 import matplotlib.pyplot as plt
 
 from core.utils.tools import plot_data_in_dict
@@ -56,7 +57,7 @@ def test_vision_pid(my_fixture) -> None:
     """
     test_speed: float = 1.50
     expected_max_speed: float = 1.70
-    history = run_vision_pid(expected_velocity=test_speed, duration=12.0)
+    history = run_vision_pid(expected_velocity=test_speed, duration=10.0)
     input_max_speed = round(max(history['observed']), 2)
 
     # plot_data_in_dict(history, title="Vision PID Test", x_label="Time (s)", y_label="Speed (m/s)")
