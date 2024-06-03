@@ -10,13 +10,40 @@ from core.qcar import VirtualCSICamera, PhysicalCar
 from core.control.edge_finder import TraditionalEdgeFinder, EdgeFinder
 from core.policies.vision_lanefollowing import VisionLaneFollowing, BasePolicy
 from core.utils.ipc_utils import StructedDataTypeFactory, SharedMemoryWrapper
+from .observe import DecisionMaker
 
 
-# TODO: Implement this class
 class ObserveAlgModule:
     def __init__(self, observe_image_size: np.ndarray) -> None:
         protocol: np.dtype = StructedDataTypeFactory().create_dtype(num_of_cmds=5, image_size=observe_image_size)
         self.memory: SharedMemoryWrapper = SharedMemoryWrapper(protocol, 'observe', True)
+        self.last_timestamp: float = None
+        self.observer: DecisionMaker = DecisionMaker(
+            classic_traffic_pipeline=True,
+            network_class=None,
+            output_postprocess=lambda x: x.argmax().item(),
+            weights_file=None,
+            device='cuda'
+        )
+
+    def read_data(self) -> None:
+        timestamp: float = self.memory.read_from_shm('timestamp')
+        if timestamp == self.last_timestamp:
+            return
+        self.last_timestamp = timestamp # update timestamp
+        self.image: np.ndarray = self.memory.read_from_shm('image').copy()
+
+    def execute(self, lock) -> None:
+        with lock:
+            self.read_data()
+            detection_flags: dict = self.observer.detection_flags
+            transmit_data: np.ndarray = np.array([
+                1.0 if detection_flags['stop_sign'] else -1.0,
+                1.0 if detection_flags['horizontal_line'] else -1.0,
+                1.0 if detection_flags['red_light'] else -1.0,
+                1.0 if detection_flags['unknown_error'] else -1.0,
+            ])
+            self.memory.write_to_shm('data_and_commands', transmit_data)
 
 
 class ControlAlgModule:
@@ -60,34 +87,34 @@ class HardwareModule(PhysicalCar):
         super().__init__(throttle_coeff, steering_coeff)
         self.front_csi: VirtualCSICamera = VirtualCSICamera(id=3)
         self.brake_time: float = (desired_speed - 1.0) / 1.60
+        self.memories: Dict[str, SharedMemoryWrapper] = {}
         self.action: np.ndarray = np.zeros(2)
-        self.momories: Dict[str, SharedMemoryWrapper] = {}
 
     def setup(self, control_image_size: tuple, observe_image_size: tuple) -> None:
         control_protocol = StructedDataTypeFactory().create_dtype(num_of_cmds=4, image_size=control_image_size)
-        observe_protocol = StructedDataTypeFactory().create_dtype(num_of_cmds=5, image_size=observe_image_size)
-        self.momories['control'] = SharedMemoryWrapper(control_protocol, 'control', False)
-        # self.momories['observe'] = SharedMemoryWrapper(observe_protocol, 'observe', False)
+        observe_protocol = StructedDataTypeFactory().create_dtype(num_of_cmds=4, image_size=observe_image_size)
+        self.memories['control'] = SharedMemoryWrapper(control_protocol, 'control', False)
+        self.memories['observe'] = SharedMemoryWrapper(observe_protocol, 'observe', False)
 
     def terminate(self) -> None:
         self.running_gear.terminate()
         self.front_csi.terminate()
 
+    # TODO: Implement this method
     def handle_event(self) -> float:
         return 1.0
 
     def transmit_data(self, locks, shm_name, image_data: np.ndarray, data_and_command: np.ndarray) -> None:
         with locks[shm_name]:
-            current_time: float = time.time()
-            self.momories[shm_name].write_to_shm('timestamp', current_time)
-            self.momories[shm_name].write_to_shm('image', image_data)
+            self.memories[shm_name].write_to_shm('timestamp', time.time())
+            self.memories[shm_name].write_to_shm('image', image_data)
             if data_and_command is None:
                 return
-            self.momories[shm_name].write_to_shm('data_and_commands', data_and_command)
+            self.memories[shm_name].write_to_shm('data_and_commands', data_and_command)
 
     def read_action(self, lock) -> np.ndarray:
         with lock:
-            return self.momories['control'].read_from_shm('data_and_commands')[2:]
+            return self.memories['control'].read_from_shm('data_and_commands')[2:]
 
     def execute(self, locks: dict) -> None:
         # handle the stop events
@@ -99,8 +126,8 @@ class HardwareModule(PhysicalCar):
         if front_image is None:
             return
         # transmit data to algorithm modules
-        self.transmit_data(locks, 'control', front_image, np.array([1.0, current_speed, 0.0, 0.0]))
-        # self.transmit_data(locks, 'observe', front_image, None)
+        self.transmit_data(locks, 'control', front_image, np.concatenate(([1.0, current_speed], self.action)))
+        self.transmit_data(locks, 'observe', front_image, None) # no need to transmit command here
         # get the action from the control algorithm modules
         self.action: np.ndarray = self.read_action(locks['control'])
         # execute the action
