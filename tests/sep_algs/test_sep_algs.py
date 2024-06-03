@@ -18,9 +18,13 @@ def run_hardware_process(locks: dict, desired_speed: float, duration: float = 10
             module.execute(locks=locks)
     finally:
         module.halt_car()
+        # module.save_image_to_disk()
 
 def run_observe_process(lock, duration: float = 10) -> None:
+    start_time: float = time.time()
     module: ObserveAlgModule = ObserveAlgModule(observe_image_size=(410,820,3))
+    while time.time() - start_time < duration:
+        module.execute(lock)
 
 def run_control_process(lock, desired_speed: float, duration: float = 10) -> None:
     start_time: float = time.time()
@@ -41,8 +45,8 @@ def my_fixture():
 
 def test_sep_algs(my_fixture) -> None:
     prcoesses: list = []
-    duration: float = 19
-    desired_speed: float = 1.00
+    duration: float = 20
+    desired_speed: float = 0.80
     locks: dict = {
         'control': Lock(),
         'observe': Lock(),
@@ -62,5 +66,5 @@ def test_sep_algs(my_fixture) -> None:
     # start processes
     for process in prcoesses:
         process.start()
-    time.sleep(2)
+    time.sleep(4)
     run_hardware_process(locks, desired_speed, duration)

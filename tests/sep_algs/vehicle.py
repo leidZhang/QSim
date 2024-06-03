@@ -15,7 +15,7 @@ from .observe import DecisionMaker
 
 class ObserveAlgModule:
     def __init__(self, observe_image_size: np.ndarray) -> None:
-        protocol: np.dtype = StructedDataTypeFactory().create_dtype(num_of_cmds=5, image_size=observe_image_size)
+        protocol: np.dtype = StructedDataTypeFactory().create_dtype(num_of_cmds=4, image_size=observe_image_size)
         self.memory: SharedMemoryWrapper = SharedMemoryWrapper(protocol, 'observe', True)
         self.last_timestamp: float = None
         self.observer: DecisionMaker = DecisionMaker(
@@ -79,7 +79,8 @@ class ControlAlgModule:
                 command: np.ndarray = np.zeros(2) # clear reset, estimated speed
                 self.memory.write_to_shm('data_and_commands', np.concatenate([command, action]))
         except NoContourException:
-            print('No contour detected')
+            pass
+            # print('No contour detected')
 
 
 class HardwareModule(PhysicalCar):
@@ -89,6 +90,7 @@ class HardwareModule(PhysicalCar):
         self.brake_time: float = (desired_speed - 1.0) / 1.60
         self.memories: Dict[str, SharedMemoryWrapper] = {}
         self.action: np.ndarray = np.zeros(2)
+        self.images: list = []
 
     def setup(self, control_image_size: tuple, observe_image_size: tuple) -> None:
         control_protocol = StructedDataTypeFactory().create_dtype(num_of_cmds=4, image_size=control_image_size)
@@ -101,8 +103,10 @@ class HardwareModule(PhysicalCar):
         self.front_csi.terminate()
 
     # TODO: Implement this method
-    def handle_event(self) -> float:
-        return 1.0
+    def handle_event(self, lock) -> float:
+        with lock:
+            flags: np.ndarray = self.memories['observe'].read_from_shm('data_and_commands')
+            print(f"Stop Sign: {flags[0] > 0}")
 
     def transmit_data(self, locks, shm_name, image_data: np.ndarray, data_and_command: np.ndarray) -> None:
         with locks[shm_name]:
@@ -116,9 +120,13 @@ class HardwareModule(PhysicalCar):
         with lock:
             return self.memories['control'].read_from_shm('data_and_commands')[2:]
 
+    # def save_image_to_disk(self) -> None:
+    #     for i in range(len(self.images)):
+    #         cv2.imwrite(f'images/image_{i}.jpg', self.images[i])
+
     def execute(self, locks: dict) -> None:
         # handle the stop events
-        self.handle_event()
+        self.handle_event(locks['observe'])
         # estimate the current speed
         current_speed: float = self.estimate_speed()
         # transmit data to other processes
