@@ -41,7 +41,7 @@ def my_fixture():
 
 def test_sep_algs(my_fixture) -> None:
     prcoesses: list = []
-    duration: float = 18
+    duration: float = 19
     desired_speed: float = 1.00
     locks: dict = {
         'control': Lock(),

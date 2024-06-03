@@ -12,6 +12,7 @@ from core.policies.vision_lanefollowing import VisionLaneFollowing, BasePolicy
 from core.utils.ipc_utils import StructedDataTypeFactory, SharedMemoryWrapper
 
 
+# TODO: Implement this class
 class ObserveAlgModule:
     def __init__(self, observe_image_size: np.ndarray) -> None:
         protocol: np.dtype = StructedDataTypeFactory().create_dtype(num_of_cmds=5, image_size=observe_image_size)
@@ -78,8 +79,7 @@ class HardwareModule(PhysicalCar):
     def transmit_data(self, locks, shm_name, image_data: np.ndarray, data_and_command: np.ndarray) -> None:
         with locks[shm_name]:
             current_time: float = time.time()
-            hash_code: float = hashlib.sha256(str(current_time).encode()).hexdigest()
-            self.momories[shm_name].write_to_shm('timestamp', float.fromhex(hash_code[:16]))
+            self.momories[shm_name].write_to_shm('timestamp', current_time)
             self.momories[shm_name].write_to_shm('image', image_data)
             if data_and_command is None:
                 return
