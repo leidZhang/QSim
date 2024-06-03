@@ -24,7 +24,6 @@ def run_vision_pid(expected_velocity: float, duration: float=10.3) -> Dict[str, 
     """
     history = {'desired': [], 'observed': []}
 
-    prepare_test_environment(node_id=24)  # prepare the map
     car = VisionPIDTestCar(1, 1)
     pid_gains = {
         'steering': [STEERING_DEFAULT_K_P, STEERING_DEFAULT_K_I, STEERING_DEFAULT_K_D],
@@ -43,20 +42,21 @@ def run_vision_pid(expected_velocity: float, duration: float=10.3) -> Dict[str, 
         print("Interrupted!")
     finally:
         car.running_gear.read_write_std(0, 0)
-    
+
     return history
 
 @pytest.fixture(scope="function")
 def my_fixture():
     assert destroy_map() != -1, "Failed to destroy the map."
+    prepare_test_environment(node_id=24)  # prepare the map
     yield
 
 def test_vision_pid(my_fixture) -> None:
     """
     Tests the Vision PID control system.
     """
-    test_speed: float = 1.50
-    expected_max_speed: float = 1.70
+    test_speed: float = 0.80
+    expected_max_speed: float = 1.00
     history = run_vision_pid(expected_velocity=test_speed, duration=10.0)
     input_max_speed = round(max(history['observed']), 2)
 
@@ -66,7 +66,3 @@ def test_vision_pid(my_fixture) -> None:
     assert len(history['observed']) > 0, "No observed velocities logged."
     assert input_max_speed <= expected_max_speed, \
         f"Observed max speed {input_max_speed}m/s exceeds expected max speed {expected_max_speed}m/s."
-    
-    
-
-    

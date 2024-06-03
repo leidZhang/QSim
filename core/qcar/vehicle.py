@@ -204,7 +204,7 @@ class VirtualAgentCar(VirtualCar):
         return super().execute(action)
 
 
-class PhysicalCar(BaseCar): 
+class PhysicalCar(BaseCar):
     """
     The PhysicalCar class is a class that defines the interface for the physical car
 
@@ -215,8 +215,8 @@ class PhysicalCar(BaseCar):
     - handle_leds: Handles the LEDs of the car
     - estimate_speed: Estimates the speed of the car
     """
-    
-    def __init__(self, throttle_coeff: float, steering_coeff: float) -> None:
+
+    def __init__(self, throttle_coeff: float = 0.3, steering_coeff: float = 0.5) -> None:
         """
         Initializes the PhysicalCar object
 
@@ -244,7 +244,7 @@ class PhysicalCar(BaseCar):
         - None
         """
         # steering indicator
-        if steering > 0.3: 
+        if steering > 0.3:
             self.leds[0] = 1
             self.leds[2] = 1
         elif steering < -0.3:
@@ -253,9 +253,9 @@ class PhysicalCar(BaseCar):
         else:
             self.leds = np.array([0, 0, 0, 0, 0, 0, self.leds[6], self.leds[7]])
         # reverse indicator
-        if throttle < 0: 
+        if throttle < 0:
             self.leds[5] = 1
-    
+
     def estimate_speed(self) -> float:
         """
         The estimate_speed method estimates the speed of the car based on the motor tach
@@ -264,8 +264,8 @@ class PhysicalCar(BaseCar):
         - float: The estimated speed of the car
         """
         return float(self.running_gear.motorTach)
-    
-    def halt_car(self, steering: float = 0.0, halt_time: float = 1.0) -> None: 
+
+    def halt_car(self, steering: float = 0.0, halt_time: float = 1.0) -> None:
         """
         Halts the QCar.
 
@@ -278,4 +278,3 @@ class PhysicalCar(BaseCar):
         """
         self.running_gear.read_write_std(throttle=0, steering=steering, LEDs=self.leds)
         time.sleep(halt_time)
-        
