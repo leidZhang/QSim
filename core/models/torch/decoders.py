@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 from core.models.torch.common import MLP
-from core.utils.aggregation_utils import flatten_batch, unflatten_batch
+from core.utils.agg_utils import flatten_batch, unflatten_batch
 
 class DenseDecoder(nn.Module):
     def __init__(

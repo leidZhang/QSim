@@ -11,7 +11,7 @@ from mlflow.store.artifact.artifact_repository_registry import get_artifact_repo
 
 #project imports
 from core.utils.tools import mlflow_log_npz, mlflow_load_npz
-from core.utils.aggregation_utils import cat_structure_np, stack_structure_np, map_structure
+from core.utils.agg_utils import cat_structure_np, stack_structure_np, map_structure
 
 
 @dataclass(frozen=True)

@@ -7,6 +7,7 @@ import numpy as np
 from core.policies.base_policy import BasePolicy
 from core.control.edge_finder import EdgeFinder
 from core.control.pid_control import ThrottlePIDController, SteeringPIDController, PIDController
+from core.utils.tools import realtime_message_output
 
 
 class VisionLaneFollowing(BasePolicy):
@@ -41,7 +42,7 @@ class VisionLaneFollowing(BasePolicy):
         self.reference_velocity: float = 0.0
         self.edge_finder: EdgeFinder = edge_finder # TraditionalEdgeFinder(image_width, image_height)
         self.steering_controller: PIDController = SteeringPIDController(upper_bound=0.5, lower_bound=-0.5)
-        self.throttle_controller: PIDController = ThrottlePIDController(upper_bound=0.3, lower_bound=0)
+        self.throttle_controller: PIDController = ThrottlePIDController(upper_bound=0.3, lower_bound=0.0)
 
     def setup_steering(self, k_p: float, k_i: float, k_d: float) -> None:
         """
@@ -101,7 +102,7 @@ class VisionLaneFollowing(BasePolicy):
         result: tuple = self.edge_finder.execute(image)
         self.steering: float = self.steering_controller.execute(result, image.shape[1])
         self.reference_velocity = self.expected_velocity * abs(math.cos(2.7 * self.steering)) * reduce_factor
-        self.throttle: float = self.throttle_controller.execute(self.reference_velocity, linear_speed)
-        # realtime_message_output(f'Expected: {self.reference_velocity:1.4f}, Measured:{linear_speed:1.4f}')
+        self.throttle: float = self.throttle_controller.execute(self.reference_velocity, linear_speed) 
+        print(f'Expected: {self.reference_velocity:1.4f}, Measured:{linear_speed:1.4f}, dt: {self.throttle_controller.dt:1.4f}')
 
-        return np.array([self.throttle, self.steering]), {}
+        return np.array([abs(self.throttle), self.steering]), {}

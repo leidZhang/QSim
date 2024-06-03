@@ -1,16 +1,18 @@
 import time
 import hashlib
-from typing import Dict
+from typing import Dict, Tuple
 
 import cv2
 import numpy as np
 
 from core.control.edge_finder import NoContourException
-from core.qcar import VirtualCSICamera, PhysicalCar
+from core.qcar import VirtualCSICamera, VirtualRGBDCamera, PhysicalCar
 from core.control.edge_finder import TraditionalEdgeFinder, EdgeFinder
 from core.policies.vision_lanefollowing import VisionLaneFollowing, BasePolicy
+from core.utils.tools import realtime_message_output
 from core.utils.ipc_utils import StructedDataTypeFactory, SharedMemoryWrapper
 from .observe import DecisionMaker
+from .exceptions import HaltException
 
 
 class ObserveAlgModule:
@@ -29,14 +31,16 @@ class ObserveAlgModule:
     def read_data(self) -> None:
         timestamp: float = self.memory.read_from_shm('timestamp')
         if timestamp == self.last_timestamp:
-            return
+            return 
         self.last_timestamp = timestamp # update timestamp
         self.image: np.ndarray = self.memory.read_from_shm('image').copy()
 
     def execute(self, lock) -> None:
         with lock:
             self.read_data()
+            self.observer(self.image)
             detection_flags: dict = self.observer.detection_flags
+            # realtime_message_output(f"Detection flags: {detection_flags}")
             transmit_data: np.ndarray = np.array([
                 1.0 if detection_flags['stop_sign'] else -1.0,
                 1.0 if detection_flags['horizontal_line'] else -1.0,
@@ -44,6 +48,7 @@ class ObserveAlgModule:
                 1.0 if detection_flags['unknown_error'] else -1.0,
             ])
             self.memory.write_to_shm('data_and_commands', transmit_data)
+            #print(transmit_data)
 
 
 class ControlAlgModule:
@@ -60,23 +65,25 @@ class ControlAlgModule:
         self.policy.setup_steering(k_p=steering_gains[0], k_i=steering_gains[1], k_d=steering_gains[2])
         self.policy.setup_throttle(k_p=throttle_gains[0], k_i=throttle_gains[1], k_d=throttle_gains[2])
 
-    def read_data(self) -> None:
+    def read_data(self) -> bool:
         data_and_command: np.ndarray = self.memory.read_from_shm('data_and_commands')
-        if data_and_command[0] < 0:
-            self.policy.reset_start_time()
+        self.reduce_factor: float = data_and_command[0]
         self.estimated_speed: float = data_and_command[1]
         timestamp: float = self.memory.read_from_shm('timestamp')
         if timestamp == self.last_timestamp:
-            return
+            return False
         self.last_timestamp = timestamp # update timestamp
         self.image: np.ndarray = self.memory.read_from_shm('image').copy()
+        return True
 
     def execute(self, lock) -> None:
         try:
             with lock:
-                self.read_data()
+                if not self.read_data():
+                    return
+                # self.policy.reset_start_time()
                 action, _ = self.policy.execute(self.image, self.estimated_speed, 1.0)
-                command: np.ndarray = np.zeros(2) # clear reset, estimated speed
+                command: np.ndarray = np.array([0.0, 0.0]) # clear reset, estimated speed
                 self.memory.write_to_shm('data_and_commands', np.concatenate([command, action]))
         except NoContourException:
             pass
@@ -87,10 +94,11 @@ class HardwareModule(PhysicalCar):
     def __init__(self, throttle_coeff: float = 0.3, steering_coeff: float = 0.5, desired_speed: float = 0) -> None:
         super().__init__(throttle_coeff, steering_coeff)
         self.front_csi: VirtualCSICamera = VirtualCSICamera(id=3)
-        self.brake_time: float = (desired_speed - 1.0) / 1.60
+        self.rgbd_camera: VirtualRGBDCamera = VirtualRGBDCamera()
+        self.brake_time: float = (desired_speed - 1.0) / 1.60 if desired_speed > 1.0 else 0.0
         self.memories: Dict[str, SharedMemoryWrapper] = {}
         self.action: np.ndarray = np.zeros(2)
-        self.images: list = []
+        self.reset: float = 0.0
 
     def setup(self, control_image_size: tuple, observe_image_size: tuple) -> None:
         control_protocol = StructedDataTypeFactory().create_dtype(num_of_cmds=4, image_size=control_image_size)
@@ -103,40 +111,38 @@ class HardwareModule(PhysicalCar):
         self.front_csi.terminate()
 
     # TODO: Implement this method
-    def handle_event(self, lock) -> float:
+    def read_halt_event(self, lock) -> Tuple[bool, int]:
         with lock:
             flags: np.ndarray = self.memories['observe'].read_from_shm('data_and_commands')
-            print(f"Stop Sign: {flags[0] > 0}")
+        if flags[0] > 0:
+            # print('Stop sign detected')
+            return True, 3 + self.brake_time
+        elif flags[2] > 0:
+            # print('Red light detected')
+            return True, 0.1
+        return False, -1
 
     def transmit_data(self, locks, shm_name, image_data: np.ndarray, data_and_command: np.ndarray) -> None:
         with locks[shm_name]:
-            self.memories[shm_name].write_to_shm('timestamp', time.time())
-            self.memories[shm_name].write_to_shm('image', image_data)
-            if data_and_command is None:
-                return
-            self.memories[shm_name].write_to_shm('data_and_commands', data_and_command)
+            if image_data is not None:
+                self.memories[shm_name].write_to_shm('timestamp', time.time())
+                self.memories[shm_name].write_to_shm('image', image_data)
+            if data_and_command is not None:
+                self.memories[shm_name].write_to_shm('data_and_commands', data_and_command)
 
     def read_action(self, lock) -> np.ndarray:
         with lock:
             return self.memories['control'].read_from_shm('data_and_commands')[2:]
 
-    # def save_image_to_disk(self) -> None:
-    #     for i in range(len(self.images)):
-    #         cv2.imwrite(f'images/image_{i}.jpg', self.images[i])
-
     def execute(self, locks: dict) -> None:
-        # handle the stop events
-        self.handle_event(locks['observe'])
-        # estimate the current speed
-        current_speed: float = self.estimate_speed()
-        # transmit data to other processes
-        front_image: np.ndarray = self.front_csi.read_image()
-        if front_image is None:
-            return
-        # transmit data to algorithm modules
-        self.transmit_data(locks, 'control', front_image, np.concatenate(([1.0, current_speed], self.action)))
-        self.transmit_data(locks, 'observe', front_image, None) # no need to transmit command here
-        # get the action from the control algorithm modules
-        self.action: np.ndarray = self.read_action(locks['control'])
-        # execute the action
-        self.running_gear.read_write_std(throttle=self.action[0], steering=self.action[1], LEDs=self.leds)
+        rgbd_image: np.ndarray = self.rgbd_camera.read_rgb_image()
+        self.transmit_data(locks, 'observe', rgbd_image, None) # no need to transmit command here
+        stop_flag, halt_time = self.read_halt_event(locks['observe'])
+        if stop_flag: # find stop sign or red light
+            self.halt_car(steering=self.action[1], halt_time=halt_time)
+        else:
+            front_image: np.ndarray = self.front_csi.read_image()
+            current_speed: float = self.estimate_speed()
+            self.transmit_data(locks, 'control', front_image, np.concatenate(([self.reset, current_speed], self.action)))
+            self.action: np.ndarray = self.read_action(locks['control'])
+            self.running_gear.read_write_std(throttle=self.action[0], steering=self.action[1], LEDs=self.leds)

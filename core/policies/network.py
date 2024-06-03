@@ -3,7 +3,7 @@ import numpy as np
 
 from core.models.torch.model import Model
 from core.data.preprocessor import Preprocessor
-from core.utils.aggregation_utils import map_structure
+from core.utils.agg_utils import map_structure
 
 class NetworkPolicy:
     def __init__(self, device):

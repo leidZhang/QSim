@@ -1,5 +1,6 @@
 import time
-from multiprocessing import Process, Lock
+from typing import List
+from multiprocessing import Process, Lock, Event
 
 import pytest
 
@@ -10,19 +11,19 @@ from tests.vision_pid.constants import THROTTLE_DEFAULT_K_P, THROTTLE_DEFAULT_K_
 from .vehicle import HardwareModule, ControlAlgModule, ObserveAlgModule
 
 def run_hardware_process(locks: dict, desired_speed: float, duration: float = 10) -> None:
-    try:
-        start_time: float = time.time()
-        module: HardwareModule = HardwareModule(desired_speed=desired_speed)
-        module.setup(control_image_size=(410,820,3), observe_image_size=(410,820,3))
-        while time.time() - start_time < duration:
-            module.execute(locks=locks)
-    finally:
-        module.halt_car()
-        # module.save_image_to_disk()
-
-def run_observe_process(lock, duration: float = 10) -> None:
     start_time: float = time.time()
-    module: ObserveAlgModule = ObserveAlgModule(observe_image_size=(410,820,3))
+    module: HardwareModule = HardwareModule(desired_speed=desired_speed)
+    module.setup(control_image_size=(410,820,3), observe_image_size=(480,640,3))
+    while time.time() - start_time < duration:
+        module.execute(locks=locks)
+    # halt the car
+    print("Halting the car...")
+    module.halt_car()
+
+def run_observe_process(lock, event, duration: float = 10) -> None:
+    start_time: float = time.time()
+    module: ObserveAlgModule = ObserveAlgModule(observe_image_size=(480,640,3))
+    event.set()
     while time.time() - start_time < duration:
         module.execute(lock)
 
@@ -43,15 +44,15 @@ def my_fixture():
     prepare_test_environment(node_id=24)
     yield
 
-def test_sep_algs(my_fixture) -> None:
-    prcoesses: list = []
-    duration: float = 20
-    desired_speed: float = 0.80
+def test_sep_algs() -> None:
+    prcoesses: List[Process] = []
+    activate_event = Event()
+    duration: float = 1000
+    desired_speed: float = 1.50
     locks: dict = {
         'control': Lock(),
         'observe': Lock(),
     }
-    # control algorithm process
     control_process: Process = Process(
         target=run_control_process,
         args=(locks['control'], desired_speed, duration+2)
@@ -60,11 +61,12 @@ def test_sep_algs(my_fixture) -> None:
     # observe algorithm process
     observe_process: Process = Process(
         target=run_observe_process,
-        args=(locks['observe'], duration+2)
+        args=(locks['observe'], activate_event, duration+2)
     )
     prcoesses.append(observe_process)
     # start processes
     for process in prcoesses:
         process.start()
-    time.sleep(4)
+    activate_event.wait()
+    time.sleep(2)
     run_hardware_process(locks, desired_speed, duration)

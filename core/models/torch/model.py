@@ -7,7 +7,7 @@ from core.models.torch.a2c import ActorCritic
 from core.models.torch.rnn import GRUCellStack
 from core.models.torch.encoders import MultiEncoder
 from core.models.torch.decoders import DenseDecoder
-from core.utils.aggregation_utils import flatten_batch
+from core.utils.agg_utils import flatten_batch
 
 class Model(nn.Module):
     def __init__(self, device="cuda:0"):

@@ -62,6 +62,16 @@ class SignalFilter:
         if round(result, 10) > self.threshold:
             return "red light"
         return "green light"
+    
+    def clear(self) -> None:
+        """
+        Clears the buffer and the accumulator for the filter.
+
+        Returns:
+            None
+        """
+        self.buffer = Queue(self.buffer_size)
+        self.accumulator = 0
 
 
 class RawImagePipeline(object):
@@ -196,12 +206,11 @@ class RawImagePipeline(object):
 
         if contours:
             contours = max(contours, key = cv2.contourArea)
-            traffic_light_area = cv2.contourArea(contours)
+            self.detected_area = cv2.contourArea(contours)
             # return only those pass teh area thershold.
             # Some lights aere not relevant (that is they are really far away and theier features are hard to distinguish)
-            # print(f"Frame area: {self.traffic_light_area}")
-            self.detected_area = traffic_light_area
-            if 450 < traffic_light_area:
+            if 300 < self.detected_area:
+                # print(f"Frame area: {self.detected_area}")
                 x, y, w, h = cv2.boundingRect(contours)
                 img =  img_original[y:(y+h),x:(x+w),:]
                 self.found_flag = True
@@ -236,7 +245,7 @@ class RawImagePipeline(object):
                 a_l_2 = a_l**2
                 a_ = cv2.contourArea(cnt_)
                 a_ = max(a_,0)
-                if a_ < 1200: # 1300:
+                if a_ < 1200: # csi: 950: # rgbd: 1300:
                     continue
                 # ratio of area to arclength of a circle is : (4*pi^2*r^2)/pi*r^2 = 4*pi
                 # area based filtering, we dont want contours with high area or less area
@@ -398,11 +407,10 @@ class DecisionMaker:
                 Device in which the model will run
                 '''
         self.pipeline = RawImagePipeline()
-        self.filter = SignalFilter(2.0e-11, 10)
-        self.last_stopped_time = time.time()
+        self.filter = SignalFilter(0, 10)
         self.stop_sign_ignore_interval = stop_sign_ignore_interval
         self.pointer = -1
-        self.dist_coeffs = [580, 1300]# [1.25, 2.5]
+        self.dist_coeffs = [1200, 1200]# [1.25, 2.5]
         if classic_traffic_pipeline:
             # Final vars. dont touch these. Touch them at your own risk
             print("Using classical method")
@@ -418,6 +426,7 @@ class DecisionMaker:
             'red_light': False, # True if traffic light is red
             'unknown_error': False
         }
+        self.last_stopped_time = time.time()
 
     def thesh_horizontal_line(self, low_bottom_image:np.ndarray) ->bool:
         '''
@@ -482,9 +491,9 @@ class DecisionMaker:
             Time to sleep in seconds
         '''
         img_back = img[img.shape[0]*7//10:,:,:].copy()
-        # cv2.imshow('Images2', img)
+        # cv2.imshow('Images2_Raw', img)
         img, flag = self.pipeline(img)
-        # cv2.imshow('Images2', img)
+        # cv2.imshow('Images2_Contour', img)
         # print(
         #     f"Bound: {self.dist_coeffs[self.pointer]}, \
         #     Current: {self.pipeline.detected_area}, \
@@ -501,18 +510,15 @@ class DecisionMaker:
             # return False, 0
         elif flag == 'stop':
             self.detection_flags["horizontal_line"] = False
-            if time.time()-self.last_stopped_time >= self.stop_sign_ignore_interval:
+            if time.time() - self.last_stopped_time >= self.stop_sign_ignore_interval:
                 self.last_stopped_time = time.time()
                 self.detection_flags["stop_sign"] = True
-                # print(self.detection_flags)
+                # print("Ignore stop sign")
                 return
-                # print(flag)
+            # print("Found stop sign")
             self.detection_flags["stop_sign"] = False
-            # print(self.detection_flags)
             return
         elif flag=='traffic':
-            # print("sum ",mask.sum()/255)
-            # cv2.waitKey(1)
             self.thesh_horizontal_line(img_back)
             if self.has_horizontal_line:
                 self.detection_flags["horizontal_line"] = self.has_horizontal_line
@@ -532,14 +538,15 @@ class DecisionMaker:
                 return
 
             # print(self.classic_traffic_pipeline)
-            if self.classic_traffic_pipeline and self.detection_flags["horizontal_line"]:
+            if self.classic_traffic_pipeline: # and self.detection_flags["horizontal_line"]:
                 mask = cv2.inRange(pyramid_expand(cv2.cvtColor(img, cv2.COLOR_BGR2RGB), channel_axis= 2), self.lower, self.upper)
                 signal: float = mask.sum() / 255
                 # push signal to the filter
-                if signal >= 1: # original is > 5
+                if signal > 0: # original is > 5
                     result: str = self.filter(1)
                 else:
                     result: str = self.filter(0)
+                # print(result)
                 # get the result from the filter
                 if result == "green light": # and signal < 1:
                     self.detection_flags["red_light"] = False

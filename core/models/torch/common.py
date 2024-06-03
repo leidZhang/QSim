@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 #project imports
-from core.utils.aggregation_utils import flatten_batch, unflatten_batch
+from core.utils.agg_utils import flatten_batch, unflatten_batch
 
 class MLP(nn.Module):
     def __init__(

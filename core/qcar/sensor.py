@@ -54,19 +54,45 @@ class VirtualRGBDCamera:
     def terminate(self) -> None: 
         self.camera.terminate() 
 
-    def read_rgb_image(self) -> np.ndarray: 
-        if self.camera.read_RGB() != -1: 
-            # cv2.imshow('RGBD Image', self.camera.imageBufferRGB)
+    def read_rgb_image(self) -> np.ndarray:  
+        # cv2.imshow('RGBD Image', self.camera.imageBufferRGB)
+        frame = self.camera.streamRGB.get_frame()
+        if frame is not None:
+            frame.get_data(self.camera.imageBufferRGB)
+            frame.release()
             return self.camera.imageBufferRGB 
+        return None
+    
+    def await_rgb_image(self) -> np.ndarray:
+        if self.camera.read_RGB() != -1: 
+            return self.camera.imageBufferRGB
 
     def read_depth_image(self, data_mode='PX') -> np.ndarray: 
+        frame = self.camera.streamDepth.get_frame()
+        if frame is None:
+            return None
+        
+        if data_mode == 'PX': 
+            frame.get_data(self.camera.imageBufferDepthPX)
+            frame.release()
+            return self.camera.imageBufferDepthPX
+        elif data_mode == 'M': 
+            frame.get_meters(self.camera.imageBufferDepthM)
+            frame.release()
+            return self.camera.imageBufferDepthM
+        else: 
+            raise ValueError("Invalid data mode")
+
+    def await_depth_image(self, data_mode='PX') -> np.ndarray:
         if self.camera.read_depth(data_mode) != -1: 
             if data_mode == 'PX': 
                 # cv2.imshow('RGBD PX', self.camera.imageBufferDepthPX)
                 return self.camera.imageBufferDepthPX
-            if data_mode == 'M': 
+            elif data_mode == 'M': 
                 # cv2.imshow('RGBD M', self.camera.imageBufferDepthM)
                 return self.camera.imageBufferDepthM
+            else: 
+                raise ValueError("Invalid data mode")
 
 
 class VirtualLidar: 

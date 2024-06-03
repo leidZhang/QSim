@@ -3,7 +3,7 @@ import torch.nn as nn
 from typing import Dict
 
 #project imports
-from core.utils.aggregation_utils import flatten_batch, unflatten_batch
+from core.utils.agg_utils import flatten_batch, unflatten_batch
 
 class MultiEncoder(nn.Module):
     def __init__(
