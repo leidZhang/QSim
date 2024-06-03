@@ -51,7 +51,7 @@ class ControlAlgModule:
                 command: np.ndarray = np.zeros(2) # clear reset, estimated speed
                 self.memory.write_to_shm('data_and_commands', np.concatenate([command, action]))
         except NoContourException:
-            pass
+            print('No contour detected')
 
 
 class HardwareModule(PhysicalCar):
