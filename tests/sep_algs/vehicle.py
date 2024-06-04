@@ -28,6 +28,7 @@ class ObserveAlgModule:
             device='cuda'
         )
 
+    # TODO: Move this method to a concrete SharedMemoryWrapper class？
     def read_data(self) -> None:
         timestamp: float = self.memory.read_from_shm('timestamp')
         will_read_image: bool = timestamp != self.last_timestamp
@@ -68,27 +69,32 @@ class ControlAlgModule:
         self.policy.setup_steering(k_p=steering_gains[0], k_i=steering_gains[1], k_d=steering_gains[2])
         self.policy.setup_throttle(k_p=throttle_gains[0], k_i=throttle_gains[1], k_d=throttle_gains[2])
 
+    # TODO: Move this method to a concrete SharedMemoryWrapper class？
     def read_data(self) -> bool:
         timestamp: float = self.memory.read_from_shm('timestamp')
+        data_and_command: np.ndarray = self.memory.read_from_shm('data_and_commands')
         will_read_image: bool = timestamp != self.last_timestamp
         if will_read_image:
             self.last_timestamp = timestamp # update timestamp
             self.image: np.ndarray = self.memory.read_from_shm('image').copy()
 
-            data_and_command: np.ndarray = self.memory.read_from_shm('data_and_commands')
-            self.estimated_speed: float = data_and_command[1]
-            if data_and_command[0] > 0:
-                self.policy.reset_start_time()
+        self.estimated_speed: float = data_and_command[1]
+        # print(f"Reset Flag: {data_and_command[0]:.4f}")
+        if data_and_command[0] > 0:
+            # print("Resetting the start time of the controllers")
+            self.policy.reset_start_time()
         return will_read_image
 
     def execute(self, lock) -> None:
         try:
+            # start = time.time()
             with lock:
                 if not self.read_data():
                     return
                 action, _ = self.policy.execute(self.image, self.estimated_speed, 1.0)
                 command: np.ndarray = np.array([0.0, 0.0]) # clear reset, estimated speed
                 self.memory.write_to_shm('data_and_commands', np.concatenate([command, action]))
+            # print(f'Execution time: {time.time() - start:.4f}s')
         except NoContourException:
             pass
             # print('No contour detected')
@@ -122,13 +128,12 @@ class HardwareModule(PhysicalCar):
             # print('Stop sign detected')
             halt_time: float = 3 + self.brake_time
             raise HaltException(stop_time=halt_time)
-        # elif flags[2] > 0:
-        #     # print('Red light detected')
-        #     halt_time: float = 0.1
-        #     raise HaltException(stop_time=halt_time)
-        else:
-            self.reset = 0.0
+        elif flags[2] > 0:
+            # print('Red light detected')
+            halt_time: float = 0.1
+            raise HaltException(stop_time=halt_time)
 
+    # TODO: Move this method to a concrete SharedMemoryWrapper class？
     def transmit_data(self, locks, shm_name, image_data: np.ndarray, data_and_command: np.ndarray) -> None:
         with locks[shm_name]:
             if image_data is not None:
@@ -137,6 +142,7 @@ class HardwareModule(PhysicalCar):
             if data_and_command is not None:
                 self.memories[shm_name].write_to_shm('data_and_commands', data_and_command)
 
+    # TODO: Move this method to a concrete SharedMemoryWrapper class？
     def read_action(self, lock) -> np.ndarray:
         with lock:
             return self.memories['control'].read_from_shm('data_and_commands')[2:]
@@ -149,9 +155,10 @@ class HardwareModule(PhysicalCar):
 
             front_image: np.ndarray = self.front_csi.read_image()
             current_speed: float = self.estimate_speed()
-            self.transmit_data(locks, 'control', front_image, np.concatenate(([self.reset, current_speed], self.action)))
+            self.transmit_data(locks, 'control', front_image, np.concatenate(([0.0, current_speed], self.action)))
             self.action: np.ndarray = self.read_action(locks['control'])
             self.running_gear.read_write_std(throttle=self.action[0], steering=self.action[1], LEDs=self.leds)
         except HaltException as e:
-            self.reset = 1.0
+            print(f"Stopping the car for {e.stop_time:.2f} seconds")
+            self.memories['control'].write_to_shm('data_and_commands', np.concatenate(([1.0, 0.0], self.action)))
             self.halt_car(steering=self.action[1], halt_time=e.stop_time)

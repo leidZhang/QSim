@@ -48,7 +48,7 @@ def test_sep_algs() -> None:
     prcoesses: List[Process] = []
     activate_event = Event()
     duration: float = 1000
-    desired_speed: float = 0.60
+    desired_speed: float = 1.30
     locks: dict = {
         'control': Lock(),
         'observe': Lock(),

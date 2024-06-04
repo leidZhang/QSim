@@ -103,6 +103,6 @@ class VisionLaneFollowing(BasePolicy):
         self.steering: float = self.steering_controller.execute(result, image.shape[1])
         self.reference_velocity = self.expected_velocity * abs(math.cos(2.7 * self.steering)) * reduce_factor
         self.throttle: float = self.throttle_controller.execute(self.reference_velocity, linear_speed) 
-        print(f'Expected: {self.reference_velocity:1.4f}, Measured:{linear_speed:1.4f}, dt: {self.throttle_controller.dt:1.4f}')
+        # print(f'Expected: {self.reference_velocity:1.4f}, Measured:{linear_speed:1.4f}, dt: {self.throttle_controller.dt:1.4f}')
 
         return np.array([abs(self.throttle), self.steering]), {}
