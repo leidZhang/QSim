@@ -48,25 +48,29 @@ def test_sep_algs() -> None:
     prcoesses: List[Process] = []
     activate_event = Event()
     duration: float = 1000
-    desired_speed: float = 1.50
+    desired_speed: float = 0.60
     locks: dict = {
         'control': Lock(),
         'observe': Lock(),
     }
     control_process: Process = Process(
         target=run_control_process,
+        name="control",
         args=(locks['control'], desired_speed, duration+2)
     )
     prcoesses.append(control_process)
     # observe algorithm process
     observe_process: Process = Process(
         target=run_observe_process,
+        name="observer",
         args=(locks['observe'], activate_event, duration+2)
     )
     prcoesses.append(observe_process)
     # start processes
     for process in prcoesses:
+        print(f"Activating {process.name} process...")
         process.start()
     activate_event.wait()
     time.sleep(2)
+    print("Activating hardware process...")
     run_hardware_process(locks, desired_speed, duration)
