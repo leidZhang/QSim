@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Tuple
 
 import numpy as np
 
@@ -17,6 +17,7 @@ class EdgeFinder(ABC):
     preprocessing steps are implemented by subclasses.
     - execute: Execute the edge detection algorithm. The method will be implemented by
     the subclass
+    - find_slope_from_binary_image: Find the slope and intercept of the lane from the binary image
     """
 
     def __init__(self, image_width: int = 820, image_height: int = 410) -> None:
@@ -32,11 +33,12 @@ class EdgeFinder(ABC):
         """
         self.image_width: int = image_width
         self.image_height: int = image_height
-
+            
     @abstractmethod
     def preprocess_image(self, image: np.ndarray) -> np.ndarray:
         """
-        Preprocesss the input image
+        Preprocesss the input image, including resize, crop, convert to grayscale, etc.
+        The specific preprocessing steps are implemented by subclasses.
 
         Parameters:
         image: np.ndarray: The original image waiting for process

@@ -5,6 +5,7 @@ import numpy as np
 
 from hal.utilities.image_processing import ImageProcessing
 
+from core.utils.image_utils import find_slope_intercept_from_binary
 from .edge_finder import EdgeFinder
 from .exceptions import NoImageException, NoContourException
 from .constants import HOUGH_ANGLE_LOWER_BOUND, HOUGH_ANGLE_UPPER_BOUND
@@ -60,7 +61,10 @@ class TraditionalEdgeFinder(EdgeFinder):
         if image is None:
             raise NoImageException()
         # crop the image
-        self.image = image[220:360, 100:]
+        self.image = image[230:360, 100:]
+        # resize the image
+        self.image = cv2.resize(self.image, (self.image.shape[1] // 2, self.image.shape[0] // 2))
+        # self.reference_image: np.ndarray = self.image.copy()
         # convert the image to grayscale
         self.image: np.ndarray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
 
@@ -86,6 +90,7 @@ class TraditionalEdgeFinder(EdgeFinder):
             y1: int = int(y0 + 1000 * (a))
             x2: int = int(x0 - 1000 * (-b))
             y2: int = int(y0 - 1000 * (a))
+            # cv2.line(self.reference_image, (x1, y1), (x2, y2), (255, 0, 0), 3)
             return x1, y1, x2, y2
         return None
 
@@ -107,6 +112,7 @@ class TraditionalEdgeFinder(EdgeFinder):
             EDGES_UPPER_BOUND,
             apertureSize=3
         ) #fine tune the threshold
+        cv2.imshow("Canny", edges)
         params: list[list[int]] = [[], [], [], []] # for valid lines
         lines: np.ndarray = cv2.HoughLines(edges, 1, np.pi/180, HOUGH_CONFIDENT_THRESHOLD)
         if lines is None:
@@ -115,7 +121,7 @@ class TraditionalEdgeFinder(EdgeFinder):
         # calculate the line parameters
         for line in lines:
             result: tuple = self.get_line_params(line)
-            if result is None or (self.prev_x1 and abs(result[0] - self.prev_x1) > 35):
+            if result is None or (self.prev_x1 and abs(result[0] - self.prev_x1) > 15):
                 continue
             # draw the line on the image
             for i, value in enumerate(result):
@@ -126,6 +132,7 @@ class TraditionalEdgeFinder(EdgeFinder):
             x1, y1, x2, y2 = map(int, np.mean(np_params, axis=1))
             self.prev_x1 = x1 # update prev x1
             cv2.line(self.image, (x1, y1), (x2, y2), (0, 0, 255), 3)
+            # cv2.line(self.reference_image, (x1, y1), (x2, y2), (0, 0, 255), 3)
         else:
             self.prev_x1 = 0 # there is a sudden edge change
         # cv2.imshow("HoughLine", self.image)
@@ -175,19 +182,23 @@ class TraditionalEdgeFinder(EdgeFinder):
         # find the largest contour
         largest_contour: np.ndarray = max(contours, key=cv2.contourArea)
         cv2.drawContours(self.image, [largest_contour], -1, (0, 255, 0), 3)
+        # cv2.drawContours(self.reference_image, [largest_contour], -1, (0, 255, 0), 3)
         # draw the largest contour on the image
         hull: np.ndarray = cv2.convexHull(largest_contour)
         # draw the hull on the image
         mask: np.ndarray = np.zeros_like(self.image)
         cv2.fillPoly(mask, [hull], (255, 255, 255))
+        # mask = cv2.resize(mask, (mask.shape[1] * 2, mask.shape[0] * 2))
         # cv2.imshow("Mask", mask)
         # Calculate the difference between adjacent pixels
         diff: np.ndarray = cv2.Sobel(mask, cv2.CV_64F, 1, 1, ksize=15)
         edge: np.ndarray = cv2.threshold(diff, 0, 255, cv2.THRESH_BINARY)[1] # fine tune the threshold
+        # edge = cv2.resize(edge, (edge.shape[1] * 2, edge.shape[0] * 2))
 
-        # cv2.imshow("Edge", edge)
-        # cv2.imshow("Largest Contour", self.image)
-        return ImageProcessing.find_slope_intercept_from_binary(binary=edge)
+        cv2.imshow("Edge", edge)
+        cv2.imshow("Largest Contour", self.image)
+        # cv2.imshow("Reference Image", self.reference_image)
+        return find_slope_intercept_from_binary(binary=edge)
 
     def execute(self, original_image: np.ndarray) -> Tuple[float, float]:
         """
@@ -202,4 +213,5 @@ class TraditionalEdgeFinder(EdgeFinder):
         self.preprocess_image(original_image)
         self.get_houghline_image()
         contours: np.ndarray = self.find_contours()
-        return self.get_slope_and_intercept(contours)
+        result: Tuple[float, float] = self.get_slope_and_intercept(contours)
+        return (result[0]-0.02, result[1]*2+1)

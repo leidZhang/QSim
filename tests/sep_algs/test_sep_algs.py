@@ -47,8 +47,8 @@ def my_fixture():
 def test_sep_algs(my_fixture) -> None:
     prcoesses: List[Process] = []
     activate_event = Event()
-    duration: float = 60
-    desired_speed: float = 1.50
+    duration: float = 100
+    desired_speed: float = 1.40
     locks: dict = {
         'control': Lock(),
         'observe': Lock(),

@@ -5,7 +5,7 @@ from typing import Dict, Tuple
 import cv2
 import numpy as np
 
-from core.control.edge_finder import NoContourException
+from core.control.edge_finder import NoContourException, NoImageException
 from core.qcar import VirtualCSICamera, VirtualRGBDCamera, PhysicalCar
 from core.control.edge_finder import TraditionalEdgeFinder, EdgeFinder
 from core.policies.vision_lanefollowing import VisionLaneFollowing, BasePolicy
@@ -87,14 +87,16 @@ class ControlAlgModule:
 
     def execute(self, lock) -> None:
         try:
-            # start = time.time()
+            start: float = time.time()
             with lock:
                 if not self.read_data():
                     return
                 action, _ = self.policy.execute(self.image, self.estimated_speed, 1.0)
                 command: np.ndarray = np.array([0.0, 0.0]) # clear reset, estimated speed
                 self.memory.write_to_shm('data_and_commands', np.concatenate([command, action]))
-            # print(f'Execution time: {time.time() - start:.4f}s')
+                # cv2.waitKey(1)
+            end: float = time.time() - start
+            time.sleep(max(0, 0.004 - end))
         except NoContourException:
             pass
             # print('No contour detected')
@@ -121,17 +123,17 @@ class HardwareModule(PhysicalCar):
         self.front_csi.terminate()
 
     # TODO: Implement this method
-    def read_halt_event(self, lock) -> None:
+    def handle_halt_event(self, lock) -> None:
         with lock:
             flags: np.ndarray = self.memories['observe'].read_from_shm('data_and_commands')
         if flags[0] > 0:
             # print('Stop sign detected')
             halt_time: float = 3 + self.brake_time
             raise HaltException(stop_time=halt_time)
-        elif flags[2] > 0:
-            # print('Red light detected')
-            halt_time: float = 0.1
-            raise HaltException(stop_time=halt_time)
+        # elif flags[2] > 0:
+        #     # print('Red light detected')
+        #     halt_time: float = 0.1
+        #     raise HaltException(stop_time=halt_time)
 
     # TODO: Move this method to a concrete SharedMemoryWrapper class？
     def transmit_data(self, locks, shm_name, image_data: np.ndarray, data_and_command: np.ndarray) -> None:
@@ -151,12 +153,12 @@ class HardwareModule(PhysicalCar):
         try:
             rgbd_image: np.ndarray = self.rgbd_camera.read_rgb_image()
             self.transmit_data(locks, 'observe', rgbd_image, None) # no need to transmit command here
-            self.read_halt_event(locks['observe'])
+            self.handle_halt_event(locks['observe'])
 
             front_image: np.ndarray = self.front_csi.read_image()
             current_speed: float = self.estimate_speed()
             self.transmit_data(locks, 'control', front_image, np.concatenate(([0.0, current_speed], self.action)))
-            self.action: np.ndarray = self.read_action(locks['control'])
+            self.action = self.read_action(locks['control'])
             self.running_gear.read_write_std(throttle=self.action[0], steering=self.action[1], LEDs=self.leds)
         except HaltException as e:
             print(f"Stopping the car for {e.stop_time:.2f} seconds")

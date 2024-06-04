@@ -31,3 +31,12 @@ def prepare_test_environment(node_id: int = 4) -> None:
     simulator: QLabEnvironment = PerformanceTestEnvironment(dt=0.05, privileged=True)
     simulator.setup(nodes=None, sequence=waypoint_sequence)
     simulator.reset(location=[x_pos, y_pose, 0], orientation=[0, 0, angle])
+
+def prepare_test_environment_waypoint(waypoint_index: int = 0) -> None:
+    roadmap: ACCRoadMap = ACCRoadMap()
+    waypoint_sequence = roadmap.generate_path([10, 4, 14, 20, 22, 10])
+
+    simulator: QLabEnvironment = PerformanceTestEnvironment(dt=0.05, privileged=True)
+    simulator.setup(nodes=None, sequence=waypoint_sequence)
+    location, orientation = simulator.spawn_on_waypoints(waypoint_index=waypoint_index)
+    simulator.reset(location=location, orientation=orientation)
