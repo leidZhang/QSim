@@ -112,7 +112,7 @@ class TraditionalEdgeFinder(EdgeFinder):
             EDGES_UPPER_BOUND,
             apertureSize=3
         ) #fine tune the threshold
-        cv2.imshow("Canny", edges)
+        # cv2.imshow("Canny", edges)
         params: list[list[int]] = [[], [], [], []] # for valid lines
         lines: np.ndarray = cv2.HoughLines(edges, 1, np.pi/180, HOUGH_CONFIDENT_THRESHOLD)
         if lines is None:
@@ -195,8 +195,8 @@ class TraditionalEdgeFinder(EdgeFinder):
         edge: np.ndarray = cv2.threshold(diff, 0, 255, cv2.THRESH_BINARY)[1] # fine tune the threshold
         # edge = cv2.resize(edge, (edge.shape[1] * 2, edge.shape[0] * 2))
 
-        cv2.imshow("Edge", edge)
-        cv2.imshow("Largest Contour", self.image)
+        # cv2.imshow("Edge", edge)
+        # cv2.imshow("Largest Contour", self.image)
         # cv2.imshow("Reference Image", self.reference_image)
         return find_slope_intercept_from_binary(binary=edge)
 
