@@ -15,13 +15,9 @@ from tests.sep_algs.test_sep_algs import test_sep_algs
 # os.system(test_command)
 
 if __name__ == '__main__':
-    # prepare the test environment
     assert destroy_map() != -1, "Failed to destroy the map."
     prepare_test_environment(node_id=24)
-    # run the test
     test_sep_algs()
-    # destroy the map
-    destroy_map()
     print("Test completed successfully.")
 
     

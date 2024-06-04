@@ -44,11 +44,11 @@ def my_fixture():
     prepare_test_environment(node_id=24)
     yield
 
-def test_sep_algs() -> None:
+def test_sep_algs(my_fixture) -> None:
     prcoesses: List[Process] = []
     activate_event = Event()
-    duration: float = 1000
-    desired_speed: float = 1.30
+    duration: float = 60
+    desired_speed: float = 1.50
     locks: dict = {
         'control': Lock(),
         'observe': Lock(),
