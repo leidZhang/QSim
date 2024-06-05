@@ -253,10 +253,12 @@ class HoughPipeLine:
         self.get_hough_lines = self.hough_line_methods[device]
         if device == "gpu":
             # create a canny edge detector and hough lines detector in the gpu
-            self.hough_lines_detector: cv2.cuda_HoughLinesDetector = cv2.cuda.createHoughLinesDetector(
+            self.hough_lines_detector: cv2.cuda_HoughLinesDetector = \
+            cv2.cuda.createHoughLinesDetector(
                 1, np.pi/180, self.hough_confident_threshold
             )
-            self.canny_edge_detector: cv2.cuda_CannyEdgeDetector = cv2.cuda.createCannyEdgeDetector(
+            self.canny_edge_detector: cv2.cuda_CannyEdgeDetector = \
+            cv2.cuda.createCannyEdgeDetector(
                 self.edges_bounds[0],
                 self.edges_bounds[1],
                 apertureSize=3
