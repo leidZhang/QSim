@@ -9,7 +9,7 @@ from core.control.edge_finder import NoContourException, NoImageException
 from core.qcar import VirtualCSICamera, VirtualRGBDCamera, PhysicalCar
 from core.control.edge_finder import TraditionalEdgeFinder, EdgeFinder
 from core.policies.vision_lanefollowing import VisionLaneFollowing, BasePolicy
-from core.utils.tools import realtime_message_output
+from core.utils.io_utils import ImageWriter
 from core.utils.ipc_utils import StructedDataTypeFactory, SharedMemoryWrapper
 from .observe import DecisionMaker
 from .exceptions import HaltException
@@ -110,6 +110,7 @@ class HardwareModule(PhysicalCar):
         self.brake_time: float = (desired_speed - 1.0) / 1.60 if desired_speed > 1.0 else 0.0
         self.memories: Dict[str, SharedMemoryWrapper] = {}
         self.action: np.ndarray = np.zeros(2)
+        self.writer: ImageWriter = ImageWriter('images')
         self.reset: float = 1.0
 
     def setup(self, control_image_size: tuple, observe_image_size: tuple) -> None:
@@ -126,10 +127,10 @@ class HardwareModule(PhysicalCar):
     def handle_halt_event(self, lock) -> None:
         with lock:
             flags: np.ndarray = self.memories['observe'].read_from_shm('data_and_commands')
-        if flags[0] > 0:
-            # print('Stop sign detected')
-            halt_time: float = 3 + self.brake_time
-            raise HaltException(stop_time=halt_time)
+        # if flags[0] > 0:
+        #     # print('Stop sign detected')
+        #     halt_time: float = 3 + self.brake_time
+        #     raise HaltException(stop_time=halt_time)
         # elif flags[2] > 0:
         #     # print('Red light detected')
         #     halt_time: float = 0.1
@@ -160,6 +161,8 @@ class HardwareModule(PhysicalCar):
             self.transmit_data(locks, 'control', front_image, np.concatenate(([0.0, current_speed], self.action)))
             self.action = self.read_action(locks['control'])
             self.running_gear.read_write_std(throttle=self.action[0], steering=self.action[1], LEDs=self.leds)
+            if front_image is not None:
+                self.writer.add_image(front_image.copy())
         except HaltException as e:
             print(f"Stopping the car for {e.stop_time:.2f} seconds")
             self.memories['control'].write_to_shm('data_and_commands', np.concatenate(([1.0, 0.0], self.action)))
