@@ -231,6 +231,7 @@ class HoughPipeLine:
         - hough_confident_threshold: int: the confident threshold of the hough line
         - device: str: the device to use for hough line detection
         """
+        self.device: str = device 
         self.angle_bounds: Tuple[int, int] = angle_bounds
         self.edges_bounds: Tuple[int, int] = edges_bounds
         self.hough_confident_threshold: int = hough_confident_threshold
@@ -240,6 +241,27 @@ class HoughPipeLine:
         }
         self.get_hough_lines = self.hough_line_methods[device]
         self.prev_x1 = 0 # the x1 of the found edge on the previous frame
+
+    def _handle_draw_hough_lines(
+            self, 
+            image: Union[np.ndarray, cv2.cuda_GpuMat], 
+            point_1: tuple, 
+            point_2: tuple
+        ) -> None:
+        """
+        Draws the hough lines on the input image.
+
+        Parameters:
+        - image: Union[np.ndarray, cv2.cuda_GpuMat]: The input image for hough line detection.
+        - point_1: tuple: The first point of the line.
+        - point_2: tuple: The second point of the line.
+        """
+        if self.device == "cpu":
+            cv2.line(image, point_1, point_2, (0, 0, 255), 3)
+        else:
+            image_cpu: np.ndarray = image.download()
+            cv2.line(image_cpu, point_1, point_2, (0, 0, 255), 3)
+            image.upload(image_cpu)
 
     def get_hough_lines_image(self, image: Union[np.ndarray, cv2.cuda_GpuMat]) -> None:
         """
@@ -272,7 +294,7 @@ class HoughPipeLine:
             np_params = np.array(params, dtype=int)
             x1, y1, x2, y2 = map(int, np.mean(np_params, axis=1))
             self.prev_x1 = x1 # update prev x1
-            cv2.line(image, (x1, y1), (x2, y2), (0, 0, 255), 3)
+            self._handle_draw_hough_lines(image, (x1, y1), (x2, y2))
             # cv2.line(self.reference_image, (x1, y1), (x2, y2), (0, 0, 255), 3)
         else:
             self.prev_x1 = 0 # there is a sudden edge change

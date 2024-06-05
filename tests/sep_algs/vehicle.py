@@ -127,10 +127,10 @@ class HardwareModule(PhysicalCar):
     def handle_halt_event(self, lock) -> None:
         with lock:
             flags: np.ndarray = self.memories['observe'].read_from_shm('data_and_commands')
-        # if flags[0] > 0:
-        #     # print('Stop sign detected')
-        #     halt_time: float = 3 + self.brake_time
-        #     raise HaltException(stop_time=halt_time)
+        if flags[0] > 0:
+            # print('Stop sign detected')
+            halt_time: float = 3 + self.brake_time
+            raise HaltException(stop_time=halt_time)
         # elif flags[2] > 0:
         #     # print('Red light detected')
         #     halt_time: float = 0.1

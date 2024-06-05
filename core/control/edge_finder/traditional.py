@@ -95,7 +95,7 @@ class TraditionalEdgeFinder(EdgeFinder):
         - Tuple: The slope and intercept of the detected edge.
         """
         self._preprocess_image(original_image)
-        self.hough_pipeline(self.image)
+        self.hough_pipeline(self.image) # draw the hough lines on the image
         largest_contour: np.ndarray = self.contour_pipeline(self.image)
         edge: np.ndarray = self.sobel_pipeline(largest_contour, self.image)
         result: Tuple[float, float] = find_slope_intercept_from_binary(binary=edge)
