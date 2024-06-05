@@ -10,21 +10,6 @@ from pal.utilities.math import Filter
 class PIDController(ABC):
     """
     The PIDController class is an abstract class that implements the PID controller
-
-    Attributes:
-    - integral_error: float: The integral error of the PID controller
-    - cross_error: float: The cross error of the PID controller
-    - prev_cross_error: float: The previous cross error of the PID controller
-    - prev_derivative_term: float: The previous derivative term of the PID controller
-    - prev_state: float: The previous state of the PID controller
-    - upper_bound: float: The upper bound of the PID controller
-    - lower_bound: float: The lower bound of the PID controller
-    - frequecy_filter: Filter: The frequency filter of the PID controller
-
-    Methods:
-    - setup: Sets up the PID controller
-    - handle_cross_error: Sets up the cross error
-    - execute: Executes the PID controller
     """
 
     def __init__(self, upper_bound: float, lower_bound: float) -> None:
@@ -34,9 +19,6 @@ class PIDController(ABC):
         Parameters:
         - upper_bound: float: The upper bound of the PID controller
         - lower_bound: float: The lower bound of the PID controller
-
-        Returns:
-        - None
         """
         # error terms
         self.integral_error: float = 0.0

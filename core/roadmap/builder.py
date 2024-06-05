@@ -17,18 +17,6 @@ from core.qcar.constants import QCAR_ACTOR_ID
 class ACCMapBuilder:
     """
     The Builder class responsible for building the map for the ACC2024 competition
-
-    Attributes:
-    - qlab: QuanserInteractiveLabs: The QuanserInteractiveLabs object
-    - scale: float: The scale of the map
-
-    Methods:
-    - build_walls: Builds the walls of the map
-    - build_floor: Builds the floor of the map
-    - build_stop_sign: Builds the stop signs of the map
-    - build_crosswalk: Builds the crosswalk of the map
-    - build_traffic_light: Builds the traffic lights of the map
-    - build_car: Builds the car for the map
     """
 
     def __init__(self, qlab: QuanserInteractiveLabs, offsets: Tuple[float]) -> None:
@@ -45,6 +33,9 @@ class ACCMapBuilder:
     def build_walls(self) -> None:
         """
         Builds the walls of the map
+
+        Returns:
+        - None
         """
         walls: QLabsWalls = QLabsWalls(self.qlab)
         walls.set_enable_dynamics(False)
@@ -84,6 +75,9 @@ class ACCMapBuilder:
     def build_floor(self) -> None:
         """
         Builds the floor of the map
+
+        Returns:
+        - None
         """
         flooring: QLabsFlooring = QLabsFlooring(self.qlab)
         flooring.spawn(location=[ACC_X_OFFSET + self.offsets[0], ACC_Y_OFFSET + self.offsets[1], 0.0], rotation=[0, 0, -math.pi/2])
@@ -91,6 +85,9 @@ class ACCMapBuilder:
     def build_stop_sign(self) -> None:
         """
         Builds the stop signs of the map
+
+        Returns:
+        - None
         """
         stop_signs: list = []
         stop_sign: QLabsStopSign = QLabsStopSign(self.qlab)
@@ -103,6 +100,9 @@ class ACCMapBuilder:
     def build_crosswalk(self) -> None:
         """
         Builds the crosswalk of the map
+
+        Returns:
+        - None
         """
         crosswalk: QLabsCrosswalk = QLabsCrosswalk(self.qlab)
         crosswalk.spawn_degrees (location =[-2 + ACC_X_OFFSET + self.offsets[0], -1.475 + ACC_Y_OFFSET + self.offsets[1], 0.01],
@@ -112,9 +112,12 @@ class ACCMapBuilder:
         spline.spawn_degrees([2.05 + ACC_X_OFFSET + self.offsets[0], -1.5 + ACC_Y_OFFSET + self.offsets[1], 0.01], [0, 0, 0], [0.27, 0.02, 0.001], False)
         spline.spawn_degrees([-2.075 + ACC_X_OFFSET + self.offsets[0], ACC_Y_OFFSET + self.offsets[1], 0.01], [0, 0, 0], [0.27, 0.02, 0.001], False)
 
-    def build_traffic_light(self) -> list:
+    def build_traffic_light(self) -> List[QLabsTrafficLight]:
         """
         Builds the traffic lights of the map
+
+        Returns:
+        - List[QLabsTrafficLight]: The list of traffic lights
         """
         traffic_lights: List[QLabsTrafficLight] = [QLabsTrafficLight(self.qlab)] * 2
 

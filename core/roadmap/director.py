@@ -11,13 +11,6 @@ from .builder import ACCMapBuilder
 class ACCDirector:
     """
     The Director class responsible for directing the building of the map for the ACC2024 competition
-
-    Attributes:
-    - qlabs: QuanserInteractiveLabs: The QuanserInteractiveLabs object
-    - builder: ACCMapBuilder: The ACCMapBuilder object
-
-    Methods:
-    - build_map: Builds the map for the competition
     """
 
     def __init__(self, qlabs: QuanserInteractiveLabs, offsets: Tuple[float]) -> None:

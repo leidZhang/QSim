@@ -13,18 +13,6 @@ from core.utils.tools import realtime_message_output
 class VisionLaneFollowing(BasePolicy):
     """
     The VisionLaneFollowing class is a class that generates the steering and throttle values for the car
-
-    Attributes:
-    - edge_finder: TraditionalEdgeFinder: The edge finder of the car
-    - steering_controller: PIDController: The steering controller of the car
-    - throttle_controller: PIDController: The throttle controller of the car
-
-    Methods:
-    - setup_steering: Sets up the steering controller
-    - setup_throttle: Sets up the throttle controller
-    - reset_start_time: Resets the start time of the controllers
-    - reset_delta_t: Resets the delta time of the controllers
-    - execute: Executes the lane following
     """
 
     def __init__(self, expected_velocity: float, edge_finder: EdgeFinder) -> None:

@@ -5,13 +5,6 @@ from abc import ABC, abstractmethod
 class KeyboardControllerStrategy(ABC):
     """
     Abstract base class for keyboard control strategies for a QCar model.
-
-    Attributes:
-        state (dict): The current control state of the QCar.
-        key (str): The specific key associated with this control strategy.
-
-    Methods:
-        execute(keyboard_event: KeyboardEvent): An abstract method that defines the execution behavior of the strategy.
     """
 
     def __init__(self, state: dict, key: str) -> None:

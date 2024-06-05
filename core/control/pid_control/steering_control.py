@@ -8,14 +8,6 @@ class SteeringPIDController(PIDController):
     """
     The SteeringPIDController class is a class that generates the steering angle for the car
     based on the slope and intercept on the frame
-
-    Attributes:
-    - slope_offset: float: The slope offset of the lane
-    - intercept_offset: float: The intercept offset of the lane
-
-    Methods:
-    - handle_cross_error: calculate the cross error and provide the handle result
-    - execute: execute method to execute the PID controller
     """
 
     def __init__(self, upper_bound: float, lower_bound: float) -> None:
@@ -25,9 +17,6 @@ class SteeringPIDController(PIDController):
         Parameters:
         - upper_bound: float: The upper bound of the PID controller
         - lower_bound: float: The lower bound of the PID controller
-
-        Returns:
-        - None
         """
         super().__init__(upper_bound, lower_bound)
         self.slope_offset: float = DEFAULT_SLOPE_OFFSET

@@ -14,10 +14,6 @@ from .constants import EDGE_CONFIGS_RIGHT_LARGE_MAP
 class ACCRoadMap(RoadMap):
     """
     The road map class for the ACC2024 competition
-
-    Methods:
-    - generate_random_cycle: Generates a random cycle from a given starting node
-    - generate_path: Generates a path from a given sequence of nodes
     """
 
     def __init__(self) -> None:

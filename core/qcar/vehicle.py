@@ -18,14 +18,6 @@ class BaseCar:
     """
     The BaseCar class is an abstract class that defines the interface for both
     the physical and virtual cars
-
-    Attributes:
-    - throttle_coeff: float: The throttle coefficient of the car
-    - steering_coeff: float: The steering coefficient of the car
-
-    Methods:
-    - estimate_speed: Estimate the car's speed based on the motor tach
-    - execute: Executes the action of the car
     """
 
     def __init__(self, throttle_coeff: float, steering_coeff: float) -> None:
@@ -61,16 +53,6 @@ class VirtualCar(BaseCar):
     The VirtualCar class is a class that defines the interface for the virtual car that
     can get the action from any external agent, it can also get the ego state of the car
     by communicating with the Quanser Interactive Labs
-
-    Attributes:
-    - actor_id: int: The id of the actor
-    - running_gear: QCar: The running gear of the car
-    - monitor: Monitor: The monitor of the car
-
-    Methods:
-    - get_ego_state: Gets the ego state of the car
-    - get_vehicle_state: Gets the state of the vehicle
-    - execute: Executes the action of the car
     """
 
     def __init__(
@@ -90,9 +72,6 @@ class VirtualCar(BaseCar):
         - qlabs: QuanserInteractiveLabs: The Quanser Interactive Labs object
         - throttle_coeff: float: The throttle coefficient of the car
         - steering_coeff: float: The steering coefficient of the car
-
-        Returns:
-        - None
         """
         # basic attributes
         super().__init__(throttle_coeff, steering_coeff)
@@ -152,13 +131,6 @@ class VirtualAgentCar(VirtualCar):
     """
     The VirtualAgentCar class is a class that defines the interface for the virtual car and
     also load a specific policy to execute the action
-
-    Attributes:
-    - policy: Union[BasePolicy, PolicyAdapter]: The policy to be loaded
-
-    Methods:
-    - set_policy: Sets the policy to be loaded
-    - execute: Executes the action of the car
     """
 
     def __init__(self, actor_id, dt, qlabs, throttle_coeff: float = 0.3, steering_coeff: float = 0.5) -> None:
@@ -171,9 +143,6 @@ class VirtualAgentCar(VirtualCar):
         - qlabs: QuanserInteractiveLabs: The Quanser Interactive Labs object
         - throttle_coeff: float: The throttle coefficient of the car
         - steering_coeff: float: The steering coefficient of the car
-
-        Returns:
-        - None
         """
         super().__init__(actor_id, dt, qlabs, throttle_coeff, steering_coeff)
         self.policy: Union[BasePolicy, PolicyAdapter] = None
@@ -207,13 +176,6 @@ class VirtualAgentCar(VirtualCar):
 class PhysicalCar(BaseCar):
     """
     The PhysicalCar class is a class that defines the interface for the physical car
-
-    Attributes:
-    - running_gear: QCar: The running gear of the car
-
-    Methods:
-    - handle_leds: Handles the LEDs of the car
-    - estimate_speed: Estimates the speed of the car
     """
 
     def __init__(self, throttle_coeff: float = 0.3, steering_coeff: float = 0.5) -> None:

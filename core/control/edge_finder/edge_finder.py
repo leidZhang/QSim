@@ -35,7 +35,7 @@ class EdgeFinder(ABC):
         self.image_height: int = image_height
             
     @abstractmethod
-    def preprocess_image(self, image: np.ndarray) -> np.ndarray:
+    def _preprocess_image(self, image: np.ndarray) -> np.ndarray:
         """
         Preprocesss the input image, including resize, crop, convert to grayscale, etc.
         The specific preprocessing steps are implemented by subclasses.
