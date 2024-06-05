@@ -19,6 +19,7 @@ def run_hardware_process(locks: dict, desired_speed: float, duration: float = 10
     # halt the car
     print("Halting the car...")
     module.halt_car()
+    module.writer.write_images()
 
 def run_observe_process(lock, event, duration: float = 10) -> None:
     start_time: float = time.time()
@@ -47,7 +48,7 @@ def my_fixture():
 def test_sep_algs(my_fixture) -> None:
     prcoesses: List[Process] = []
     activate_event = Event()
-    duration: float = 100
+    duration: float = 40
     desired_speed: float = 1.40
     locks: dict = {
         'control': Lock(),
