@@ -28,6 +28,12 @@ class SobelPipeLine:
             'gpu': self._apply_sobel_gpu,
         }
         self.get_edge_image = self.sobel_methods[device]
+        if device == 'gpu':
+            self.gpu_mask: cv2.cuda_GpuMat = cv2.cuda_GpuMat()
+            self.sobel_filter: cv2.cuda_SobelFilter = cv2.cuda.createSobelFilter(
+                cv2.CV_64F, cv2.CV_64F, 1, 1, ksize=15
+            )
+
 
     def __call__(self, largest_contour: np.ndarray, image: np.ndarray) -> np.ndarray:
         """
@@ -57,12 +63,11 @@ class SobelPipeLine:
         hull: np.ndarray = cv2.convexHull(largest_contour)
 
         mask: np.ndarray = np.zeros_like(image)
-        gpu_mask: cv2.cuda_GpuMat = cv2.cuda_GpuMat()
-        gpu_mask.upload(mask)
-        cv2.cuda.fillPoly(gpu_mask, [hull], (255, 255, 255))
+        cv2.fillPoly(mask, [hull], (255, 255, 255))
+        self.gpu_mask.upload(mask)
 
         # Apply the Sobel edge detector in the GPU
-        gpu_diff = cv2.cuda.createSobelFilter(cv2.CV_64F, cv2.CV_64F, 1, 1, ksize=15).apply(gpu_mask)
+        gpu_diff: cv2.cuda_GpuMat = self.sobel_filter.apply(self.gpu_mask)
         # Apply the threshold in the GPU
         _, gpu_edge = cv2.cuda.threshold(gpu_diff, 0, 255, cv2.THRESH_BINARY)
 
@@ -161,7 +166,12 @@ class ContourPipeLine:
         Returns:
         - None
         """
-        cv2.cuda.drawContours(gpu_image, [contour], -1, (0, 255, 0), 3)
+        # Download the image to CPU memory
+        image_cpu = gpu_image.download()
+        # Draw the contours on the CPU image
+        cv2.drawContours(image_cpu, [contour], -1, (0, 255, 0), 3)
+        # Upload the image back to GPU memory
+        gpu_image.upload(image_cpu)
 
     def _draw_contour_on_cpu(self, contour: np.ndarray, image: np.ndarray) -> None:
         """
@@ -235,12 +245,22 @@ class HoughPipeLine:
         self.angle_bounds: Tuple[int, int] = angle_bounds
         self.edges_bounds: Tuple[int, int] = edges_bounds
         self.hough_confident_threshold: int = hough_confident_threshold
+        self.prev_x1 = 0 # the x1 of the found edge on the previous frame
         self.hough_line_methods = {
             "cpu": self._get_hough_lines_on_cpu,
             "gpu": self._get_hough_lines_on_gpu
         }
         self.get_hough_lines = self.hough_line_methods[device]
-        self.prev_x1 = 0 # the x1 of the found edge on the previous frame
+        if device == "gpu":
+            # create a canny edge detector and hough lines detector in the gpu
+            self.hough_lines_detector: cv2.cuda_HoughLinesDetector = cv2.cuda.createHoughLinesDetector(
+                1, np.pi/180, self.hough_confident_threshold
+            )
+            self.canny_edge_detector: cv2.cuda_CannyEdgeDetector = cv2.cuda.createCannyEdgeDetector(
+                self.edges_bounds[0],
+                self.edges_bounds[1],
+                apertureSize=3
+            )
 
     def _handle_draw_hough_lines(
             self, 
@@ -315,19 +335,9 @@ class HoughPipeLine:
         if gpu_image is None:
             raise NoImageException()
         
-        # create a canny edge detector and hough lines detector in the gpu
-        hough_lines_detector: cv2.cuda_HoughLinesDetector = cv2.cuda.createHoughLinesDetector(
-            1, np.pi/180, self.hough_confident_threshold
-        )
-        canny_edge_detector: cv2.cuda_CannyEdgeDetector = cv2.cuda.createCannyEdgeDetector(
-            self.edges_bounds[0],
-            self.edges_bounds[1],
-            apertureSize=3
-        )
-
         # apply the canny edge detector and hough lines detector
-        edges = canny_edge_detector.detect(gpu_image)
-        lines = hough_lines_detector.detect(edges)
+        edges = self.canny_edge_detector.detect(gpu_image)
+        lines = self.hough_lines_detector.detect(edges)
         return lines.download()
 
     def _get_hough_lines_on_cpu(self, image: np.ndarray) -> np.ndarray:
