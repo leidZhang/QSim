@@ -4,6 +4,7 @@ from multiprocessing import Process, Lock, Event
 
 import pytest
 
+from core.utils.tools import realtime_message_output
 from tests.performance_environment import prepare_test_environment
 from tests.performance_environment import destroy_map
 from tests.vision_pid.constants import STEERING_DEFAULT_K_P, STEERING_DEFAULT_K_D, STEERING_DEFAULT_K_I
@@ -19,7 +20,7 @@ def run_hardware_process(locks: dict, desired_speed: float, duration: float = 10
     # halt the car
     print("Halting the car...")
     module.halt_car()
-    module.writer.write_images()
+    # module.writer.write_images()
 
 def run_observe_process(lock, event, duration: float = 10) -> None:
     start_time: float = time.time()
@@ -37,7 +38,10 @@ def run_control_process(lock, desired_speed: float, duration: float = 10) -> Non
     }
     module.setup(expected_velocity=desired_speed, pid_gains=pid_gains)
     while time.time() - start_time < duration:
+        start: float = time.time()
         module.execute(lock)
+        if time.time() - start > 0: 
+            realtime_message_output(f"Frequency for iteration: {1 /(time.time() - start)}Hz")
 
 @pytest.fixture(scope="function")
 def my_fixture():

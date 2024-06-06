@@ -23,16 +23,14 @@ class SobelPipeLine:
         Parameters:
         - device: str: the device to use for edge detection
         """
-        self.sobel_methods = {
-            'cpu': self._apply_sobel_cpu,
-            'gpu': self._apply_sobel_gpu,
-        }
-        self.get_edge_image = self.sobel_methods[device]
         if device == 'gpu':
+            self.get_edge_image = self._apply_sobel_gpu
             self.gpu_mask: cv2.cuda_GpuMat = cv2.cuda_GpuMat()
             self.sobel_filter: cv2.cuda_SobelFilter = cv2.cuda.createSobelFilter(
                 cv2.CV_64F, cv2.CV_64F, 1, 1, ksize=15
             )
+        else:
+            self.get_edge_image = self._apply_sobel_cpu
 
 
     def __call__(self, largest_contour: np.ndarray, image: np.ndarray) -> np.ndarray:
@@ -124,14 +122,13 @@ class ContourPipeLine:
         - ksize: Tuple[int, int]: the kernel size of the gaussian blur
         - sigma_x: int: the sigma x of the gaussian blur
         """
-        self.draw_contour_methods = {
-            'cpu': self._draw_contour_on_cpu,
-            'gpu': self._draw_contour_on_gpu
-        }
         self.thresh_bounds: Tuple[int, int] = thresh_bounds
         self.ksize: Tuple[int, int] = ksize
         self.sigma_x: int = sigma_x
-        self.draw_contour_method = self.draw_contour_methods[device]
+        if device == 'gpu':
+            self.draw_contour_method = self._draw_contour_on_gpu
+        else:
+            self.draw_contour_method = self._draw_contour_on_cpu
 
     def get_largest_contour(self, image: Union[np.ndarray, cv2.cuda_GpuMat]) -> np.ndarray:
         """
@@ -246,12 +243,8 @@ class HoughPipeLine:
         self.edges_bounds: Tuple[int, int] = edges_bounds
         self.hough_confident_threshold: int = hough_confident_threshold
         self.prev_x1 = 0 # the x1 of the found edge on the previous frame
-        self.hough_line_methods = {
-            "cpu": self._get_hough_lines_on_cpu,
-            "gpu": self._get_hough_lines_on_gpu
-        }
-        self.get_hough_lines = self.hough_line_methods[device]
         if device == "gpu":
+            self.get_hough_lines = self._get_hough_lines_on_gpu
             # create a canny edge detector and hough lines detector in the gpu
             self.hough_lines_detector: cv2.cuda_HoughLinesDetector = \
             cv2.cuda.createHoughLinesDetector(
@@ -263,6 +256,8 @@ class HoughPipeLine:
                 self.edges_bounds[1],
                 apertureSize=3
             )
+        else: 
+            self.get_hough_lines = self._get_hough_lines_on_cpu
 
     def _handle_draw_hough_lines(
             self, 
