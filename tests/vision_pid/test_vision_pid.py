@@ -1,6 +1,6 @@
 import time
 import pytest
-from typing import Dict, List, Generator
+from typing import Dict, List, Tuple
 
 import cv2
 import matplotlib.pyplot as plt
@@ -11,6 +11,7 @@ from tests.performance_environment import destroy_map
 from .pid_vehicle import VisionPIDTestCar
 from .constants import STEERING_DEFAULT_K_I, STEERING_DEFAULT_K_P, STEERING_DEFAULT_K_D
 from .constants import THROTTLE_DEFAULT_K_P, THROTTLE_DEFAULT_K_I, THROTTLE_DEFAULT_K_D
+from .constants import DEFAULT_SLOPE_OFFSET, DEFAULT_INTERCEPT_OFFSET
 
 def run_vision_pid(expected_velocity: float, duration: float=10.3) -> Dict[str, List[float]]:
     """
@@ -25,12 +26,13 @@ def run_vision_pid(expected_velocity: float, duration: float=10.3) -> Dict[str, 
     history = {'desired': [], 'observed': []}
 
     car = VisionPIDTestCar(1, 1)
+    offsets: Tuple[float, float] = (DEFAULT_SLOPE_OFFSET, DEFAULT_INTERCEPT_OFFSET)
     pid_gains = {
         'steering': [STEERING_DEFAULT_K_P, STEERING_DEFAULT_K_I, STEERING_DEFAULT_K_D],
         'throttle': [THROTTLE_DEFAULT_K_P, THROTTLE_DEFAULT_K_I, THROTTLE_DEFAULT_K_D]
     }
 
-    car.setup(expected_velocity=expected_velocity, pid_gains=pid_gains)
+    car.setup(expected_velocity=expected_velocity, pid_gains=pid_gains, offsets=offsets)
     car.policy.reset_start_time()  # reset the start time
     start_time = time.time()
     try:

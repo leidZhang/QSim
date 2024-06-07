@@ -61,12 +61,12 @@ class ControlAlgModule:
         self.memory: SharedMemoryWrapper = SharedMemoryWrapper(protocol, 'control', True)
         self.last_timestamp: float = -1.0
 
-    def setup(self, expected_velocity: float, pid_gains: Dict[str, list]) -> None:
+    def setup(self, expected_velocity: float, pid_gains: Dict[str, list], offsets: Tuple[float, float]) -> None:
         steering_gains: list = pid_gains['steering']
         throttle_gains: list = pid_gains['throttle']
         edge_finder: EdgeFinder = TraditionalEdgeFinder(image_width=820, image_height=410)
         self.policy: BasePolicy = VisionLaneFollowing(edge_finder=edge_finder, expected_velocity=expected_velocity)
-        self.policy.setup_steering(k_p=steering_gains[0], k_i=steering_gains[1], k_d=steering_gains[2])
+        self.policy.setup_steering(k_p=steering_gains[0], k_i=steering_gains[1], k_d=steering_gains[2], offsets=offsets)
         self.policy.setup_throttle(k_p=throttle_gains[0], k_i=throttle_gains[1], k_d=throttle_gains[2])
 
     # TODO: Move this method to a concrete SharedMemoryWrapper class？

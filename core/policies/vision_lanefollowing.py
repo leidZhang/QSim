@@ -32,7 +32,7 @@ class VisionLaneFollowing(BasePolicy):
         self.steering_controller: PIDController = SteeringPIDController(upper_bound=0.5, lower_bound=-0.5)
         self.throttle_controller: PIDController = ThrottlePIDController(upper_bound=0.3, lower_bound=0.0)
 
-    def setup_steering(self, k_p: float, k_i: float, k_d: float) -> None:
+    def setup_steering(self, k_p: float, k_i: float, k_d: float, offsets: Tuple[float, float]) -> None:
         """
         Sets up the steering controller
 
@@ -44,7 +44,7 @@ class VisionLaneFollowing(BasePolicy):
         Returns:
         - None
         """
-        self.steering_controller.setup(k_p, k_i, k_d)
+        self.steering_controller.setup(k_p, k_i, k_d, offsets)
 
     def setup_throttle(self, k_p: float, k_i: float, k_d: float) -> None:
         """

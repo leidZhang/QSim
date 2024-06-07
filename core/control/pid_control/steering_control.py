@@ -1,7 +1,8 @@
+from typing import Tuple
+
 import numpy as np
 
 from core.control.pid_control.pid_controller import PIDController
-from .constants import DEFAULT_SLOPE_OFFSET, DEFAULT_INTERCEPT_OFFSET
 
 
 class SteeringPIDController(PIDController):
@@ -10,7 +11,13 @@ class SteeringPIDController(PIDController):
     based on the slope and intercept on the frame
     """
 
-    def __init__(self, upper_bound: float, lower_bound: float) -> None:
+    def __init__(
+            self, 
+            upper_bound: float, 
+            lower_bound: float,
+            # slope_offset: float = DEFAULT_SLOPE_OFFSET,
+            # intercept_offset: float = DEFAULT_INTERCEPT_OFFSET
+        ) -> None:
         """
         Initializes the SteeringPIDController object
 
@@ -19,8 +26,24 @@ class SteeringPIDController(PIDController):
         - lower_bound: float: The lower bound of the PID controller
         """
         super().__init__(upper_bound, lower_bound)
-        self.slope_offset: float = DEFAULT_SLOPE_OFFSET
-        self.intercept_offset: float = DEFAULT_INTERCEPT_OFFSET
+        # self.slope_offset: float = slope_offset
+        # self.intercept_offset: float = intercept_offset
+
+    def setup(self, k_p: float, k_i: float, k_d: float, offsets: Tuple[float, float]) -> None:
+        """
+        The setup method to set the PID gains
+
+        Parameters:
+        - k_p: float: The proportional gain of the PID controller
+        - k_i: float: The integral gain of the PID controller
+        - k_d: float: The derivative gain of the PID controller
+
+        Returns:
+        - None
+        """
+        self.slope_offset = offsets[0]
+        self.intercept_offset = offsets[1]
+        super().setup(k_p, k_i, k_d)
 
     def handle_cross_error(self, slope: float, intercept: float, image_width: float) -> bool:
         """

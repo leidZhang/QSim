@@ -16,6 +16,7 @@ class SobelPipeLine:
     The SobelPipeLine class is responsible for finding the edges of the road using Sobel 
     edge detection. It can be used in serial or parallel with other edge finders.
     """
+
     def __init__(self, device: str = 'cpu') -> None:
         """
         Initialize the SobelPipeLine instance
@@ -79,10 +80,7 @@ class SobelPipeLine:
         - contours (np.ndarray): Contours found in the input image.
 
         Returns:
-        - Tuple: The slope and intercept of the detected edge.
-
-        Raises:
-        - NoContourException: If the contours are None or empty.
+        - np.ndarray: The edge image of the input image.
         """
         # cv2.drawContours(self.reference_image, [largest_contour], -1, (0, 255, 0), 3)
         # draw the largest contour on the image
@@ -139,6 +137,9 @@ class ContourPipeLine:
 
         Returns:
         - np.ndarray: The largest contour found in the input image.
+
+        Raises:
+        - NoImageException: If the input image is None.
         """
         contours: np.ndarray = self._find_contours(image)
         if contours is None or len(contours) == 0: 
