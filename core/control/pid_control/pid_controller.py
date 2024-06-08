@@ -22,8 +22,8 @@ class PIDController(ABC):
         """
         # error terms
         self.integral_error: float = 0.0
-        self.cross_error: float = 0.0
-        self.prev_cross_error: float = 0.0
+        self.control_error: float = 0.0
+        self.prev_control_error: float = 0.0
         self.prev_derivative_term: float = 0.0
         # state terms
         self.prev_state: float = 0.0
@@ -53,39 +53,39 @@ class PIDController(ABC):
         self.start = time.time()
 
     @abstractmethod
-    def handle_cross_error(self, *args) -> Any:
+    def handle_control_error(self, *args) -> Any:
         """
-        The abstract method to handle the cross error
+        The abstract method to handle the control error
 
         Parameters:
-        - *args: The required input for the cross error
+        - *args: The required input for the control error
 
         Returns:
-        - Any: Any required output related to the cross error
+        - Any: Any required output related to the control error
         """
         ...
 
     def execute(self) -> float:
         """
         The base execute method to execute the PID controller, the calculation of
-        the cross error needs to be implemented by the child class
+        the control error needs to be implemented by the child class
 
         Returns:
         - float: The state of the PID controller
         """
-        self.dt = time.time() - self.start if time.time() - self.start > 0.001 else 0.001
+        self.dt = time.time() - self.start if time.time() - self.start != 0.0 else 0.001
         control_rate: float = 1 / self.dt
         self.frequecy_filter = Filter().low_pass_first_order_variable(control_rate-5, self.dt, self.prev_state)
         next(self.frequecy_filter)
 
         self.start = time.time()
-        self.integral_error += self.dt * self.cross_error
-        derivetive_error: float = (self.cross_error - self.prev_cross_error) / self.dt
-        raw_state: float = self.k_p * self.cross_error + self.k_i * self.integral_error + self.k_d * derivetive_error
+        self.integral_error += self.dt * self.control_error
+        derivetive_error: float = (self.control_error - self.prev_control_error) / self.dt
+        raw_state: float = self.k_p * self.control_error + self.k_i * self.integral_error + self.k_d * derivetive_error
         state: float = self.frequecy_filter.send((np.clip(raw_state, self.lower_bound, self.upper_bound), self.dt))
         self.prev_state = state # update the previous state
         # save the last cross error
-        self.prev_cross_error = self.cross_error
+        self.prev_control_error = self.control_error
         self.prev_derivative_term = derivetive_error
 
         return state

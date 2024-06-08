@@ -5,8 +5,6 @@ from threading import Thread
 import cv2
 import numpy as np
 
-from core.utils.ipc_utils import SocketWrapper
-from core.control.pid_control import ThrottlePIDController, PIDController
 from core.qcar import PhysicalCar
 from core.qcar import VirtualCSICamera, VirtualRGBDCamera
 from .vehicle import PIDControlCar
@@ -16,7 +14,7 @@ from .constants import STEERING_DEFAULT_K_P, STEERING_DEFAULT_K_I, STEERING_DEFA
 
 
 # TODO: Refactor this class
-class Master:
+class QCarCoordinator:
     def __init__(self, duration: float) -> None:
         # CREATE QUANSER HARDWARE OBJECTS IN A THREAD OR A PROCESS
         self.duration: float = duration
@@ -42,20 +40,6 @@ class Master:
                 cv2.waitKey(1)
             else:
                 time.sleep(0.001)
-    
-    def start_control_comm(self) -> None:
-        control_comm: SocketWrapper = SocketWrapper(name="control")
-        start: float = time.time()
-        while time.time() - start < self.duration:
-            control_comm()
-            time.sleep(0.001)
-    
-    def start_observe_comm(self) -> None:
-        observe_comm: SocketWrapper = SocketWrapper(name="observe")
-        start: float = time.time()
-        while time.time() - start < self.duration:
-            observe_comm()
-            time.sleep(0.001)
 
     # TODO: Change some parameters
     def start_car_comm(self) -> None:
@@ -69,16 +53,12 @@ class Master:
 
         start: float = time.time()
         last_reset: float = start
-        reverse_flag: bool = False
         while time.time() - start < self.duration:
             if time.time() - last_reset > 2:
                 last_reset = time.time()
-                reverse_flag = not reverse_flag
             car.execute(
-                line_tuple=(DEFAULT_SLOPE_OFFSET, DEFAULT_INTERCEPT_OFFSET), 
-                image_width=820, 
-                stop_flags=[], 
-                reverse_flag=reverse_flag
+                line_tuple=(0.50, DEFAULT_INTERCEPT_OFFSET, 820),
+                stop_flags=[],
             )
         print("Terminating the car...")
 
@@ -86,8 +66,6 @@ class Master:
         threads: List[Thread] = []
         threads.append(Thread(target=self.start_csi_comm))
         threads.append(Thread(target=self.start_rgbd_comm))
-        threads.append(Thread(target=self.start_control_comm))
-        threads.append(Thread(target=self.start_observe_comm))
         print("Starting the demo...")
         for thread in threads:
             thread.start()

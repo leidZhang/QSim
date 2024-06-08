@@ -1,8 +1,18 @@
 from typing import Any, Dict
+from queue import Empty
+from multiprocessing import Queue
 from multiprocessing.shared_memory import SharedMemory
 
 import numpy as np
 
+def fetch_latest_in_queue(data_queue: Queue) -> None:
+    latest_data: Any = None
+    try:
+        while True:
+            latest_data = data_queue.get_nowait()
+    except Empty:
+        pass
+    return latest_data
 
 class StructedDataTypeFactory:
     def create_dtype(self, num_of_cmds: int, image_size: tuple) -> np.ndarray:
@@ -28,13 +38,3 @@ class SharedMemoryWrapper:
 
     def read_from_shm(self, key: str) -> Any:
         return self.shared_data[0][key]
-    
-
-# TODO: Implement this class
-class SocketWrapper:
-    def __init__(self, name: str) -> None:
-        self.name: str = name
-
-    def __call__(self) -> None:
-        # print(f"Message from {self.name}")
-        ...

@@ -12,8 +12,8 @@ class SteeringPIDController(PIDController):
     """
 
     def __init__(
-            self, 
-            upper_bound: float, 
+            self,
+            upper_bound: float,
             lower_bound: float,
             # slope_offset: float = DEFAULT_SLOPE_OFFSET,
             # intercept_offset: float = DEFAULT_INTERCEPT_OFFSET
@@ -45,7 +45,7 @@ class SteeringPIDController(PIDController):
         self.intercept_offset = offsets[1]
         super().setup(k_p, k_i, k_d)
 
-    def handle_cross_error(self, slope: float, intercept: float, image_width: float) -> bool:
+    def handle_control_error(self, slope: float, intercept: float, image_width: float) -> bool:
         """
         Calculate the cross error based on the slope and intercept
 
@@ -64,8 +64,8 @@ class SteeringPIDController(PIDController):
             slope = self.slope_offset
             intercept = self.intercept_offset
         # calculate the cross error
-        self.cross_error: float = (intercept/-slope) - (self.intercept_offset / -self.slope_offset)
-        self.cross_error = self.cross_error / image_width
+        self.control_error: float = (intercept/-slope) - (self.intercept_offset / -self.slope_offset)
+        self.control_error = self.control_error / image_width
         return True
 
     def execute(self, input: tuple, image_width: float) -> float:
@@ -82,6 +82,6 @@ class SteeringPIDController(PIDController):
         # decode the input
         slope: float = input[0]
         intercept: float = input[1]
-        if self.handle_cross_error(slope, intercept, image_width):
+        if self.handle_control_error(slope, intercept, image_width):
             return super().execute() # calculate the steering angle
         return 0.0
