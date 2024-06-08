@@ -9,7 +9,7 @@ from core.control.edge_finder import NoContourException, NoImageException
 from core.qcar import VirtualCSICamera, VirtualRGBDCamera, PhysicalCar
 from core.control.edge_finder import TraditionalEdgeFinder, EdgeFinder
 from core.policies.vision_lanefollowing import VisionLaneFollowing, BasePolicy
-from core.utils.performance_utils import mock_delay, skip_delay
+from core.utils.performance import mock_delay, skip_delay
 from core.utils.ipc_utils import StructedDataTypeFactory, SharedMemoryWrapper
 from .observe import DecisionMaker
 from .exceptions import HaltException
@@ -93,7 +93,7 @@ class ControlAlgModule:
         try:
             start: float = time.time()
             with lock:
-                if not self.read_data(): 
+                if not self.read_data():
                     return
                 action, _ = self.policy.execute(self.image, self.estimated_speed, 1.0)
                 command: np.ndarray = np.array([0.0, 0.0]) # clear reset, estimated speed
@@ -114,7 +114,7 @@ class HardwareModule(PhysicalCar):
         self.action: np.ndarray = np.zeros(2)
         self.reset: float = 1.0
         # self.writer: ImageWriter = ImageWriter('images')
-        
+
 
     def setup(self, control_image_size: tuple, observe_image_size: tuple) -> None:
         control_protocol = StructedDataTypeFactory().create_dtype(num_of_cmds=4, image_size=control_image_size)

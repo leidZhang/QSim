@@ -1,76 +1,37 @@
-import time
-from typing import List, Dict, Tuple
 from threading import Thread
+from multiprocessing import Queue
+from typing import List, Dict, Tuple, Any
 
-import cv2
-import numpy as np
-
-from core.qcar import PhysicalCar
 from core.qcar import VirtualCSICamera, VirtualRGBDCamera
-from .vehicle import PIDControlCar
-from .constants import DEFAULT_INTERCEPT_OFFSET, DEFAULT_SLOPE_OFFSET
-from .constants import THROTTLE_DEFAULT_K_P, THROTTLE_DEFAULT_K_I, THROTTLE_DEFAULT_K_D
-from .constants import STEERING_DEFAULT_K_P, STEERING_DEFAULT_K_I, STEERING_DEFAULT_K_D
+from .factory import PIDControlCarFactory
 
 
-# TODO: Refactor this class
+# TODO: Implement this class
 class QCarCoordinator:
-    def __init__(self, duration: float) -> None:
+    def __init__(self, queue_size: int = 5) -> None:
         # CREATE QUANSER HARDWARE OBJECTS IN A THREAD OR A PROCESS
-        self.duration: float = duration
-
-    def start_csi_comm(self) -> None:
-        csi_camera: VirtualCSICamera = VirtualCSICamera(id=3)
-        start: float = time.time()
-        while time.time() - start < self.duration:
-            image: np.ndarray = csi_camera.read_image()
-            if image is not None:
-                cv2.imshow('CSI Image', image)
-                cv2.waitKey(1)
-            else:
-                time.sleep(0.001)
-
-    def start_rgbd_comm(self) -> None:
-        rgbd_camera: VirtualRGBDCamera = VirtualRGBDCamera()
-        start: float = time.time()
-        while time.time() - start < self.duration:
-            image: np.ndarray = rgbd_camera.read_rgb_image()
-            if image is not None:
-                cv2.imshow('RGB Image', image)
-                cv2.waitKey(1)
-            else:
-                time.sleep(0.001)
-
-    # TODO: Change some parameters
-    def start_car_comm(self) -> None:
-        car: PhysicalCar = PIDControlCar(throttle_coeff=1, steering_coeff=1)
-        offsets: Tuple[float, float] = (DEFAULT_SLOPE_OFFSET, DEFAULT_INTERCEPT_OFFSET)
-        pid_gains: Dict[str, List[float]] = {
-            'steering': [STEERING_DEFAULT_K_P, STEERING_DEFAULT_K_I, STEERING_DEFAULT_K_D],
-            'throttle': [THROTTLE_DEFAULT_K_P, THROTTLE_DEFAULT_K_I, THROTTLE_DEFAULT_K_D]
+        self.thread_pool: List[Thread] = []
+        self.queues: Dict[str, Queue] = {
+            'edge_request': Queue(queue_size),
+            'edge_response': Queue(queue_size),
+            'observe_request': Queue(queue_size),
+            'observe_response': Queue(queue_size)
         }
-        car.setup(pid_gains=pid_gains, offsets=offsets)
+        self.comm_settings: Dict[str, Tuple[Any, tuple]] = {
+            'edge_finder_comm': (VirtualCSICamera, (self.queues['edge_response'], )),
+            'observe_comm': (VirtualRGBDCamera, (self.queues['observe_response'], )),
+            'car_comm': (PIDControlCarFactory(), (self.queues['edge_request'], self.queues['observe_request']))
+        } # required variables for comm factory and thread
 
-        start: float = time.time()
-        last_reset: float = start
-        while time.time() - start < self.duration:
-            if time.time() - last_reset > 2:
-                last_reset = time.time()
-            car.execute(
-                line_tuple=(0.50, DEFAULT_INTERCEPT_OFFSET, 820),
-                stop_flags=[],
-            )
-        print("Terminating the car...")
+    def add_to_thread_pool(self, target, args: Any) -> None:
+        thread: Thread = Thread(target=target, args=args)
+        self.thread_pool.append(thread)
 
     def start_main_process(self) -> None:
-        threads: List[Thread] = []
-        threads.append(Thread(target=self.start_csi_comm))
-        threads.append(Thread(target=self.start_rgbd_comm))
-        print("Starting the demo...")
-        for thread in threads:
-            thread.start()
-        self.start_car_comm()
-        print("Demo started, waiting for threads to join...")
-        for thread in threads:
-            thread.join()
-        print("Demo complete.")
+        ...
+        # threads.append(Thread(target=run_edge_finder_comm))
+        # threads.append(Thread(target=run_observe_comm))
+        # print("Starting the demo...")
+        # for thread in threads:
+        #     thread.start()
+        # run_car_comm()

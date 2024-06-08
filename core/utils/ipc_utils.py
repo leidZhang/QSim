@@ -1,5 +1,5 @@
 from typing import Any, Dict
-from queue import Empty
+from queue import Empty, Full
 from multiprocessing import Queue
 from multiprocessing.shared_memory import SharedMemory
 
@@ -13,6 +13,16 @@ def fetch_latest_in_queue(data_queue: Queue) -> None:
     except Empty:
         pass
     return latest_data
+
+def put_latest_in_queue(data: Any, data_queue: Queue) -> None:
+    try:
+        data_queue.put_nowait(data)
+    except Full:
+        try:
+            data_queue.put_nowait()
+        except Empty:
+            pass
+        data_queue.put_nowait(data)
 
 class StructedDataTypeFactory:
     def create_dtype(self, num_of_cmds: int, image_size: tuple) -> np.ndarray:

@@ -34,6 +34,12 @@ class BaseCar:
         self.throttle_coeff: float = throttle_coeff
         self.steering_coeff: float = steering_coeff
 
+    def setup(self, *args) -> None:
+        """
+        The setup function of the car, the subclasses will implement the function
+        """
+        ...
+
     @abstractmethod
     def execute(self, *args) -> Tuple:
         """
