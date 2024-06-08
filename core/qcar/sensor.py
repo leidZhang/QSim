@@ -1,5 +1,7 @@
 import time 
 import math 
+from typing import List, Dict
+
 import numpy as np 
 
 from pal.utilities.vision import Camera2D

@@ -193,6 +193,9 @@ class PhysicalCar(BaseCar):
         self.running_gear: QCar = QCar()
         self.leds = np.array([0, 0, 0, 0, 0, 0, 0, 0])
 
+    def setup(self, *args) -> None:
+        ...
+
     def handle_leds(self, throttle: float, steering: float) -> None:
         """
         The handle_leds method handles the LEDs of the car, when the
@@ -238,5 +241,9 @@ class PhysicalCar(BaseCar):
         Returns:
         - None
         """
+        if halt_time >= 3:
+            self.leds: np.ndarray = np.concatenate((self.leds[:6], [1, 1]))
         self.running_gear.read_write_std(throttle=0, steering=steering, LEDs=self.leds)
         time.sleep(halt_time)
+        self.leds = np.concatenate((self.leds[:6], [0, 0]))
+        self.running_gear.read_write_std(throttle=0, steering=steering, LEDs=self.leds)

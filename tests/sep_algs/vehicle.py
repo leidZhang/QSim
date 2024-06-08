@@ -9,7 +9,7 @@ from core.control.edge_finder import NoContourException, NoImageException
 from core.qcar import VirtualCSICamera, VirtualRGBDCamera, PhysicalCar
 from core.control.edge_finder import TraditionalEdgeFinder, EdgeFinder
 from core.policies.vision_lanefollowing import VisionLaneFollowing, BasePolicy
-from core.utils.io_utils import ImageWriter
+from core.utils.performance_utils import mock_delay, skip_delay
 from core.utils.ipc_utils import StructedDataTypeFactory, SharedMemoryWrapper
 from .observe import DecisionMaker
 from .exceptions import HaltException
@@ -56,10 +56,14 @@ class ObserveAlgModule:
 
 
 class ControlAlgModule:
-    def __init__(self, control_image_size: np.ndarray) -> None:
+    def __init__(self, control_image_size: np.ndarray, will_mock_delay: bool = False) -> None:
         protocol: np.dtype = StructedDataTypeFactory().create_dtype(num_of_cmds=4, image_size=control_image_size)
         self.memory: SharedMemoryWrapper = SharedMemoryWrapper(protocol, 'control', True)
         self.last_timestamp: float = -1.0
+        if will_mock_delay:
+            self.execute_delay = mock_delay
+        else:
+            self.execute_delay = skip_delay
 
     def setup(self, expected_velocity: float, pid_gains: Dict[str, list], offsets: Tuple[float, float]) -> None:
         steering_gains: list = pid_gains['steering']
@@ -89,14 +93,12 @@ class ControlAlgModule:
         try:
             start: float = time.time()
             with lock:
-                if not self.read_data():
+                if not self.read_data(): 
                     return
                 action, _ = self.policy.execute(self.image, self.estimated_speed, 1.0)
                 command: np.ndarray = np.array([0.0, 0.0]) # clear reset, estimated speed
+                self.execute_delay(start, 0.0125) # mock hardware delay
                 self.memory.write_to_shm('data_and_commands', np.concatenate([command, action]))
-                # cv2.waitKey(1)
-            end: float = time.time() - start
-            time.sleep(max(0, 0.004 - end))
         except NoContourException:
             pass
             # print('No contour detected')
@@ -161,6 +163,7 @@ class HardwareModule(PhysicalCar):
             current_speed: float = self.estimate_speed()
             self.transmit_data(locks, 'control', front_image, np.concatenate(([0.0, current_speed], self.action)))
             self.action = self.read_action(locks['control'])
+            # self.handle_leds(throttle=self.action[0], steering=self.action[1])
             self.running_gear.read_write_std(throttle=self.action[0], steering=self.action[1], LEDs=self.leds)
             # if front_image is not None:
             #     self.writer.add_image(front_image.copy())

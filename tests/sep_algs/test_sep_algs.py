@@ -32,7 +32,10 @@ def run_observe_process(lock, event, duration: float = 10) -> None:
 
 def run_control_process(lock, desired_speed: float, duration: float = 10) -> None:
     start_time: float = time.time()
-    module: ControlAlgModule = ControlAlgModule(control_image_size=(410,820,3))
+    module: ControlAlgModule = ControlAlgModule(
+        control_image_size=(410,820,3), 
+        will_mock_delay=True
+    )
     offsets: Tuple[float, float] = (DEFAULT_SLOPE_OFFSET, DEFAULT_INTERCEPT_OFFSET)
     pid_gains = {
         'steering': [STEERING_DEFAULT_K_P, STEERING_DEFAULT_K_I, STEERING_DEFAULT_K_D],
@@ -54,7 +57,7 @@ def my_fixture():
 def test_sep_algs(my_fixture) -> None:
     prcoesses: List[Process] = []
     activate_event = Event()
-    duration: float = 40
+    duration: float = 1000
     desired_speed: float = 1.40
     locks: dict = {
         'control': Lock(),

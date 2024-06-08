@@ -28,3 +28,13 @@ class SharedMemoryWrapper:
 
     def read_from_shm(self, key: str) -> Any:
         return self.shared_data[0][key]
+    
+
+# TODO: Implement this class
+class SocketWrapper:
+    def __init__(self, name: str) -> None:
+        self.name: str = name
+
+    def __call__(self) -> None:
+        # print(f"Message from {self.name}")
+        ...
