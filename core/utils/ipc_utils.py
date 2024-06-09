@@ -6,24 +6,6 @@ from multiprocessing import Queue
 
 import numpy as np
 
-def fetch_latest_in_queue(data_queue: Queue) -> None:
-    latest_data: Any = None
-    # if not data_queue.empty():
-    #     latest_data = data_queue.get()
-    try:
-        latest_data = data_queue.get_nowait()
-    except Empty:
-        pass
-    return latest_data
-
-def put_latest_in_queue(data: Any, data_queue: Queue) -> None:
-    # print(f"put latest data {data}")
-    try:
-        data_queue.put_nowait(data)
-    except Full:
-        data_queue.get()
-        data_queue.put(data)
-
 
 # class StructedDataTypeFactory:
 #     def create_dtype(self, num_of_cmds: int, image_size: tuple) -> np.ndarray:
@@ -49,3 +31,22 @@ def put_latest_in_queue(data: Any, data_queue: Queue) -> None:
 
 #     def read_from_shm(self, key: str) -> Any:
 #         return self.shared_data[0][key]
+
+def fetch_latest_in_queue(data_queue: Queue) -> None:
+    latest_data: Any = None
+    # if not data_queue.empty():
+    #     latest_data = data_queue.get()
+    try:
+        latest_data = data_queue.get_nowait()
+    except Empty:
+        pass
+    return latest_data
+
+def put_latest_in_queue(data: Any, data_queue: Queue) -> None:
+    # print(f"put latest data {data}")
+    try:
+        data_queue.put_nowait(data)
+    except Full:
+        data_queue.get()
+        data_queue.put(data)
+
