@@ -2,19 +2,15 @@ from threading import Thread
 from multiprocessing import Queue, Process
 from typing import List, Dict, Union, Any
 
+from core.utils.executions import BaseCoordinator
 from core.utils.executions import BaseThreadExec, BaseProcessExec
 from .executions import EdgeFinderExec, ObserveExec
 from .executions import EdgeFinderComm, ObserveComm, CarComm
 
 
-# TODO: Implement activation method
-class QCarCoordinator:
+class QCarCoordinator(BaseCoordinator):
     def __init__(self, queue_size: int = 5) -> None:
-        # CREATE QUANSER HARDWARE OBJECTS IN A THREAD OR A PROCESS
-        self.pools: Dict[str, list] = {
-            'thread': [],
-            'process': []
-        }
+        super().__init__() # create self.pool
         self.queues: Dict[str, Queue] = {
             'edge_request': Queue(queue_size),
             'edge_response': Queue(queue_size),
@@ -33,10 +29,43 @@ class QCarCoordinator:
             } # required args for process
         }
 
-    def add_to_pool(self, exec_type: str, exec_name: str) -> None:
+    def terminate(self) -> None:
+        # set the main events
+        for types in self.settings.keys():
+            for val in self.settings[types].values():
+                # extract exec instance from setting
+                exec: BaseThreadExec | BaseProcessExec = val[0]
+                # terminate the threads or proess by calling terminate
+                exec.terminate()
+
+        # join the threads and process
+        for types in self.pools.keys():
+            for instance in self.pools[types]:
+                instance.join()
+
+    def start_main_process(self) -> None:
+        # add the sub-processes and threads to the pool
+        for exec_type in self.settings.keys():
+            for process_setting in self.settings[exec_type]:
+                exec_name: str = next(iter(process_setting))
+                self._add_to_pool(exec_type=exec_type, exec_name=exec_name)
+
+        # activate the sub-processes
+        for process in self.pools['process']:
+            process.start()
+        # activate the threads
+        for threads in self.pools['thread']:
+            threads.start()
+
+        # observe keyboard interrupt
+        self.observe_keyboard_interrupt()
+
+    start = start_main_process # alias
+
+    def _add_to_pool(self, exec_type: str, exec_name: str) -> None:
         # extract parameters from the setting dict
         setting: dict = self.settings[exec_type]
-        exec: Union[BaseThreadExec, BaseProcessExec] = setting[exec_name][0]
+        exec: BaseThreadExec | BaseProcessExec = setting[exec_name][0]
         args: tuple = setting[exec_name][1]
 
         # create process or thread
@@ -52,26 +81,3 @@ class QCarCoordinator:
 
         # add thread or process to the pool
         self.pools[exec_type].append(result)
-
-    def terminate(self) -> None:
-        # set the main events
-        for types in self.settings.keys():
-            for val in self.settings[types].values():
-                # extract exec instance from setting
-                exec: Union[BaseThreadExec, BaseProcessExec] = val[0]
-                # set the event to terminate the threads or proess by calling terminate
-                exec.terminate()
-
-        # join the threads and process
-        for types in self.pools.keys():
-            for instance in self.pools[types]:
-                instance.join()
-
-    def start_main_process(self) -> None:
-        ...
-        # threads.append(Thread(target=run_edge_finder_comm))
-        # threads.append(Thread(target=run_observe_comm))
-        # print("Starting the demo...")
-        # for thread in threads:
-        #     thread.start()
-        # run_car_comm()

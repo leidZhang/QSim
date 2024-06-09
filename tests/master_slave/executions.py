@@ -13,6 +13,7 @@ from .modules import EdgeFinderWrapper, ObserverWrapper
 from .factory import PIDControlCarFactory
 
 
+# TODO: find a way to use other types of EdgeFinder
 class EdgeFinderExec(BaseProcessExec):
     def create_instance(self) -> EdgeFinderWrapper:
         edge_finder: EdgeFinder = TraditionalEdgeFinder()

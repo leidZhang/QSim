@@ -1,7 +1,38 @@
-from typing import Any
+import time
+from typing import Any, Dict, List
+from threading import Thread
+from multiprocessing import Process
 from threading import Event as ThEvent
 from multiprocessing import Event as MpEvent
 from abc import ABC, abstractmethod
+
+
+class BaseCoordinator(ABC):
+    def __init__(self) -> None:
+        self.pools: Dict[str, List[Process | Thread]] = {
+            'thread': [], # store threads only
+            'process': [] # store processes only
+        }
+
+    @abstractmethod
+    def terminate(self) -> None:
+        ...
+
+    @abstractmethod
+    def start_main_process(self) -> None:
+        ...
+
+    def observe_keyboard_interrupt(self) -> None:
+        try:
+            while True:
+                time.sleep(100)
+        except KeyboardInterrupt:
+            print("Stopping System...")
+        except Exception as e:
+            print(f"System stopped unexpectedly due to {e}")
+        finally:
+            self.terminate()
+            print("System stopped")
 
 
 class BaseProcessExec(ABC):
