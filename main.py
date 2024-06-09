@@ -107,7 +107,7 @@ def add_offset_to_map(nodes: Dict[str, np.ndarray], waypoint_sequence: np.ndarra
     for waypoint in waypoint_sequence:
         waypoint[0] += offset[0]
         waypoint[1] += offset[1]
-    
+
     return new_nodes, waypoint_sequence
 
 

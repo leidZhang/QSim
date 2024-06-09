@@ -1,3 +1,4 @@
+import os
 import time
 from typing import Any, Dict, List
 from threading import Thread
@@ -33,6 +34,7 @@ class BaseCoordinator(ABC):
         finally:
             self.terminate()
             print("System stopped")
+            os._exit(0)
 
 
 class BaseProcessExec(ABC):

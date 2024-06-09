@@ -1,5 +1,6 @@
+import time
 from threading import Thread
-from multiprocessing import Queue, Process
+from multiprocessing import Queue, Process, Lock
 from typing import List, Dict, Union, Any
 
 from core.utils.executions import BaseCoordinator
@@ -11,6 +12,12 @@ from .executions import EdgeFinderComm, ObserveComm, CarComm
 class QCarCoordinator(BaseCoordinator):
     def __init__(self, queue_size: int = 5) -> None:
         super().__init__() # create self.pool
+        self.locks: dict = {
+            'edge_request': Lock(),
+            'edge_response': Lock(),
+            'edge_request': Lock(),
+            'edge_response': Lock(),
+        }
         self.queues: Dict[str, Queue] = {
             'edge_request': Queue(queue_size),
             'edge_response': Queue(queue_size),
@@ -46,13 +53,13 @@ class QCarCoordinator(BaseCoordinator):
     def start_main_process(self) -> None:
         # add the sub-processes and threads to the pool
         for exec_type in self.settings.keys():
-            for process_setting in self.settings[exec_type]:
-                exec_name: str = next(iter(process_setting))
+            for exec_name in self.settings[exec_type]:
                 self._add_to_pool(exec_type=exec_type, exec_name=exec_name)
 
         # activate the sub-processes
         for process in self.pools['process']:
             process.start()
+        time.sleep(8) # sleep 4s for process activation
         # activate the threads
         for threads in self.pools['thread']:
             threads.start()

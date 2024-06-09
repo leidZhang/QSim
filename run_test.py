@@ -13,6 +13,7 @@ from core.utils.executions import BaseProcessExec
 
 # pytest
 if __name__ == "__main__":
-    python_path: str = sys.executable
-    test_command: str = f"{python_path} -m pytest tests/unit_test/"
-    os.system(test_command)
+    # python_path: str = sys.executable
+    # test_command: str = f"{python_path} -m pytest tests/unit_test/"
+    # os.system(test_command)
+    test_master_slave()

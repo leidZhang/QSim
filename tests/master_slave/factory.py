@@ -1,10 +1,8 @@
 from threading import Event
 from typing import Tuple, Dict, List, Any
 
-from core.utils.executions import BaseThreadExec
 from core.qcar.factory import CarFactory
 from .modules import PIDControlCar
-from .executions import EdgeFinderComm, ObserveComm, CarComm
 from .constants import DEFAULT_INTERCEPT_OFFSET, DEFAULT_SLOPE_OFFSET
 from .constants import THROTTLE_DEFAULT_K_P, THROTTLE_DEFAULT_K_I, THROTTLE_DEFAULT_K_D
 from .constants import STEERING_DEFAULT_K_P, STEERING_DEFAULT_K_I, STEERING_DEFAULT_K_D

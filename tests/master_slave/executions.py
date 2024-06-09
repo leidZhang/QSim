@@ -1,6 +1,6 @@
 import time
 from typing import Union
-from multiprocessing import Queue
+from multiprocessing import Queue, Lock
 
 import cv2
 import numpy as np
@@ -30,11 +30,12 @@ class EdgeFinderComm(BaseThreadExec):
         self.camera: VirtualCSICamera = VirtualCSICamera(id=3)
 
     def execute(self, edge_response_queue: Queue) -> None:
+        start = time.time()
         image: np.ndarray = self.camera.read_image()
         if image is not None:
             put_latest_in_queue(image.copy(), edge_response_queue)
-            cv2.imshow('EdegFinder Image', image)
-            cv2.waitKey(1)
+            # cv2.imshow('EdegFinder Image', image)
+            # cv2.waitKey(1)
         else:
             time.sleep(0.001)
 
@@ -45,14 +46,13 @@ class ObserveComm(BaseThreadExec):
 
     def setup_thread(self) -> None:
         self.camera: VirtualRGBDCamera = VirtualRGBDCamera()
-        self.read_image = self.camera.read_rgb_image()
 
     def execute(self, observe_response_queue: Queue) -> None:
-        image: np.ndarray = self.read_image()
+        image: np.ndarray = self.camera.read_rgb_image()
         if image is not None:
             put_latest_in_queue(image.copy(), observe_response_queue)
-            cv2.imshow('Observer Image', image)
-            cv2.waitKey(1)
+            # cv2.imshow('Observer Image', image)
+            # cv2.waitKey(1)
         else:
             time.sleep(0.001)
 

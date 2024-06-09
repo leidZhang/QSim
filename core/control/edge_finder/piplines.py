@@ -13,7 +13,7 @@ from .constants import THRESH_LOWER_BOUND, THRESH_UPPER_BOUND
 
 class SobelPipeLine:
     """
-    The SobelPipeLine class is responsible for finding the edges of the road using Sobel 
+    The SobelPipeLine class is responsible for finding the edges of the road using Sobel
     edge detection. It can be used in serial or parallel with other edge finders.
     """
 
@@ -46,7 +46,7 @@ class SobelPipeLine:
         - np.ndarray: The edge image of the input image.
         """
         return self.get_edge_image(largest_contour, image)
-    
+
     def _apply_sobel_gpu(self, largest_contour: np.ndarray, gpu_image: cv2.cuda_GpuMat) -> np.ndarray:
         """
         Gets the edge image from the input image and largest_contour.
@@ -106,9 +106,9 @@ class ContourPipeLine:
     """
 
     def __init__(
-        self, 
-        thresh_bounds: Tuple[int, int] = (THRESH_LOWER_BOUND, THRESH_UPPER_BOUND), 
-        ksize: Tuple[int, int] = (9, 9), 
+        self,
+        thresh_bounds: Tuple[int, int] = (THRESH_LOWER_BOUND, THRESH_UPPER_BOUND),
+        ksize: Tuple[int, int] = (9, 9),
         sigma_x: int = 0,
         device: str = 'cpu'
     ) -> None:
@@ -142,7 +142,7 @@ class ContourPipeLine:
         - NoImageException: If the input image is None.
         """
         contours: np.ndarray = self._find_contours(image)
-        if contours is None or len(contours) == 0: 
+        if contours is None or len(contours) == 0:
             raise NoContourException()
         largest_contour: np.ndarray = max(contours, key=cv2.contourArea)
         self.draw_contour_method(largest_contour, image)
@@ -222,9 +222,9 @@ class HoughPipeLine:
     The HoughPipeLine class is responsible for hough line transformation.
     It can be used in serial or parallel with other edge finders.
     """
-    
+
     def __init__(
-        self, 
+        self,
         angle_bounds: Tuple[int, int] = (HOUGH_ANGLE_LOWER_BOUND, HOUGH_ANGLE_UPPER_BOUND),
         edges_bounds: Tuple[int, int] = (EDGES_LOWER_BOUND, EDGES_UPPER_BOUND),
         hough_confident_threshold: int = HOUGH_CONFIDENT_THRESHOLD,
@@ -239,7 +239,7 @@ class HoughPipeLine:
         - hough_confident_threshold: int: the confident threshold of the hough line
         - device: str: the device to use for hough line detection
         """
-        self.device: str = device 
+        self.device: str = device
         self.angle_bounds: Tuple[int, int] = angle_bounds
         self.edges_bounds: Tuple[int, int] = edges_bounds
         self.hough_confident_threshold: int = hough_confident_threshold
@@ -257,13 +257,13 @@ class HoughPipeLine:
                 self.edges_bounds[1],
                 apertureSize=3
             )
-        else: 
+        else:
             self.get_hough_lines = self._get_hough_lines_on_cpu
 
     def _handle_draw_hough_lines(
-            self, 
-            image: Union[np.ndarray, cv2.cuda_GpuMat], 
-            point_1: tuple, 
+            self,
+            image: Union[np.ndarray, cv2.cuda_GpuMat],
+            point_1: tuple,
             point_2: tuple
         ) -> None:
         """
@@ -296,8 +296,8 @@ class HoughPipeLine:
         """
         lines: np.ndarray = self.get_hough_lines(image)
         if lines is None:
-            return 
-        
+            return
+
         # calculate the line parameters
         params: list[list[int]] = [[], [], [], []] # for valid lines
         for line in lines:
@@ -317,7 +317,7 @@ class HoughPipeLine:
         else:
             self.prev_x1 = 0 # there is a sudden edge change
         # cv2.imshow("HoughLine", image)
-    
+
     __call__ = get_hough_lines_image # alias
 
     def _get_hough_lines_on_gpu(self, gpu_image: cv2.cuda_GpuMat) -> np.ndarray:
@@ -332,7 +332,7 @@ class HoughPipeLine:
         """
         if gpu_image is None:
             raise NoImageException()
-        
+
         # apply the canny edge detector and hough lines detector
         edges = self.canny_edge_detector.detect(gpu_image)
         lines = self.hough_lines_detector.detect(edges)
@@ -350,7 +350,7 @@ class HoughPipeLine:
         """
         if image is None:
             raise NoImageException()
-        
+
         edges: np.ndarray = cv2.Canny(
             image,
             self.edges_bounds[0],
