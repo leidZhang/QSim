@@ -29,15 +29,16 @@ class EdgeFinderComm(BaseThreadExec):
     def setup_thread(self) -> None:
         self.camera: VirtualCSICamera = VirtualCSICamera(id=3)
 
-    def execute(self, edge_response_queue: Queue) -> None:
-        start = time.time()
+    def execute(self, edge_response_queue: Queue, observer_response_queue: Queue) -> None:
         image: np.ndarray = self.camera.read_image()
         if image is not None:
+            # print("Sending image to edge finder...")
             put_latest_in_queue(image.copy(), edge_response_queue)
+            put_latest_in_queue(image.copy(), observer_response_queue)
             # cv2.imshow('EdegFinder Image', image)
             # cv2.waitKey(1)
         else:
-            time.sleep(0.001)
+            time.sleep(0.001) # thread yielding
 
 
 class ObserveComm(BaseThreadExec):
@@ -54,7 +55,7 @@ class ObserveComm(BaseThreadExec):
             # cv2.imshow('Observer Image', image)
             # cv2.waitKey(1)
         else:
-            time.sleep(0.001)
+            time.sleep(0.001) # thread yielding
 
 
 class CarComm(BaseThreadExec):
@@ -63,3 +64,7 @@ class CarComm(BaseThreadExec):
 
     def execute(self, edge_request_queue: Queue, observe_request_queue: Queue) -> None:
         self.car.execute(edge_request_queue, observe_request_queue)
+
+    def run_thread(self, edge_request_queue: Queue, observe_request_queue: Queue) -> None:
+        super().run_thread( edge_request_queue, observe_request_queue)
+        self.car.halt_car()

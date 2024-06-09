@@ -4,5 +4,5 @@ from .coordinator import QCarCoordinator
 def test_master_slave() -> None:
     destroy_map()
     prepare_test_environment(node_id=24)
-    coordinator: QCarCoordinator = QCarCoordinator(queue_size=5)
+    coordinator: QCarCoordinator = QCarCoordinator(queue_size=3)
     coordinator.start_main_process()

@@ -26,8 +26,8 @@ class QCarCoordinator(BaseCoordinator):
         } # queues for IPC
         self.settings: Dict[str, dict] = {
             'thread': {
-                'edge_finder_comm': (EdgeFinderComm(), (self.queues['edge_response'], )),
-                'observe_comm': (ObserveComm(), (self.queues['observe_response'], )),
+                'edge_finder_comm': (EdgeFinderComm(), (self.queues['edge_response'], self.queues['observe_response'])),
+                # 'observe_comm': (ObserveComm(), (self.queues['observe_response'], )),
                 'car_comm': (CarComm(), (self.queues['edge_request'], self.queues['observe_request']))
             }, # required args for thread
             'process': {

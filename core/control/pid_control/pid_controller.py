@@ -73,7 +73,7 @@ class PIDController(ABC):
         Returns:
         - float: The state of the PID controller
         """
-        self.dt = time.time() - self.start if time.time() - self.start != 0.0 else 0.001
+        self.dt = time.time() - self.start # if time.time() - self.start != 0.0 else 0.001
         control_rate: float = 1 / self.dt
         self.frequecy_filter = Filter().low_pass_first_order_variable(control_rate-5, self.dt, self.prev_state)
         next(self.frequecy_filter)

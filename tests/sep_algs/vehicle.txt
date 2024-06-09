@@ -5,10 +5,11 @@ from typing import Dict, Tuple
 import cv2
 import numpy as np
 
+from core.policies.base_policy import BasePolicy
 from core.control.edge_finder import NoContourException, NoImageException
 from core.qcar import VirtualCSICamera, VirtualRGBDCamera, PhysicalCar
 from core.control.edge_finder import TraditionalEdgeFinder, EdgeFinder
-from core.policies.vision_lanefollowing import VisionLaneFollowing, BasePolicy
+from core.policies.vision_lanefollowing import VisionLaneFollowing
 from core.utils.performance import mock_delay, skip_delay
 from core.utils.ipc_utils import StructedDataTypeFactory, SharedMemoryWrapper
 from .observe import DecisionMaker
