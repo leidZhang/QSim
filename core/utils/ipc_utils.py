@@ -50,3 +50,7 @@ def put_latest_in_queue(data: Any, data_queue: Queue) -> None:
         data_queue.get()
         data_queue.put(data)
 
+def clear_queue(data_queue: Queue) -> None:
+    while not data_queue.empty():
+        data_queue.get()
+

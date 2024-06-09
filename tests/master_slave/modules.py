@@ -10,7 +10,7 @@ from core.qcar import PhysicalCar
 from core.control.edge_finder import EdgeFinder, NoContourException
 from core.utils.ipc_utils import fetch_latest_in_queue
 from core.utils.ipc_utils import put_latest_in_queue
-from core.utils.tools import realtime_message_output
+from core.utils.ipc_utils import clear_queue
 from core.policies.pid_policy import CompositePIDPolicy
 from .exceptions import HaltException
 from .observe import DecisionMaker
@@ -124,7 +124,9 @@ class PIDControlCar(PhysicalCar):
             self.handle_control(edge_queue)
         except HaltException as e:
             print(f"Stopping the car for {e.stop_time:.2f} seconds")
-            self.last_state = None # clear the last state
             self.halt_car(steering=self.action[1], halt_time=e.stop_time)
             self.policy.reset_start_time()
+            self.last_state = None # clear the last state
         time.sleep(0.001) # thread yielding
+            
+        
