@@ -1,9 +1,12 @@
 import time
 from threading import Thread
-from multiprocessing import Queue, Process, Lock
+from threading import Event as ThEvent
+from multiprocessing import Event as MpEvent
+from multiprocessing import Queue, Process
 from typing import List, Dict, Union, Any
 
-from core.utils.executions import BaseCoordinator
+from core.utils.executions import Event
+from core.utils.executions import BaseCoordinator, WatchDogTimer
 from core.utils.executions import BaseThreadExec, BaseProcessExec
 from .executions import EdgeFinderExec, ObserveExec
 from .executions import EdgeFinderComm, ObserveComm, CarComm
@@ -11,28 +14,47 @@ from .executions import EdgeFinderComm, ObserveComm, CarComm
 
 class QCarCoordinator(BaseCoordinator):
     def __init__(self, queue_size: int = 5) -> None:
-        super().__init__() # create self.pool
-        self.locks: dict = {
-            'edge_request': Lock(),
-            'edge_response': Lock(),
-            'edge_request': Lock(),
-            'edge_response': Lock(),
+        # events for monitoring
+        events: Dict[str, Event] = {
+            'edge_finder_comm': ThEvent(),
+            'observe_comm': ThEvent(),
+            'car_comm': ThEvent(),
+            'edge_finder': MpEvent(),
+            'observe': MpEvent()
         }
+        # watchdogs to monitor the threads and processes
+        watchdogs: Dict[str, Dict[str, WatchDogTimer]] = {
+            'thread': {
+                'edge_finder_comm': WatchDogTimer(event=events['edge_finder_comm'], timeout=0.05),
+                # 'observe_comm': WatchDogTimer(event=events['observe_comm'], timeout=0.05),
+                'car_comm': WatchDogTimer(event=events['car_comm'], timeout=0.05),
+            },
+            'process': {
+                'edge_finder': WatchDogTimer(event=events['edge_finder'], timeout=0.3),
+                'observe': WatchDogTimer(event=events['observe'], timeout=0.3)
+            }
+        }
+
+        # create pool, watchdogs
+        super().__init__(watchdogs=watchdogs)
+
+        # queues for IPC
         self.queues: Dict[str, Queue] = {
             'edge_request': Queue(queue_size),
             'edge_response': Queue(queue_size),
             'observe_request': Queue(queue_size),
             'observe_response': Queue(queue_size)
-        } # queues for IPC
+        }
+        # required args for subprocesses and threads
         self.settings: Dict[str, dict] = {
             'thread': {
-                'edge_finder_comm': (EdgeFinderComm(), (self.queues['edge_response'], self.queues['observe_response'])),
-                # 'observe_comm': (ObserveComm(), (self.queues['observe_response'], )),
-                'car_comm': (CarComm(), (self.queues['edge_request'], self.queues['observe_request']))
+                'edge_finder_comm': (EdgeFinderComm(events['edge_finder_comm']), (self.queues['edge_response'], self.queues['observe_response'], )),
+                # 'observe_comm': (ObserveComm(events['observe_comm']), (self.queues['observe_response'], )),
+                'car_comm': (CarComm(events['car_comm']), (self.queues['edge_request'], self.queues['observe_request'], ))
             }, # required args for thread
             'process': {
-                'edge_finder': (EdgeFinderExec(), (self.queues['edge_response'], self.queues['edge_request'])),
-                'observe': (ObserveExec(), (self.queues['observe_response'], self.queues['observe_request']))
+                'edge_finder': (EdgeFinderExec(events['edge_finder']), (self.queues['edge_response'], self.queues['edge_request'], )),
+                'observe': (ObserveExec(events['observe']), (self.queues['observe_response'], self.queues['observe_request'], ))
             } # required args for process
         }
 
@@ -41,7 +63,7 @@ class QCarCoordinator(BaseCoordinator):
         for types in self.settings.keys():
             for val in self.settings[types].values():
                 # extract exec instance from setting
-                exec: BaseThreadExec | BaseProcessExec = val[0]
+                exec: Union[BaseThreadExec, BaseProcessExec] = val[0]
                 # terminate the threads or proess by calling terminate
                 exec.terminate()
 
@@ -59,20 +81,21 @@ class QCarCoordinator(BaseCoordinator):
         # activate the sub-processes
         for process in self.pools['process']:
             process.start()
-        time.sleep(8) # sleep 4s for process activation
+        # wait until process are activated
+        self.prepare_processes()
         # activate the threads
         for threads in self.pools['thread']:
             threads.start()
 
-        # observe keyboard interrupt
-        self.observe_keyboard_interrupt()
+        # observe the processes and threads
+        self.run_monitor_thread()
 
     start = start_main_process # alias
 
     def _add_to_pool(self, exec_type: str, exec_name: str) -> None:
         # extract parameters from the setting dict
         setting: dict = self.settings[exec_type]
-        exec: BaseThreadExec | BaseProcessExec = setting[exec_name][0]
+        exec: Union[BaseThreadExec, BaseProcessExec] = setting[exec_name][0]
         args: tuple = setting[exec_name][1]
 
         # create process or thread

@@ -38,6 +38,7 @@ class ObserverWrapper:
             result: dict = self.observer.detection_flags
             # put the data in the response queue
             put_latest_in_queue(result, response)
+            # set watch dog event
 
 
 class EdgeFinderWrapper:
@@ -60,6 +61,7 @@ class EdgeFinderWrapper:
                 time.sleep(max(0, 0.015 - end)) # thread yielding
                 # put the data in the response queue
                 put_latest_in_queue(result, response)
+                # set watch dog event
         except NoContourException:
             print("No contour!")
 
@@ -128,5 +130,3 @@ class PIDControlCar(PhysicalCar):
             self.policy.reset_start_time()
             self.last_state = None # clear the last state
         time.sleep(0.001) # thread yielding
-            
-        

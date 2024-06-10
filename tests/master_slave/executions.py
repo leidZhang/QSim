@@ -1,5 +1,6 @@
 import time
 from typing import Union
+from threading import Event
 from multiprocessing import Queue, Lock
 
 import cv2
@@ -42,9 +43,6 @@ class EdgeFinderComm(BaseThreadExec):
 
 
 class ObserveComm(BaseThreadExec):
-    def __init__(self) -> None:
-        super().__init__()
-
     def setup_thread(self) -> None:
         self.camera: VirtualRGBDCamera = VirtualRGBDCamera()
 
