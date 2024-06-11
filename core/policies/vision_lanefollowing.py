@@ -4,7 +4,7 @@ from typing import Tuple
 import numpy as np
 
 from core.control.edge_finder import EdgeFinder
-from core.utils.tools import realtime_message_output
+from core.utils.performance import realtime_message_output
 from .pid_policy import CompositePIDPolicy
 
 

@@ -1,4 +1,7 @@
+import sys
 import time
+
+import matplotlib.pyplot as plt
 
 def skip() -> None:
     pass
@@ -9,3 +12,23 @@ def mock_delay(start: float, delay: float) -> None:
 
 def skip_delay(start: float, delay: float) -> None:
     pass
+
+def elapsed_time(start_time: float) -> float:
+    return time.time() - start_time
+
+def realtime_message_output(message: str) -> None: 
+    sys.stdout.write(f'\r{message}')
+    sys.stdout.flush()
+
+def plot_data_in_dict(data_lists: dict, title: str, x_label: str, y_label: str) -> None: 
+    for label, data_list in data_lists.items():
+        x_axis: list = list(range(len(data_list)))
+        y_axis: list = data_list
+        plt.plot(x_axis, y_axis, label=label)
+    
+    plt.title(title)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.legend()
+
+    plt.show()

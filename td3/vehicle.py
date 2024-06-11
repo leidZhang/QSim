@@ -7,7 +7,7 @@ from pal.utilities.math import Calculus
 
 from core.qcar import VirtualCar
 from core.qcar.constants import WHEEL_RADIUS, ENCODER_COUNTS_PER_REV, PIN_TO_SPUR_RATIO
-from core.utils.tools import realtime_message_output, elapsed_time
+from core.utils.performance import realtime_message_output, elapsed_time
 from constants import MAX_LOOKAHEAD_INDICES
 
 

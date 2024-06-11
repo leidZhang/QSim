@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple
 import cv2
 import matplotlib.pyplot as plt
 
-from core.utils.tools import plot_data_in_dict
+from core.utils.performance import plot_data_in_dict
 from tests.performance_environment import prepare_test_environment
 from tests.performance_environment import destroy_map
 from .pid_vehicle import VisionPIDTestCar

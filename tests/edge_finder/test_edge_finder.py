@@ -6,7 +6,7 @@ import numpy as np
 
 from core.qcar.sensor import VirtualCSICamera
 from core.control.edge_finder import TraditionalEdgeFinder, EdgeFinder, NoContourException
-from core.utils.tools import realtime_message_output
+from core.utils.performance import realtime_message_output
 
 def handle_iteration(edge_finder: EdgeFinder, image: np.ndarray) -> Tuple[float, float]:
     try: 
