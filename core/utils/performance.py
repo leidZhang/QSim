@@ -3,14 +3,11 @@ import time
 
 import matplotlib.pyplot as plt
 
-def skip() -> None:
-    pass
-
 def mock_delay(start: float, delay: float) -> None:
     end: float = time.time() - start
     time.sleep(max(0, delay - end))
 
-def skip_delay(start: float, delay: float) -> None:
+def skip_delay(*args) -> None:
     pass
 
 def elapsed_time(start_time: float) -> float:
@@ -32,3 +29,5 @@ def plot_data_in_dict(data_lists: dict, title: str, x_label: str, y_label: str) 
     plt.legend()
 
     plt.show()
+
+skip = skip_delay
