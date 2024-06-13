@@ -37,8 +37,8 @@ class PurePursuitPolicy:
 
         tx, ty = waypoints[i]
 
-        #compute steer action
-        x, y, yaw = state[:3]
+        # compute steer action
+        x, y, yaw = state[:3]        
         alpha: float = np.arctan2(ty - y, tx - x) - yaw
         l: float = np.sqrt((x - tx)**2 + (y - ty)**2)
         theta: float = np.arctan2(2 * 0.256 * np.sin(alpha), l)

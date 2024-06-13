@@ -42,15 +42,23 @@ class WaypointCar(VirtualCar):
         self.handle_observation(orig, rot)
 
     def update_state(self) -> None:
-        self.ego_state = self.get_ego_state()
+        # get the ego state from the qlabs
+        self.ego_state = self.get_ego_state() 
+        # get the original and rotation matrix
         orig, _, rot = self.cal_vehicle_state(self.ego_state)
+        # get the local waypoints
         local_waypoints: np.ndarray = np.roll(
             self.waypoints, -self.current_waypoint_index, axis=0
         )[:MAX_LOOKAHEAD_INDICES]
+        # get the distance to the waypoints
         self.norm_dist: np.ndarray = np.linalg.norm(local_waypoints - orig, axis=1)
+        # get the index of the closest waypoint
         self.dist_ix: int = np.argmin(self.norm_dist)
+        # update the current waypoint index
         self.current_waypoint_index = (self.current_waypoint_index + self.dist_ix) % self.waypoints.shape[0]
-        self.next_waypoints = self.next_waypoints[self.dist_ix:] # clear pasted waypoints
+        # clear pasted waypoints
+        self.next_waypoints = self.next_waypoints[self.dist_ix:] 
+        # add waypoint to the observation
         self.handle_observation(orig, rot)
 
     def estimate_speed(self) -> float:
