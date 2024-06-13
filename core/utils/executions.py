@@ -124,6 +124,9 @@ class BaseProcessExec(ABC):
     def terminate(self) -> None:
         self.done.set()
 
+    def final(self) -> None:
+        pass
+
     @abstractmethod
     def create_instance(self) -> Any:
         ...
@@ -139,6 +142,8 @@ class BaseProcessExec(ABC):
             instance.execute(*args)
             # set the watchdog or skip
             self.reach_new_stage()
+        # final execution to close resources
+        self.final()
 
 
 class BaseThreadExec(ABC):
@@ -159,6 +164,9 @@ class BaseThreadExec(ABC):
     def terminate(self) -> None:
         self.done.set()
 
+    def final(self) -> None:
+        pass
+
     @abstractmethod
     def setup_thread(self) -> None:
         ...
@@ -177,3 +185,5 @@ class BaseThreadExec(ABC):
             self.execute(*args)
             # set the watchdog
             self.watchdog_event.set()
+        # final execution to close resources
+        self.final()
