@@ -3,6 +3,7 @@ from typing import Tuple
 import cv2
 import numpy as np
 
+
 def region_of_interest(img: np.ndarray, vertices: np.ndarray) -> np.ndarray:
     """
     Applies an image mask.
@@ -21,9 +22,10 @@ def region_of_interest(img: np.ndarray, vertices: np.ndarray) -> np.ndarray:
     cv2.fillPoly(mask, vertices, match_mask_color)
     return cv2.bitwise_and(img, mask)
 
+
 def find_slope_intercept_from_points(points: np.ndarray) -> Tuple[float, float]:
     """
-    This function will return the linear polinomial coefficients to the lane found 
+    This function will return the linear polinomial coefficients to the lane found
     in the binary image
 
     Parameters:
@@ -37,9 +39,10 @@ def find_slope_intercept_from_points(points: np.ndarray) -> Tuple[float, float]:
     slope, intercept = np.polyfit(x, y, 1)
     return slope, intercept
 
+
 def find_slope_intercept_from_binary(binary: np.ndarray) -> Tuple[float, float]:
     """
-    This function will return the linear polinomial coefficients to the lane found 
+    This function will return the linear polinomial coefficients to the lane found
     in the binary image
 
     Parameters:

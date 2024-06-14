@@ -32,6 +32,7 @@ import numpy as np
 #     def read_from_shm(self, key: str) -> Any:
 #         return self.shared_data[0][key]
 
+
 def fetch_latest_in_queue(data_queue: Queue) -> None:
     latest_data: Any = None
     # if not data_queue.empty():
@@ -42,6 +43,7 @@ def fetch_latest_in_queue(data_queue: Queue) -> None:
         pass
     return latest_data
 
+
 def put_latest_in_queue(data: Any, data_queue: Queue) -> None:
     # print(f"put latest data {data}")
     try:
@@ -50,7 +52,7 @@ def put_latest_in_queue(data: Any, data_queue: Queue) -> None:
         data_queue.get()
         data_queue.put(data)
 
+
 def clear_queue(data_queue: Queue) -> None:
     while not data_queue.empty():
         data_queue.get()
-

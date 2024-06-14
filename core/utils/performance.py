@@ -3,19 +3,24 @@ import time
 
 import matplotlib.pyplot as plt
 
+
 def mock_delay(start: float, delay: float) -> None:
     end: float = time.time() - start
     time.sleep(max(0, delay - end))
 
+
 def skip_delay(*args) -> None:
     pass
+
 
 def elapsed_time(start_time: float) -> float:
     return time.time() - start_time
 
+
 def realtime_message_output(message: str) -> None:
     sys.stdout.write(f'\r{message}')
     sys.stdout.flush()
+
 
 def plot_data_in_dict(data_lists: dict, title: str, x_label: str, y_label: str) -> None:
     for label, data_list in data_lists.items():

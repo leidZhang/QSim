@@ -3,6 +3,7 @@ import numpy as np
 from core.environment.detector import EpisodeMonitor
 from core.environment.exception import AnomalousEpisodeException
 
+
 @pytest.mark.unit_test
 def test_episode_monitor_1() -> None:
     # test action[0] > 0.045 and no position change
@@ -13,6 +14,7 @@ def test_episode_monitor_1() -> None:
         for input in test_inputs:
             monitor(input[0], input[1])
     assert "Error happened in the episode!" in str(exc_info.value)
+
 
 @pytest.mark.unit_test
 def test_episode_monitor_2() -> None:
@@ -25,6 +27,7 @@ def test_episode_monitor_2() -> None:
             monitor(input[0], input[1])
     assert "Error happened in the episode!" in str(exc_info.value)
 
+
 @pytest.mark.unit_test
 def test_episode_monitor_3() -> None:
     # test action[0] > 0.045 and have position change
@@ -34,6 +37,7 @@ def test_episode_monitor_3() -> None:
     for input in test_inputs:
         monitor(input[0], input[1])
     assert monitor.accumulator > 0
+
 
 @pytest.mark.unit_test
 def test_episode_monitor_4() -> None:
@@ -45,6 +49,7 @@ def test_episode_monitor_4() -> None:
         monitor(input[0], input[1])
     assert monitor.accumulator > 0
 
+
 @pytest.mark.unit_test
 def test_episode_monitor_5() -> None:
     # test action[0] = 0.045 and no position change but haven't full the queue yet
@@ -54,6 +59,7 @@ def test_episode_monitor_5() -> None:
     for input in test_inputs:
         monitor(input[0], input[1])
     assert monitor.accumulator == 0
+
 
 @pytest.mark.unit_test
 def test_episode_monitor_6() -> None:
@@ -65,6 +71,7 @@ def test_episode_monitor_6() -> None:
         monitor(input[0], input[1])
     assert monitor.accumulator > 0
 
+
 @pytest.mark.unit_test
 def test_episode_monitor_7() -> None:
     # test action[0] > 0.045 and have position change but haven't full the queue yet
@@ -74,6 +81,7 @@ def test_episode_monitor_7() -> None:
     for input in test_inputs:
         monitor(input[0], input[1])
     assert monitor.accumulator == 0
+
 
 @pytest.mark.unit_test
 def test_episode_monitor_8() -> None:
@@ -85,6 +93,7 @@ def test_episode_monitor_8() -> None:
         monitor(input[0], input[1])
     assert monitor.accumulator > 0
 
+
 @pytest.mark.unit_test
 def test_episode_monitor_9() -> None:
     # test action[0] < 0.045 and no position change
@@ -94,6 +103,7 @@ def test_episode_monitor_9() -> None:
     for input in test_inputs:
         monitor(input[0], input[1])
     assert monitor.accumulator > 0
+
 
 @pytest.mark.unit_test
 def test_episode_monitor_10() -> None:
@@ -105,6 +115,7 @@ def test_episode_monitor_10() -> None:
         monitor(input[0], input[1])
     assert monitor.accumulator > 0
 
+
 @pytest.mark.unit_test
 def test_episode_monitor_11() -> None:
     # test action[0] > 0.045 and no position change, just full the queue
@@ -115,6 +126,7 @@ def test_episode_monitor_11() -> None:
         for input in test_inputs:
             monitor(input[0], input[1])
     assert "Error happened in the episode!" in str(exc_info.value)
+
 
 @pytest.mark.unit_test
 def test_episode_monitor_12() -> None:

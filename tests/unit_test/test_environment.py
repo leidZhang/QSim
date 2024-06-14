@@ -5,6 +5,7 @@ import pytest
 import numpy as np
 from core.environment import QLabEnvironment
 
+
 def prepare_test_environment() -> QLabEnvironment:
     # test instance
     test_env: QLabEnvironment = QLabEnvironment()
@@ -20,6 +21,7 @@ def prepare_test_environment() -> QLabEnvironment:
     test_env.set_nodes(nodes)
     test_env.set_waypoint_sequence(waypoints)
     return test_env
+
 
 @pytest.mark.unit_test
 def test_cal_waypoint_angle() -> None:
@@ -43,6 +45,7 @@ def test_cal_waypoint_angle() -> None:
             assert res == pytest.approx(expect[i] - 2 * math.pi), \
                 f"Expect: {expect[i] - 2 * math.pi} at index {i}, but got {res}"
 
+
 @pytest.mark.unit_test
 def test_spawn_on_waypoints_1() -> None:
     # test the index < 0
@@ -51,6 +54,7 @@ def test_spawn_on_waypoints_1() -> None:
         test_env.spawn_on_waypoints(-1)
     assert 'Invalid Waypoint index format' in str(exc_info.value)
 
+
 @pytest.mark.unit_test
 def test_spawn_on_waypoints_2() -> None:
     # test the index > len(waypoint)
@@ -58,6 +62,7 @@ def test_spawn_on_waypoints_2() -> None:
     with pytest.raises(ValueError) as exc_info:
         test_env.spawn_on_waypoints(10000)
     assert 'Invalid Waypoint index format' in str(exc_info.value)
+
 
 @pytest.mark.unit_test
 def test_spawn_waypoints_3() -> None:
@@ -80,6 +85,7 @@ def test_spawn_waypoints_3() -> None:
             expect[i][1][2] -= 2 * math.pi
         assert res == expect[i], f"Expect: {expect[i]} at index {i}, but got {res}"
 
+
 @pytest.mark.unit_test
 def test_spawn_on_nodes_1() -> None:
     # test index not exist
@@ -87,6 +93,7 @@ def test_spawn_on_nodes_1() -> None:
     with pytest.raises(ValueError) as exc_info:
         test_env.spawn_on_nodes(1000)
     assert 'Index not exist!' in str(exc_info.value)
+
 
 @pytest.mark.unit_test
 def test_spawn_on_nodes_2() -> None:

@@ -15,6 +15,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from mlflow.store.artifact.artifact_repo import ArtifactRepository
 
+
 class LogColorFormatter(logging.Formatter):
     GREY = '\033[90m'
     WHITE = '\033[37m'
@@ -56,6 +57,7 @@ class LogColorFormatter(logging.Formatter):
             fmt = self.fmt
         return logging.Formatter(fmt).format(record)
 
+
 def configure_logging(prefix='[%(name)s]', level=logging.DEBUG, info_color=None):
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(level)
@@ -71,6 +73,7 @@ def configure_logging(prefix='[%(name)s]', level=logging.DEBUG, info_color=None)
         logging.getLogger(logname).setLevel(logging.WARNING)  # disable other loggers
     for logname in ['absl', 'minerl']:
         logging.getLogger(logname).setLevel(logging.INFO)
+
 
 def mlflow_init(mlruns_dir):
     run_name = os.environ.get("MLFLOW_RUN_NAME")
@@ -101,6 +104,7 @@ def mlflow_init(mlruns_dir):
     os.environ["MLFLOW_RUN_ID"] = run.info.run_id
     return run
 
+
 def load_checkpoint(model, mlruns_dir, run_id, map_location="cpu"):
     path = Path(mlruns_dir[8:]) / "0" / run_id / "latest_checkpoint.pt"
     try:
@@ -129,6 +133,7 @@ def load_checkpoint(model, mlruns_dir, run_id, map_location="cpu"):
 #         logging.exception('Error reading or setting the checkpoint.')
 #         return None
 
+
 def mlflow_load_checkpoint(model, run_id=None, optimizers=tuple(), artifact_path="checkpoints/latest.pt", map_location=None):
     with tempfile.TemporaryDirectory() as tmpdir:
         run_id = run_id if run_id is not None else mlflow.active_run().info.run_id
@@ -149,6 +154,7 @@ def mlflow_load_checkpoint(model, run_id=None, optimizers=tuple(), artifact_path
             opt.load_state_dict(checkpoint[f'optimizer_{i}_state_dict'])
 
         return checkpoint["epoch"]
+
 
 def mlflow_save_checkpoint(model, optimizers, steps, mlruns_dir=None, run_id=None):
     if mlruns_dir is None:
@@ -178,6 +184,7 @@ def mlflow_save_checkpoint(model, optimizers, steps, mlruns_dir=None, run_id=Non
         torch.save(checkpoint, path)
         mlflow_log_artifact(mlflow_path, subdir='checkpoints')
 
+
 def mlflow_log_metrics(metrics: dict, step: int, run_id: str = None):
     while True:
         try:
@@ -186,6 +193,7 @@ def mlflow_log_metrics(metrics: dict, step: int, run_id: str = None):
         except:
             logging.exception('Error logging metrics - will retry.')
             time.sleep(10)
+
 
 def mlflow_log_npz(data: dict, name, subdir=None, verbose=False, repository: ArtifactRepository = None, mlruns_dir = None):
     if mlruns_dir is None:
@@ -198,12 +206,14 @@ def mlflow_log_npz(data: dict, name, subdir=None, verbose=False, repository: Art
         save_npz(data, path)
         mlflow_log_artifact(path, subdir, verbose, repository)
 
+
 def save_npz(data, path):
     with io.BytesIO() as f1:
         np.savez_compressed(f1, **data)
         f1.seek(0)
         with path.open('wb') as f2:
             f2.write(f1.read())
+
 
 def mlflow_log_artifact(path: Path, subdir=None, verbose=True, repository: ArtifactRepository = None):
     if verbose:
@@ -219,11 +229,13 @@ def mlflow_log_artifact(path: Path, subdir=None, verbose=True, repository: Artif
             logging.exception('Error saving artifact - will retry.')
             time.sleep(10)
 
+
 def mlflow_load_npz(name, repository: ArtifactRepository):
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpfile = Path(tmpdir) / name
         repository._download_file(name, tmpfile)
         return load_npz(tmpfile)
+
 
 def load_npz(path, keys=None) -> Dict[str, np.ndarray]:
     with path.open('rb') as f:
@@ -235,5 +247,3 @@ def load_npz(path, keys=None) -> Dict[str, np.ndarray]:
             data = {key: fdata[key] for key in keys}
 
         return data
-
-    

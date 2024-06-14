@@ -6,6 +6,7 @@ from keras.optimizers import Adam
 
 from core.models.tf.cnn_auto_drive import get_model
 
+
 def convert_model(tf_model_dir):
     optimizer = Adam(1e-4, decay=0.0)
     tf_model = get_model(optimizer)
