@@ -80,18 +80,27 @@ class ExtendedKalmanFilter: # quanser's code
         self.P = (self.I - K@H) @ self.P
 
 
-class LowPassFilter:
-    def __init__(self, threshold: float = 0.4) -> None:
+class ThresholdFilter:
+    def __init__(self, use_low_pass: bool = True, threshold: float = 0.4) -> None:
+        # base attributes
         self.last_signal: float = 0.0
         self.threshold: float = threshold
+        # low pass mode or high pass mode
+        if use_low_pass:
+            self.is_not_noise = self._low_pass
+        else:
+            self.is_not_noise = self._high_pass
 
     def reset(self) -> None:
         self.last_signal = 0.0
 
-    def _is_not_noise(self, signal: float) -> bool:
+    def _low_pass(self, signal: float) -> bool:
         return abs(signal - self.last_signal) <= self.threshold
 
+    def _high_pass(self, signal: float) -> bool:
+        return abs(signal - self.last_signal) >= self.threshold
+
     def __call__(self, signal: float) -> float:
-        if self._is_not_noise(signal):
+        if self.is_not_noise(signal):
             self.last_signal = signal
         return self.last_signal
