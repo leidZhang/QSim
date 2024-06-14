@@ -109,17 +109,24 @@ class ThresholdFilter:
 
 
 class VariableThresholdFilter(ThresholdFilter):
-    def __init__(self, use_low_pass: bool = True, threshold: float = 0.4) -> None:
+    def __init__(
+            self, 
+            use_low_pass: bool = True, 
+            threshold: float = 0.4, 
+            reduce_factor: float = 0.3,
+            buffer_size: int = 10
+        ) -> None:
         super().__init__(use_low_pass, threshold)
         # variable signal for stable or changing state
         self.variable_threshold: float = self.threshold
+        self.reduce_factor: float = reduce_factor
         # low pass mode or high pass mode
         if use_low_pass:
             self.is_not_noise = self._is_lower
         else:
             self.is_not_noise = self._is_higher
         # buffer for valid history signals
-        self.buffer: deque = deque(maxlen=10)
+        self.buffer: deque = deque(maxlen=buffer_size)
         self.accumulator: float = 0.0
         # last avg for compare
         self.last_avg: float = 0.0
@@ -131,8 +138,9 @@ class VariableThresholdFilter(ThresholdFilter):
         return abs(signal - self.last_signal) >= self.variable_threshold
 
     def _add_to_buffer(self, signal: float) -> None:
+        print(f"Incomming: {signal}, last: {self.last_signal} Will consider: {self.will_consider(signal)}")
         # use last signal if is noise
-        if self.will_consider(signal):
+        if not self.will_consider(signal) and len(self.buffer) > 0:
             signal = self.buffer[0]
         # push signal to the buffer
         if len(self.buffer) == self.buffer.maxlen:
@@ -155,7 +163,7 @@ class VariableThresholdFilter(ThresholdFilter):
         self._add_to_buffer(signal)
         # update variable threshold
         if self._is_stable():
-            self.variable_threshold = self.threshold * 0.3
+            self.variable_threshold = self.threshold * self.reduce_factor
         else:
             self.variable_threshold = self.threshold
         # final decision based on the variable threshold
