@@ -1,3 +1,5 @@
+from collections import deque
+
 import numpy as np
 
 from pal.utilities.math import wrap_to_pi
@@ -87,12 +89,9 @@ class ThresholdFilter:
         self.threshold: float = threshold
         # low pass mode or high pass mode
         if use_low_pass:
-            self.is_not_noise = self._low_pass
+            self.will_consider = self._low_pass
         else:
-            self.is_not_noise = self._high_pass
-
-    def reset(self) -> None:
-        self.last_signal = 0.0
+            self.will_consider = self._high_pass
 
     def _low_pass(self, signal: float) -> bool:
         return abs(signal - self.last_signal) <= self.threshold
@@ -101,6 +100,72 @@ class ThresholdFilter:
         return abs(signal - self.last_signal) >= self.threshold
 
     def __call__(self, signal: float) -> float:
+        if self.will_consider(signal):
+            self.last_signal = signal
+        return self.last_signal
+
+    def reset(self) -> None:
+        self.last_signal = 0.0
+
+
+class VariableThresholdFilter(ThresholdFilter):
+    def __init__(self, use_low_pass: bool = True, threshold: float = 0.4) -> None:
+        super().__init__(use_low_pass, threshold)
+        # variable signal for stable or changing state
+        self.variable_threshold: float = self.threshold
+        # low pass mode or high pass mode
+        if use_low_pass:
+            self.is_not_noise = self._is_lower
+        else:
+            self.is_not_noise = self._is_higher
+        # buffer for valid history signals
+        self.buffer: deque = deque(maxlen=10)
+        self.accumulator: float = 0.0
+        # last avg for compare
+        self.last_avg: float = 0.0
+
+    def _is_lower(self, signal: float) -> bool:
+        return abs(signal - self.last_signal) <= self.variable_threshold
+
+    def _is_higher(self, signal: float) -> bool:
+        return abs(signal - self.last_signal) >= self.variable_threshold
+
+    def _add_to_buffer(self, signal: float) -> None:
+        # use last signal if is noise
+        if self.will_consider(signal):
+            signal = self.buffer[0]
+        # push signal to the buffer
+        if len(self.buffer) == self.buffer.maxlen:
+            self.accumulator -= self.buffer.pop()
+        self.buffer.appendleft(signal)
+        # update the accumulator
+        self.accumulator += signal
+
+    def _is_stable(self) -> bool:
+        # calculate the current average value
+        avg: float = self.accumulator / len(self.buffer)
+        # compare the current average and the last average
+        flag: bool = abs(avg - self.last_avg) <= 0.1
+        # update the last average
+        self.last_avg = avg
+        return flag
+
+    def __call__(self, signal: float) -> float:
+        # add signal to the buffer
+        self._add_to_buffer(signal)
+        # update variable threshold
+        if self._is_stable():
+            self.variable_threshold = self.threshold * 0.3
+        else:
+            self.variable_threshold = self.threshold
+        # final decision based on the variable threshold
         if self.is_not_noise(signal):
             self.last_signal = signal
         return self.last_signal
+
+    def reset(self) -> None:
+        super().reset()
+        # reset to initial state
+        self.buffer = deque(maxlen=10)
+        self.accumulator: float = 0.0
+        self.last_avg: float = 0.0
