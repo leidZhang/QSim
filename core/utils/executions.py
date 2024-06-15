@@ -26,14 +26,18 @@ class WatchDogTimer:
         self.timeout: float = timeout
 
     def start_watch_dog(self) -> None:
-        # wait for the event to be set for the first time
+        # Wait for the event to be set for the first time
         self.event.wait()
-        # clear the watchdog event
+        # Clear the watchdog event
         self.event.clear()
-        # initialize the timer
+        # Initialize the timer
         self.timer = time.time()
 
     def check_timer(self) -> bool:
+        # Ensure the watchdog has been started
+        if self.timer is None:
+            raise WatchDogException("WatchDogTimer not started. Please call start_watch_dog first.")
+
         # Check if the event is set
         if self.event.is_set():
             self.event.clear()
@@ -47,12 +51,17 @@ class WatchDogTimer:
         # No time out and event set
         return True
 
+    def set_timeout(self, timeout: float) -> None:
+        if timeout <= 0:
+            raise ValueError("Timeout must be a positive number.")
+        self.timeout = timeout
+
 
 class BaseCoordinator(ABC):
     def __init__(self, watchdogs: Dict[str, WatchDogTimer]) -> None:
         self.watchdogs: Dict[str, WatchDogTimer] = watchdogs
         self.pools: Dict[str, List[Union[Process, Thread]]] = {'thread': [], 'process': []}
-        if self.watchdogs is None or len(self.watchdogs) == 0:
+        if self.watchdogs is not None:
             self.prepare_processes = self._setup_process_watchdogs
             self.prepare_threads = self._setup_thread_watchdogs
             self.execute_main_thread = self._monitor_system
@@ -103,7 +112,7 @@ class BaseCoordinator(ABC):
         finally:
             self.terminate()
             logging.info("System stopped")
-            # os._exit(0)
+            os._exit(0)
 
 
 class BaseProcessExec(ABC):
@@ -112,7 +121,7 @@ class BaseProcessExec(ABC):
         self.done = MpEvent()
         # watchdog event for monitoring
         if watchdog_event is not None:
-            self.watchdog_event = watchdog_event
+            self.watchdog_event = watchdog_event # multi-processing Event
             self.reach_new_stage = self._set_watchdog
         else:
             warnings.warn("The process watchdog is unconfigured")
@@ -124,6 +133,7 @@ class BaseProcessExec(ABC):
     def terminate(self) -> None:
         self.done.set()
 
+    # TODO: May need to delete this and create a template
     def final(self) -> None:
         pass
 
@@ -131,6 +141,7 @@ class BaseProcessExec(ABC):
     def create_instance(self) -> Any:
         ...
 
+    # TODO: May need to replace self.final() with instance.final()
     def run_process(self, *args) -> None:
         # create the instance of the process
         instance: Any = self.create_instance()

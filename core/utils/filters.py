@@ -110,9 +110,9 @@ class ThresholdFilter:
 
 class VariableThresholdFilter(ThresholdFilter):
     def __init__(
-            self, 
-            use_low_pass: bool = True, 
-            threshold: float = 0.4, 
+            self,
+            use_low_pass: bool = True,
+            threshold: float = 0.4,
             reduce_factor: float = 0.3,
             buffer_size: int = 10
         ) -> None:
@@ -126,7 +126,8 @@ class VariableThresholdFilter(ThresholdFilter):
         else:
             self.is_not_noise = self._is_higher
         # buffer for valid history signals
-        self.buffer: deque = deque(maxlen=buffer_size)
+        self.buffer_size: int = buffer_size
+        self.buffer: deque = deque(maxlen=self.buffer_size)
         self.accumulator: float = 0.0
         # last avg for compare
         self.last_avg: float = 0.0
@@ -174,6 +175,6 @@ class VariableThresholdFilter(ThresholdFilter):
     def reset(self) -> None:
         super().reset()
         # reset to initial state
-        self.buffer = deque(maxlen=10)
+        self.buffer = deque(maxlen=self.buffer_size)
         self.accumulator: float = 0.0
         self.last_avg: float = 0.0
