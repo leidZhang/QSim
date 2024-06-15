@@ -27,7 +27,7 @@ class QCarCoordinator(BaseCoordinator):
             'thread': {
                 'edge_finder_comm': WatchDogTimer(event=events['edge_finder_comm'], timeout=0.05),
                 # 'observe_comm': WatchDogTimer(event=events['observe_comm'], timeout=0.05),
-                'car_comm': WatchDogTimer(event=events['car_comm'], timeout=0.05),
+                'car_comm': WatchDogTimer(event=events['car_comm'], timeout=4), # temp timeout
             },
             'process': {
                 'edge_finder': WatchDogTimer(event=events['edge_finder'], timeout=0.3),
@@ -61,11 +61,13 @@ class QCarCoordinator(BaseCoordinator):
     def terminate(self) -> None:
         # set the main events
         for types in self.settings.keys():
-            for val in self.settings[types].values():
+            for key, val in self.settings[types].items():
                 # extract exec instance from setting
                 exec: Union[BaseThreadExec, BaseProcessExec] = val[0]
+                print(f"terminating {types} {key}...")
                 # terminate the threads or proess by calling terminate
                 exec.terminate()
+                print(f"{types} {key} terminated")
 
         # join the threads and process
         for types in self.pools.keys():
