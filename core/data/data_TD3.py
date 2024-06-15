@@ -449,7 +449,7 @@ class SequenceRolloutBuffer:
         # update index and pos
         # after full, replace buffer data from begin
         # print(f"state: {state}, next_state: {next_state}")
-        index = self.pos % self.buffer_size  # 取余数
+        index = self.pos % self.buffer_size
         self.observations[index] = state
         self.actions[index] = action
         self.rewards[index] = reward
@@ -463,7 +463,7 @@ class SequenceRolloutBuffer:
     def sample(self, batch_size: int):
     # buffer --> batch
         max_ind = self.buffer_size if self.full else self.pos  # 同 __len__
-        if max_ind >= batch_size:  # 确保有数据可供采样
+        if max_ind >= batch_size:
             indices = np.random.choice(max_ind, size=batch_size, replace=False)  # max里随机选size个不同的数字 组成一个数组
             return {
                 'states': self.observations[indices],  # 获取一组数据 存到对应张量里 再赋值给返回字典里对应的键
@@ -473,7 +473,6 @@ class SequenceRolloutBuffer:
                 'dones': self.dones[indices]
             }
         else:
-            # 处理无数据可采样的情况，返回空数据或合适的默认值
             return {
                 'states': np.array([]),
                 'actions': np.array([]),
