@@ -43,6 +43,7 @@ class Generator:
 
     def prepare_session(self, run_id: str, resume: bool, saved_data: int) -> tuple:
         steps, episodes = 0, 0
+        self.compare_policy: PurePursuitPolicy = PurePursuitPolicy(max_lookahead_distance=0.5)
         if resume:
             _, steps, episodes = self.train_repository.count_steps()
             if saved_data >= PREFILL:
@@ -79,6 +80,7 @@ class Generator:
         metrics = defaultdict(list)
         observation, reward, done, info = self.env.reset()
         while not done:
+            compare_action, _ = self.compare_policy(observation)
             if type(self.policy) is TD3Agent:
                 '''
                 # event driven architecture for keyboard pvp?
@@ -89,21 +91,19 @@ class Generator:
                     action, metric = self.policy.select_action(observation['state'])
                 '''
                 action, metric = self.policy.select_action(observation['state'], steps)
-
                 # filtered action = human and agent
-                next_observation, reward, done, info = self.env.step(action, metric)
+                next_observation, reward, done, info = self.env.step(action, metric, compare_action)
                 self.policy.store_transition(observation['state'], action, reward, next_observation['state'], done)
                 observation = next_observation
             else:
                 action, metric = self.policy(observation)
-                observation, reward, done, info = self.env.step(action, metric)
+                observation, reward, done, info = self.env.step(action, metric, compare_action)
 
             for key, val in metric.items():
                 metrics[key].append(val)
 
             episdoe_steps += 1
             steps += 1
-        self.env.step(np.zeros(2), {})  # stop the car
         if type(self.policy) is TD3Agent:
             time.sleep(COOL_DOWN_TIME)
         # print(metrics)
@@ -141,7 +141,7 @@ class Generator:
             mlflow_log_metrics(self.metrics_agg, step=episodes, run_id=run_id)  # use episode number as step
             self.metrics_agg = defaultdict(list)
 
-    def save_to_replay_buffer(self, data: dict, datas: list, episodes: int) -> int:
+    def save_to_replay_buffer(self, data: dict, datas: list, episodes: int) -> int:  # TODO: save_to_file
         accumulator = 0
         data_episodes = len(data)
         datas_steps = len(data['reset']) - 1
