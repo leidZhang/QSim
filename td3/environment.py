@@ -16,7 +16,7 @@ class WaypointEnvironment(QLabEnvironment):
     # def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state: np.ndarray, dist_ix: int) -> tuple:
     #     # reset this episode if there's communication issue
     #     self.detector(action=action, orig=ego_state[:2])
-    
+
     #     # init params
     #     done: bool = False
     #     reward: float = 0.0
@@ -30,7 +30,7 @@ class WaypointEnvironment(QLabEnvironment):
     #     if norm_dist[dist_ix] > 0.05:
     #         panelty = reward * (norm_dist[dist_ix] / 0.05) * 0.35
     #         reward -= panelty
-    
+
     #     # end conditions
     #     if norm_dist[dist_ix] >= 0.10:
     #         reward -= 50.0
@@ -39,10 +39,10 @@ class WaypointEnvironment(QLabEnvironment):
     #     if (np.linalg.norm(self.goal - ego_state[:2]) < GOAL_THRESHOLD and len(self.vehicle.next_waypoints) < 201):
     #         done = True # stop episode after this step
     #         self.vehicle.halt()  # stop the car
-    
+
     #     return reward, done
 
-    def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state, dist_ix, global_close, global_far) -> tuple:
+    def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state, dist_ix, global_close, global_far, compare_action) -> tuple:
         # sys.stdout.write(f"\rAction: {action}, Position: {ego_state[:2]}, Start: {self.start_orig}")
         # sys.stdout.flush()
         self.detector(action=action, orig=ego_state[:2])
@@ -79,9 +79,17 @@ class WaypointEnvironment(QLabEnvironment):
         # print(f"FORWARD_REWARD REWARD {forward_reward}")
         reward += forward_reward
 
-        b05_reward = -max(0.0, 4.6 * (pos - self.pre_pos) * (norm_dist[dist_ix] + 0.3) ** 4)
+        # compare reward
+        # compare_reward = -abs( action[1] - compare_action[1])
+        compare_reward = -abs(action[1] - compare_action[1] / 2) * (pos - self.pre_pos) * 0.104
+        reward += compare_reward
+        # print(f'compare_reward: {compare_reward}')
+
+        # b05_reward = -max(0.0, 1.3 * (pos - self.pre_pos) * (norm_dist[dist_ix] - 0.031))
         # print(f"0.05 Boundary Reward: {b05_reward}")
-        reward += b05_reward
+        # reward += b05_reward
+
+        # print(f'B/F: {"{:.2%}".format(-compare_reward / forward_reward)}')
 
         self.pre_pos = pos
 
@@ -140,7 +148,7 @@ class WaypointEnvironment(QLabEnvironment):
         # print(f"reward: {reward}")
         return reward, done
 
-    def step(self, action: np.ndarray, metrics: dict) -> Tuple[dict, float, bool, dict]:
+    def step(self, action: np.ndarray, metrics: dict, compare_action: np.ndarray) -> Tuple[dict, float, bool, dict]:
         episode_done: bool = self.episode_steps >= self.max_episode_steps
         observation, reward, info = self.init_step_params()
         action: np.ndarray = self.vehicle.execute(action)
@@ -158,7 +166,11 @@ class WaypointEnvironment(QLabEnvironment):
             ego_state: np.ndarray = self.vehicle.ego_state
             norm_dist: np.ndarray = self.vehicle.norm_dist
             dist_ix: int = self.vehicle.dist_ix
-            reward, reward_done = self.handle_reward(action, norm_dist, ego_state, dist_ix, global_close, global_far)
+            # print(f'action[1]: {action[1]}')
+            # print(f'compare_action[1]: {compare_action[1]}')
+            reward, reward_done = self.handle_reward(
+                action, norm_dist, ego_state, dist_ix, global_close, global_far, compare_action
+            )
             episode_done = episode_done or reward_done
 
         # handle observation
@@ -174,25 +186,26 @@ class WaypointEnvironment(QLabEnvironment):
     def handle_spawn_pos(self, waypoint_index: int=0) -> Tuple[list, list]:
         # can also call self.spawn_on_node here
         return self.spawn_on_waypoints(waypoint_index)
-        
+
     def reset(self) -> Tuple[dict, float, bool, dict]:
-        waypoint_index: int = random.randint(420, 750) # change index here
+        start_index: int = random.randint(420, 750) # change index here
         # waypoint_index = 420
-        self.goal = self.waypoint_sequence[waypoint_index + 400]
-        location, orientation = self.handle_spawn_pos(waypoint_index=waypoint_index)
+        self.goal = self.waypoint_sequence[start_index + 400]
+        location, orientation = self.handle_spawn_pos(waypoint_index=start_index)
         observation, reward, done, info = super().reset(location, orientation)
 
         # init vehicles, assign proper coeff for throttle and steering if you want
         qlabs: QuanserInteractiveLabs = self.simulator.qlabs
-        self.vehicle: WaypointCar = WaypointCar(actor_id=0, dt=self.dt, qlabs=qlabs, throttle_coeff=0.08)
-        self.vehicle.setup(self.waypoint_sequence, waypoint_index)
+        dt: float = self.simulator.dt
+        self.vehicle: WaypointCar = WaypointCar(actor_id=0, dt=dt, qlabs=qlabs, throttle_coeff=0.08)
+        self.vehicle.setup(self.waypoint_sequence, start_index)
         # init episode params
         self.prev_dist_ix: int = 0
         ego_state: np.ndarray = self.vehicle.ego_state
         self.start_orig: np.ndarray = ego_state[:2]
         self.prev_dist = np.inf # set previous distance to infinity
         self.last_orig: np.ndarray = self.start_orig
-        self.pre_pos: int = waypoint_index
+        self.pre_pos: int = self.vehicle.current_waypoint_index
         # init observations
         global_close: np.ndarray = self.waypoint_sequence[0]
         global_far: np.ndarray = self.waypoint_sequence[49]
