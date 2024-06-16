@@ -211,7 +211,6 @@ class D4RLTrajectoryDataset(Dataset):
             traj_mask,
         )
 
-
 # class SimplifiedD4RLDataset(D4RLTrajectoryDataset): 
 #     """
 #     SimplifiedD4RLDataset class is a subclass of D4RLTrajectoryDataset that move the 

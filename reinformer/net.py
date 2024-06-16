@@ -5,7 +5,6 @@ import torch.nn.functional as F
 from torch import distributions as pyd
 
 
-
 class MaskedCausalAttention(nn.Module):
     def __init__(
         self,
@@ -144,3 +143,4 @@ class BaseActor(nn.Module):
         mu = torch.tanh(self.mu(obs))
         std = torch.exp(self.log_std.clamp(self.log_std_min, self.log_std_max))
         return pyd.Normal(mu, std)
+    

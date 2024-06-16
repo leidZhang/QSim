@@ -4,7 +4,6 @@ from .reinformer import ReinFormer
 from .lamb import Lamb
 
 
-
 class ReinFormerTrainer:
     def __init__(
         self, 
@@ -139,3 +138,4 @@ class ReinFormerTrainer:
         self.scheduler.step()
 
         return loss.detach().cpu().item()
+    
