@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from model.net import Block, BaseActor
+from .net import Block, BaseActor
 
 
 class ReinFormer(nn.Module):
