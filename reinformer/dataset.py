@@ -7,6 +7,14 @@ import numpy as np
 
 from torch.utils.data import Dataset
 
+# SCALES: Dict[str, int] = {  
+#     "hopper": 1000, "walker2d": 1000,
+#     "halfcheetah": 5000, "maze2d": 100,
+#     "kitchen": 100, "pen": 10000,
+#     "door": 10000, "hammer": 10000,
+#     "relocate": 10000, "antmaze": 1
+# } # add more scales as needed
+
 
 def discount_cumsum(x: np.ndarray, gamma: float) -> np.ndarray:
     disc_cumsum: np.ndarray = np.zeros_like(x)
@@ -16,7 +24,7 @@ def discount_cumsum(x: np.ndarray, gamma: float) -> np.ndarray:
     return disc_cumsum
 
 
-class D4RLTrajectoryDataset(Dataset): # original dataset from reinformer
+class D4RLTrajectoryDataset(Dataset): 
     def __init__(
         self, 
         env_name: str,
@@ -24,7 +32,6 @@ class D4RLTrajectoryDataset(Dataset): # original dataset from reinformer
         context_len: int, 
         device: str
     ) -> None:
-
         self.context_len: int = context_len
         self.device: str = device
         # load dataset
@@ -32,6 +39,7 @@ class D4RLTrajectoryDataset(Dataset): # original dataset from reinformer
             self.trajectories: dict = pickle.load(f)
 
         # reward scale
+        # scale: int = SCALES[env_name]
         if env_name in ["hopper", "walker2d"]:
             scale: int = 1000
         elif env_name in ["halfcheetah"]:
@@ -80,7 +88,7 @@ class D4RLTrajectoryDataset(Dataset): # original dataset from reinformer
         ]
         print(f"dataset size: {len(self.trajectories)}\nreturns max : {returns.max()}\nreturns mean: {returns.mean()}\nreturns std : {returns.std()}")
 
-    def get_state_stats(self) -> Tuple[float, float]:
+    def get_state_stats(self) -> Tuple[np.ndarray, np.ndarray]:
         return self.state_mean, self.state_std
     
     def get_return_stats(self) -> list:
@@ -204,21 +212,21 @@ class D4RLTrajectoryDataset(Dataset): # original dataset from reinformer
         )
 
 
-class SimplifiedD4RLDataset(D4RLTrajectoryDataset): 
-    """
-    SimplifiedD4RLDataset class is a subclass of D4RLTrajectoryDataset that move the 
-    initialization of the dataset from the constructor to the factory method create_dataset.
-    The factory class will create and setup the instance of the datasets. This class has all the 
-    methods of the D4RLTrajectoryDataset class.
-    """
+# class SimplifiedD4RLDataset(D4RLTrajectoryDataset): 
+#     """
+#     SimplifiedD4RLDataset class is a subclass of D4RLTrajectoryDataset that move the 
+#     initialization of the dataset from the constructor to the factory method create_dataset.
+#     The factory class will create and setup the instance of the datasets. This class has all the 
+#     methods of the D4RLTrajectoryDataset class.
+#     """
 
-    def __init__(self, context_len: int, device: str):
-        """
-        Initialize the SimplifiedD4RLDataset class.
+#     def __init__(self, context_len: int, device: str):
+#         """
+#         Initialize the SimplifiedD4RLDataset class.
 
-        Parameters:
-        - context_len: int: the length of the context
-        - device: str: the device to run the model on
-        """
-        self.context_len: int = context_len
-        self.device: str = device
+#         Parameters:
+#         - context_len: int: the length of the context
+#         - device: str: the device to run the model on
+#         """
+#         self.context_len: int = context_len
+#         self.device: str = device
