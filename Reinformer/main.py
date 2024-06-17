@@ -64,7 +64,6 @@ def experiment(variant):
     )
 
     data_iter = iter(traj_data_loader)
-
     state_mean, state_std = traj_dataset.get_state_stats()
 
     # env = gym.make(d4rl_env)
@@ -186,21 +185,19 @@ if __name__ == "__main__":
     parser.add_argument("--dropout_p", type=float, default=0.1)
     parser.add_argument("--grad_norm", type=float, default=0.25)
     parser.add_argument("--tau", type=float, default=0.99)
-    parser.add_argument("--batch_size", type=int, default=1024)
+    parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--wd", type=float, default=1e-4)
     parser.add_argument("--warmup_steps", type=int, default=5000)
     parser.add_argument("--max_train_iters", type=int, default=10)
     parser.add_argument("--num_updates_per_iter", type=int, default=5000) # 5000
-    parser.add_argument("--device", type=str, default="cuda:1")
+    parser.add_argument("--device", type=str, default="cuda:0")
     parser.add_argument("--seed", type=int, default=2024)
     parser.add_argument("--init_temperature", type=float, default=0.1)
     # use_wandb = False
     parser.add_argument("--use_wandb", action='store_true', default=True)
     args = parser.parse_args()
 
-
-    
     if args.use_wandb:
         wandb.init(
             name="QLab", # + "-" + args.dataset,
