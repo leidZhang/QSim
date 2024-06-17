@@ -2,7 +2,7 @@ wandb_version: 1
 
 model_type:
   desc: null
-  value: reinformer
+  value: Reinformer
 dataset_dir:
   desc: null
   value: assets
