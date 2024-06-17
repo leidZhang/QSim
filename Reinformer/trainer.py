@@ -1,5 +1,10 @@
+import os
+import time
+import datetime
+
 import torch
 import torch.nn.functional as F
+import logging
 from reinformer import ReinFormer
 from lamb import Lamb
 
@@ -44,13 +49,14 @@ class ReinFormerTrainer:
 
         self.tau = variant["tau"]
         self.context_len=variant["context_len"]
-
+        self.step: int = 0
 
         self.log_temperature_optimizer = torch.optim.Adam(
             [self.model.log_temperature],
             lr=1e-4,
             betas=[0.9, 0.999],
         )
+        self.timer: float = time.time()
 
     
     def train_step(
@@ -136,6 +142,33 @@ class ReinFormerTrainer:
         self.log_temperature_optimizer.step()
 
         self.scheduler.step()
+        self.save_model()
+        self.step += 1
 
         return loss.detach().cpu().item()
+
+    def save_model(self) -> None:
+        project_dir: str = os.getcwd()
+        checkpoint_path: str = os.path.join(project_dir, "latest_checkpoint.pt")
+        backup_path: str = os.path.join(project_dir, f"backup_{datetime.now().strftime('%Y%m%d%H%M%S')}.pt")
+
+        # create checkpoint dict
+        checkpoint = {}
+        checkpoint["epoch"] = self.step
+        checkpoint["model_state_dict"] = self.model.state_dict()
+
+        # checkpoint_path = f"{self.mlruns_dir[8:]}/0/{self.run_id}/latest_checkpoint.pt"
+        # backup_path = f"{self.mlruns_dir[8:]}/0/{self.run_id}/backup_{datetime.now().strftime('%Y%m%d%H%M%S')}.pt"
+        # save model to disk
+        try:
+            if self.step % 400 == 0:
+                torch.save(checkpoint, checkpoint_path)
+                logging.info(f'Saved checkpoint {self.step}')
+            if time.time() - self.timer >= 600: # backup
+                torch.save(checkpoint, backup_path)
+                # os.remove(self.last_backup_path)
+                # self.last_backup_path = backup_path
+                self.timer = time.time()
+        except IOError as e:
+            logging.error(f"Failed to save checkpoint at {checkpoint_path}: {e}")
     
