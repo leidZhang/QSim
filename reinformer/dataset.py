@@ -27,7 +27,7 @@ def discount_cumsum(x: np.ndarray, gamma: float) -> np.ndarray:
 class D4RLTrajectoryDataset(Dataset): 
     def __init__(
         self, 
-        env_name: str,
+        # env_name: str,
         dataset_path: str, 
         context_len: int, 
         device: str
@@ -40,16 +40,16 @@ class D4RLTrajectoryDataset(Dataset):
 
         # reward scale
         # scale: int = SCALES[env_name]
-        if env_name in ["hopper", "walker2d"]:
-            scale: int = 1000
-        elif env_name in ["halfcheetah"]:
-            scale: int = 5000
-        elif env_name in ["maze2d", "kitchen"]:
-            scale: int = 100
-        elif env_name in ["pen", "door", "hammer", "relocate"]:
-            scale: int = 10000
-        elif env_name in ["antmaze"]:
-            scale: int = 1
+        # if env_name in ["hopper", "walker2d"]:
+        #     scale: int = 1000
+        # elif env_name in ["halfcheetah"]:
+        #     scale: int = 5000
+        # elif env_name in ["maze2d", "kitchen"]:
+        #     scale: int = 100
+        # elif env_name in ["pen", "door", "hammer", "relocate"]:
+        #     scale: int = 10000
+        # elif env_name in ["antmaze"]:
+        #     scale: int = 1
 
         # calculate state mean and variance and returns_to_go for all traj
         states, returns, returns_to_go = [], [], []
@@ -60,9 +60,7 @@ class D4RLTrajectoryDataset(Dataset):
             states.append(traj["observations"])
             returns.append(traj["rewards"].sum())
             # calculate returns to go 
-            traj["returns_to_go"] = (
-                discount_cumsum(traj["rewards"], 1) / scale
-            )
+            traj["returns_to_go"] = discount_cumsum(traj["rewards"], 1)
         states: np.ndarray = np.concatenate(states, axis=0)
         self.state_mean, self.state_std = (
             np.mean(states, axis=0),

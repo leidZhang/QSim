@@ -16,8 +16,8 @@ def Reinformer_eval(
     returns = []
     lengths = []
 
-    state_dim = env.observation_space.shape[0]
-    act_dim = env.action_space.shape[0]
+    state_dim = 10
+    act_dim = 2
 
     state_mean = torch.from_numpy(state_mean).to(device)
     state_std = torch.from_numpy(state_std).to(device)

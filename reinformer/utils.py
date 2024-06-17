@@ -1,5 +1,6 @@
 import os
 import glob
+import pickle   
 from typing import List, Dict
 
 import numpy as np
@@ -70,9 +71,13 @@ class DataConverter:
 
 if __name__ == "__main__":
     project_path: str = os.getcwd()
-    local_path: str = r"mlruns\0\30a2bf2445ad4f229d82e5cbad3ec1ad\artifacts\episodes_train\0"
+    local_path: str = r"mlruns\0\db3099a335304dc79f565b576943a873\artifacts\episodes_train\0"
     npz_folder_path: str = os.path.join(project_path, local_path)
     data_converter: DataConverter = DataConverter(local_path)
     trajectories: List[Dict[str, np.ndarray]] = data_converter.execute()
-
+    with open("assets/trajectories.pkl", "wb") as f:
+        pickle.dump(trajectories, f)
+    # with open("assets/trajectories.pkl", "rb") as f:
+    #     data = pickle.load(f)
+    # print(len(data))
     

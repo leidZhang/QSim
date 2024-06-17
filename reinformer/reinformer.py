@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from .net import Block, BaseActor
+from net import Block, BaseActor
 
 
 class ReinFormer(nn.Module):
@@ -77,9 +77,9 @@ class ReinFormer(nn.Module):
 
         time_embeddings = self.embed_timestep(timesteps)
         # time embeddings are treated similar to positional embeddings
-        state_embeddings = self.embed_state(states) + time_embeddings
-        action_embeddings = self.embed_action(actions) + time_embeddings
-        rtg_embeddings = self.embed_rtg(returns_to_go) + time_embeddings
+        state_embeddings = self.embed_state(states.float()) + time_embeddings
+        action_embeddings = self.embed_action(actions.float()) + time_embeddings
+        rtg_embeddings = self.embed_rtg(returns_to_go.float()) + time_embeddings
 
         # stack states, RTGs, and actions and reshape sequence as
         # (s_0, R_0, a_0, s_1, R_1, a_1, s_2, R_2, a_2 ...)
