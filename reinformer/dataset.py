@@ -36,7 +36,7 @@ class D4RLTrajectoryDataset(Dataset):
         self.device: str = device
         # load dataset
         with open(dataset_path, "rb") as f:
-            self.trajectories: dict = pickle.load(f)
+            self.trajectories: list = pickle.load(f)
 
         # reward scale
         # scale: int = SCALES[env_name]
@@ -98,7 +98,7 @@ class D4RLTrajectoryDataset(Dataset):
         return len(self.trajectories)
 
     def __getitem__(self, idx) -> tuple: # tuple with 7 tensors
-        traj: Dict[str, np.ndarray] = self.trajectories[idx]
+        traj: Dict[int, np.ndarray] = self.trajectories[idx]
         traj_len: int = traj["observations"].shape[0]
 
         if traj_len >= self.context_len:
@@ -210,22 +210,3 @@ class D4RLTrajectoryDataset(Dataset):
             rewards,
             traj_mask,
         )
-
-# class SimplifiedD4RLDataset(D4RLTrajectoryDataset): 
-#     """
-#     SimplifiedD4RLDataset class is a subclass of D4RLTrajectoryDataset that move the 
-#     initialization of the dataset from the constructor to the factory method create_dataset.
-#     The factory class will create and setup the instance of the datasets. This class has all the 
-#     methods of the D4RLTrajectoryDataset class.
-#     """
-
-#     def __init__(self, context_len: int, device: str):
-#         """
-#         Initialize the SimplifiedD4RLDataset class.
-
-#         Parameters:
-#         - context_len: int: the length of the context
-#         - device: str: the device to run the model on
-#         """
-#         self.context_len: int = context_len
-#         self.device: str = device
