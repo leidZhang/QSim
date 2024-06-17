@@ -8,7 +8,7 @@ import time
 import gym
 import numpy as np
 import torch
-# import wandb
+import wandb
 from torch.utils.data import DataLoader
 
 from dataset import D4RLTrajectoryDataset
@@ -134,26 +134,26 @@ def experiment(variant):
                 rewards=rewards,
                 traj_mask=traj_mask
             )
-            # if args.use_wandb:
-            #     wandb.log(
-            #         data={
-            #             "training/loss" : loss,
-            #         }
-            #     )
+            if args.use_wandb:
+                wandb.log(
+                    data={
+                        "training/loss" : loss,
+                    }
+                )
         t2 = time.time()
         # normalized_d4rl_score = evaluator(
         #     model=Trainer.model
         # )
         t3 = time.time()
         # normalized_d4rl_score_list.append(normalized_d4rl_score)
-        # if args.use_wandb:
-        #     wandb.log(
-        #         data={
-        #                 "training/time" : t2 - t1,
-        #                 "evaluation/score" : normalized_d4rl_score,
-        #                 "evaluation/time": t3 - t2
-        #             }
-        #     )
+        if args.use_wandb:
+            wandb.log(
+                data={
+                        "training/time" : t2 - t1,
+                        # "evaluation/score" : normalized_d4rl_score,
+                        # "evaluation/time": t3 - t2
+                    }
+            )
 
     # if args.use_wandb:
     #     wandb.log(
@@ -197,14 +197,14 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=2024)
     parser.add_argument("--init_temperature", type=float, default=0.1)
     # use_wandb = False
-    parser.add_argument("--use_wandb", action='store_true', default=False)
+    parser.add_argument("--use_wandb", action='store_true', default=True)
     args = parser.parse_args()
     
-    # if args.use_wandb:
-    #     wandb.init(
-    #         name=args.env + "-" + args.dataset,
-    #         project="Reinformer",
-    #         config=vars(args)
-    #     )
+    if args.use_wandb:
+        wandb.init(
+            name="QLab", # + "-" + args.dataset,
+            project="Reinformer",
+            config=vars(args)
+        )
 
     experiment(vars(args))

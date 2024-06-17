@@ -1,0 +1,57 @@
+{
+    "os": "Windows-10-10.0.19045-SP0",
+    "python": "3.11.4",
+    "heartbeatAt": "2024-06-17T02:41:59.532012",
+    "startedAt": "2024-06-17T02:41:59.068741",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "c:\\Users\\sdcnlab025\\Desktop\\Yida\\qsim\\reinformer\\main.py",
+    "codePathLocal": "reinformer\\main.py",
+    "codePath": "reinformer\\main.py",
+    "git": {
+        "remote": "https://github.com/leidZhang/qsim.git",
+        "commit": "5d37c30b631c03ade97f95ec644d183a784ede47"
+    },
+    "email": "haoz28889@gmail.com",
+    "root": "C:/Users/sdcnlab025/Desktop/Yida/qsim",
+    "host": "DESKTOP-2BUUR4A",
+    "username": "sdcnlab025",
+    "executable": "C:\\Users\\sdcnlab025\\AppData\\Local\\Programs\\Python\\Python311\\python.exe",
+    "cpu_count": 10,
+    "cpu_count_logical": 20,
+    "cpu_freq": {
+        "current": 3696.0,
+        "min": 0.0,
+        "max": 3696.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 3696.0,
+            "min": 0.0,
+            "max": 3696.0
+        }
+    ],
+    "disk": {
+        "/": {
+            "total": 952.1220664978027,
+            "used": 379.4007339477539
+        }
+    },
+    "gpu": "Quadro RTX 4000",
+    "gpu_count": 2,
+    "gpu_devices": [
+        {
+            "name": "Quadro RTX 4000",
+            "memory_total": 8589934592
+        },
+        {
+            "name": "Quadro P2200",
+            "memory_total": 5368709120
+        }
+    ],
+    "memory": {
+        "total": 127.71347427368164
+    }
+}
