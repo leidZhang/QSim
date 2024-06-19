@@ -1,4 +1,5 @@
 import argparse
+import logging
 import os
 import random
 from datetime import datetime
@@ -41,7 +42,7 @@ def experiment(variant):
     #     if dataset == "medium" or dataset == "meidum-replay":
     #         variant["batch_size"] = 256
     
-    dataset_path = os.path.join(variant["dataset_dir"], f"QLab.pkl")
+    dataset_path = os.path.join(variant["dataset_dir"], f"QLab-2.pkl")
     device = torch.device(variant["device"])
 
     start_time = datetime.now().replace(microsecond=0)
@@ -171,6 +172,8 @@ def experiment(variant):
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_type", choices=[ "Reinformer"], default="Reinformer")
     # parser.add_argument("--env", type=str, default="QLab")

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from net import Block, BaseActor
+from .net import Block, BaseActor
 
 
 class ReinFormer(nn.Module):
@@ -111,9 +111,9 @@ class ReinFormer(nn.Module):
         h = h.reshape(B, T, self.num_inputs, self.h_dim).permute(0, 2, 1, 3)
 
         # get predictions
-        rtg_preds  = self.predict_rtg(h[:, 0])            # predict rtg given s
-        action_dist_preds = self.predict_action(h[:, 1])  # predict action given s, R
-        state_preds = self.predict_state(h[:, 2])         # predict next state given s, R, a
+        rtg_preds  = self.predict_rtg(h[:, 0])            # predict rtg given s----g
+        action_dist_preds = self.predict_action(h[:, 1])  # predict action given s, R----a
+        state_preds = self.predict_state(h[:, 2])         # predict next state given s, R, a----s'
 
         return (
             rtg_preds,

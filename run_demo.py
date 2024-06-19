@@ -1,7 +1,6 @@
 import cv2
 
-from core.utils.io_utils import ImageReader
+from Reinformer.test import test_reinformer_car
 
 if __name__ == "__main__":
-    reader: ImageReader = ImageReader('images/')
-    reader.read_images()
+    test_reinformer_car()

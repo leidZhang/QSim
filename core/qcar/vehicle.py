@@ -63,9 +63,9 @@ class VirtualCar(BaseCar):
 
     def __init__(
         self,
-        actor_id: int,
-        dt: float,
-        qlabs: QuanserInteractiveLabs,
+        actor_id: int = 0,
+        dt: float = 0.3,
+        qlabs: QuanserInteractiveLabs = None,
         throttle_coeff: float = 0.3,
         steering_coeff: float = 0.5
     ) -> None:
