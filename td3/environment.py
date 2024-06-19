@@ -156,7 +156,7 @@ class WaypointEnvironment(QLabEnvironment):
 
         # extra obs info
         close_index: int = self.vehicle.current_waypoint_index
-        far_index: int = (self.vehicle.current_waypoint_index + 39) % self.waypoint_sequence.shape[0]
+        far_index: int = (self.vehicle.current_waypoint_index + 49) % self.waypoint_sequence.shape[0]
         global_close: np.ndarray = self.waypoint_sequence[close_index]
         global_far: np.ndarray = self.waypoint_sequence[far_index]
         # print(f'global_far: {global_far}')
@@ -188,15 +188,18 @@ class WaypointEnvironment(QLabEnvironment):
         return self.spawn_on_waypoints(waypoint_index)
 
     def reset(self) -> Tuple[dict, float, bool, dict]:
-        start_index: int = random.randint(420, 750) # change index here
+        # start_index: int = random.randint(420, 750) # change index here
+        start_index: int = 0
         # waypoint_index = 420
-        self.goal = self.waypoint_sequence[start_index + 400]
+        # self.goal = self.waypoint_sequence[start_index + 400]
+        self.goal = self.waypoint_sequence[-100]
         location, orientation = self.handle_spawn_pos(waypoint_index=start_index)
         observation, reward, done, info = super().reset(location, orientation)
 
         # init vehicles, assign proper coeff for throttle and steering if you want
         qlabs: QuanserInteractiveLabs = self.simulator.qlabs
-        dt: float = self.simulator.dt
+        # dt: float = self.simulator.dt
+        dt = 0.03
         self.vehicle: WaypointCar = WaypointCar(actor_id=0, dt=dt, qlabs=qlabs, throttle_coeff=0.08)
         self.vehicle.setup(self.waypoint_sequence, start_index)
         # init episode params
