@@ -47,8 +47,8 @@ class DataConverter:
         return_to_go: np.ndarray = np.zeros_like(reward)
         accumulated_reward: float = 0
         for i in range(len(reward) - 1, -1, -1):
-            return_to_go[i] = accumulated_reward
             accumulated_reward += reward[i]
+            return_to_go[i] = accumulated_reward
         # assign the data to the dictionary
         traj['observations'] = state
         traj['next_observations'] = next_state
@@ -72,7 +72,7 @@ class DataConverter:
 def test_reinformer_util():
     project_path: str = os.getcwd()
     print(f"Current working directory: {project_path[:-11]}")  # 打印当前工作目录
-    local_path: str = r"mlruns\0\30a2bf2445ad4f229d82e5cbad3ec1ad\artifacts\episodes_train\0"
+    local_path: str = r"mlruns\0\30a\artifacts\episodes_train\0"
     npz_folder_path: str = os.path.join(project_path[:-11], local_path)
     data_converter: DataConverter = DataConverter(local_path)
     trajectories: List[Dict[str, np.ndarray]] = data_converter.execute()

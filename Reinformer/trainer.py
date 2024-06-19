@@ -148,7 +148,7 @@ class ReinFormerTrainer:
         return loss.detach().cpu().item()
 
     def save_model(self) -> None:
-        folder_dir: str = os.path.join(os.getcwd(), "Reinformer/models/")
+        folder_dir: str = os.path.join(os.getcwd(), "models/")
         checkpoint_path: str = os.path.join(folder_dir, "latest_checkpoint.pt")
         backup_path: str = os.path.join(folder_dir, f"backup_{datetime.now().strftime('%Y%m%d%H%M%S')}.pt")
 
