@@ -64,6 +64,7 @@ class ReinformerPolicy(PTPolicy):
                 self.returns_to_go[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
             )
         action: torch.Tensor = action_predict.mean.reshape(1, -1, self.act_dim)[0, -1].detach()
+        self.step_counter += 1
         return action.cpu().numpy(), {}
 
 
