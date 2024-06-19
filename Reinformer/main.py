@@ -15,6 +15,7 @@ from torch.utils.data import DataLoader
 from dataset import D4RLTrajectoryDataset
 from trainer import ReinFormerTrainer
 from eval import Reinformer_eval
+from td3.environment import WaypointEnvironment
 
 
 
@@ -42,7 +43,8 @@ def experiment(variant):
     #     if dataset == "medium" or dataset == "meidum-replay":
     #         variant["batch_size"] = 256
     
-    dataset_path = os.path.join(variant["dataset_dir"], f"QLab-2.pkl")
+    # dataset_path = os.path.join(variant["dataset_dir"], f"trajectories.pkl")
+    dataset_path = r'C:\Users\SDCNLab_P720\PycharmProjects\qsim\assets\trajectories.pkl'
     device = torch.device(variant["device"])
 
     start_time = datetime.now().replace(microsecond=0)
@@ -142,9 +144,9 @@ def experiment(variant):
                     }
                 )
         t2 = time.time()
-        # normalized_d4rl_score = evaluator(
-        #     model=Trainer.model
-        # )
+        normalized_d4rl_score = evaluator(
+            model=Trainer.model
+        )
         t3 = time.time()
         # normalized_d4rl_score_list.append(normalized_d4rl_score)
         if args.use_wandb:
@@ -189,7 +191,7 @@ if __name__ == "__main__":
     parser.add_argument("--dropout_p", type=float, default=0.1)
     parser.add_argument("--grad_norm", type=float, default=0.25)
     parser.add_argument("--tau", type=float, default=0.99)
-    parser.add_argument("--batch_size", type=int, default=128)
+    parser.add_argument("--batch_size", type=int, default=64)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--wd", type=float, default=1e-4)
     parser.add_argument("--warmup_steps", type=int, default=5000)

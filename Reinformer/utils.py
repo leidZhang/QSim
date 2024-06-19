@@ -72,7 +72,7 @@ class DataConverter:
 def test_reinformer_util():
     project_path: str = os.getcwd()
     print(f"Current working directory: {project_path[:-11]}")  # 打印当前工作目录
-    local_path: str = r"mlruns\0\30a2bf2445ad4f229d82e5cbad3ec1ad\artifacts\episodes_train\0"
+    local_path: str = r"mlruns\0\64f95931665541f0910cd7b58a6a9e56\artifacts\episodes_train\0"
     npz_folder_path: str = os.path.join(project_path[:-11], local_path)
     data_converter: DataConverter = DataConverter(local_path)
     trajectories: List[Dict[str, np.ndarray]] = data_converter.execute()
