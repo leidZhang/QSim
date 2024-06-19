@@ -5,6 +5,7 @@ from qvl.qlabs import QuanserInteractiveLabs
 from tests.performance_environment import destroy_map
 from tests.performance_environment import prepare_test_environment
 from core.policies.pt_policy import PTPolicy
+from .dataset import D4RLTrajectoryDataset
 from .vehicle import ReinformerCar, ReinformerPolicy
 from .reinformer import ReinFormer
 from .settings import *
@@ -28,13 +29,23 @@ def test_reinformer_car() -> None:
     ).to(DEVICE)
     # prepare policy
     max_steps: int = 100000
+    state_mean: np.ndarray = np.array([
+        2.21901288, 2.27527959, 1.56569062, 1.78819954, 
+        0.63561087, 0.30543765, 2.1585068, 2.2505649,
+        2.13603409, 2.61963549
+    ])
+    state_std: np.ndarray = np.array([
+        1.26958866e-01, 1.08842578e+00, 2.22069285e-01, 1.02672571e+01,
+        5.99335785e+00, 4.90238012e+02, 3.97721646e-01, 1.11865510e+00,
+        3.78844268e-01, 1.12322966e+00
+    ])
     policy: PTPolicy = ReinformerPolicy(model, model_path=MODEL_PATH)
     policy.setup(
         eval_batch_size=1,
         max_test_ep_len=max_steps,
         context_len=CONTEXT_LEN,
-        state_mean=0.0, # how to get this when deploy on a real car?
-        state_std=0.0, # how to get this when deploy on a real car?
+        state_mean=state_mean, # how to get this when deploy on a real car?
+        state_std=state_std, # how to get this when deploy on a real car?
         state_dim=STATE_DIM,
         act_dim=ACT_DIM,
         device=DEVICE,

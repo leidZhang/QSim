@@ -28,8 +28,8 @@ class ReinformerPolicy(PTPolicy):
         self.step_counter: int = 0
         self.timesteps: torch.Tensor = torch.arange(start=0, end=max_test_ep_len, step=1)
         self.timesteps = self.timesteps.repeat(eval_batch_size, 1).to(device)
-        self.state_mean: float = state_mean
-        self.state_std: float = state_std
+        self.state_mean: torch.Tensor = torch.from_numpy(state_mean).to(device)
+        self.state_std: torch.Tensor = torch.from_numpy(state_std).to(device)
         self.actions: torch.Tensor = torch.zeros(
             (eval_batch_size, max_test_ep_len, act_dim),
             dtype=torch.float32,
@@ -48,7 +48,7 @@ class ReinformerPolicy(PTPolicy):
 
     def execute(self, observation: dict) -> Tuple[np.ndarray, dict]:
         self.states[0, self.step_counter] = torch.from_numpy(observation['state']).to(self.device)
-        # self.states[0, self.step_counter] = (self.states[0, self.step_counter] - self.state_mean) / self.state_std
+        self.states[0, self.step_counter] = (self.states[0, self.step_counter] - self.state_mean) / self.state_std
         if self.step_counter < self.context_len:
             _, action_predict, _ = self.model.forward(
                 self.timesteps[:, :self.context_len],

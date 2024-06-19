@@ -66,7 +66,8 @@ def experiment(variant):
 
     data_iter = iter(traj_data_loader)
     state_mean, state_std = traj_dataset.get_state_stats()
-
+    print(f"{type(state_mean)} {type(state_std)}")
+    print("state mean: ", state_mean, "state std: ", state_std)
     # env = gym.make(d4rl_env)
     # env.seed(seed)
 
