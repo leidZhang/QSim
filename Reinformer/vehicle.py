@@ -94,7 +94,6 @@ class ReinformerCar(WaypointCar):
         start_time: float = time.time()
         # get the action from the policy
         action, _ = self.policy.execute(self.observation)
-        print(action)
         # apply the action to the vehicle
         self.running_gear.read_write_std(action[0] * 0.08, action[1])
         self.update_state()

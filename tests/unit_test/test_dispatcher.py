@@ -19,9 +19,10 @@ def test_dispatcher_1() -> None:
         dispatcher.execute(data_queue)
         counter -= 1
 
-    while data_queue.qsize() > 1: # the last one may not be a valid task
+    while not data_queue.empty(): # the last one may not be a valid task
         node_sequence: List[int] = data_queue.get()
         last_index: int = node_sequence[-1]
+        print(node_sequence)
         assert len(node_sequence) >= 5 # the minimum length of a task
         assert len(node_sequence) <= 15 # the maximum length of a task
         assert len(ACC_GRAPH_RIGHT[last_index]) == 1 # the last node has only one next node

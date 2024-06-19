@@ -54,9 +54,6 @@ class D4RLTrajectoryDataset(Dataset):
         # calculate state mean and variance and returns_to_go for all traj
         states, returns, returns_to_go = [], [], []
         for traj in self.trajectories:
-            if "antmaze" in dataset_path:
-                # reward modification for antmaze
-                traj["rewards"] = traj["rewards"] * 100 + 1
             states.append(traj["observations"])
             returns.append(traj["rewards"].sum())
             # calculate returns to go 

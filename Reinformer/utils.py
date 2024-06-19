@@ -47,8 +47,8 @@ class DataConverter:
         return_to_go: np.ndarray = np.zeros_like(reward)
         accumulated_reward: float = 0
         for i in range(len(reward) - 1, -1, -1):
-            return_to_go[i] = accumulated_reward
             accumulated_reward += reward[i]
+            return_to_go[i] = accumulated_reward
         # assign the data to the dictionary
         traj['observations'] = state
         traj['next_observations'] = next_state
