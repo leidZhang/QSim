@@ -165,3 +165,4 @@ mlruns/
 assets/
 *.html
 images/
+wandb/
