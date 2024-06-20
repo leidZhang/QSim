@@ -243,7 +243,7 @@ class BaseProcessExec(ABC):
     to be extended by concrete classes that implement specific process execution strategies.
     """
 
-    def __init__(self, watchdog_event) -> None:
+    def __init__(self, watchdog_event = None) -> None:
         """
         Initialize the BaseProcessExec with the watchdog event.
 
@@ -339,7 +339,7 @@ class BaseThreadExec(ABC):
     concrete classes that implement specific thread execution strategies.
     """
     
-    def __init__(self, watchdog_event: ThEvent) -> None:
+    def __init__(self, watchdog_event: ThEvent = None) -> None:
         """
         Initialize the BaseThreadExec with the watchdog event.
 
@@ -423,11 +423,11 @@ class BaseThreadExec(ABC):
         # prepare the thread instances
         self.setup_thread()
         # setup the watchdog
-        self.watchdog_event.set()
+        self.reach_new_stage()
         # main loop of the thread
         while not self.done.is_set():
             self.execute(*args)
             # set the watchdog
-            self.watchdog_event.set()
+            self.reach_new_stage()
         # final execution to close resources
         self.final()

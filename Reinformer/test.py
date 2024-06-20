@@ -14,7 +14,7 @@ from .settings import *
 def test_reinformer_car() -> None:
     # prepare environment
     destroy_map()
-    waypoints: np.ndarray = prepare_test_environment(node_id=10)
+    waypoints: np.ndarray = prepare_test_environment(node_id=4)
     # nn module
     model: ReinFormer = ReinFormer(
         state_dim=STATE_DIM,

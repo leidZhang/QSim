@@ -1,5 +1,8 @@
 import sys
 import time
+from queue import Queue
+from typing import Union
+from multiprocessing import Queue as MPQueue
 
 import matplotlib.pyplot as plt
 
@@ -20,6 +23,11 @@ def elapsed_time(start_time: float) -> float:
 def realtime_message_output(message: str) -> None:
     sys.stdout.write(f'\r{message}')
     sys.stdout.flush()
+
+
+def wait_for_empty_queue_space(data_queue: Union[Queue, MPQueue], wait_time: float = 0.1) -> None:
+    while data_queue.full():
+        time.sleep(wait_time)
 
 
 def plot_data_in_dict(data_lists: dict, title: str, x_label: str, y_label: str) -> None:

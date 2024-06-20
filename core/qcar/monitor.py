@@ -45,7 +45,9 @@ class Monitor:
         a = (v - self.last_state[3]) / self.dt
         self.state = np.array([x, y, yaw, v, w, a])
 
-    def get_state(self, qlabs: QuanserInteractiveLabs) -> None:
+    def read_state(self, qlabs: QuanserInteractiveLabs) -> None:
         self.get_position(qlabs)
         self.cal_motion()
         self.last_state = self.state
+
+    get_state = read_state
