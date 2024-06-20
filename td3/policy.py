@@ -34,7 +34,7 @@ class TD3Agent(torch.nn.Module):
         self.total_it = 0
 
     def select_action(self, state, data_size):
-        state = torch.FloatTensor(state.reshape(1, -1)).to(device)
+        state = torch.FloatTensor(state.reshape(1, -1)).to(device)  # 1 row and auto column
         action_yaw = self.actor(state).detach().cpu().data.numpy().flatten()
         '''
         action type #1: <class 'numpy.ndarray'>

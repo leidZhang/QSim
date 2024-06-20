@@ -58,6 +58,7 @@ class MlflowEpisodeRepository(EpisodeRepository):
         self.write_repo = self.read_repos[0]
 
     def save_data(self, data: Dict[str, np.ndarray], episode_from: int, episode_to: int, chunk_seq: Optional[int] = None):
+    # data(from qlab) --> npz
         n_episodes = data["reset"].sum()
         n_steps = len(data["reset"]) - n_episodes
         reward = data["reward"].sum()

@@ -90,10 +90,10 @@ class Generator:
                 else:
                     action, metric = self.policy.select_action(observation['state'])
                 '''
-                action, metric = self.policy.select_action(observation['state'], steps)
+                action, metric = self.policy.select_action(observation['waypoints'], steps)
                 # filtered action = human and agent
                 next_observation, reward, done, info = self.env.step(action, metric, compare_action)
-                self.policy.store_transition(observation['state'], action, reward, next_observation['state'], done)
+                self.policy.store_transition(observation['waypoints'], action, reward, next_observation['waypoints'], done)
                 observation = next_observation
             else:
                 action, metric = self.policy(observation)
@@ -141,7 +141,7 @@ class Generator:
             mlflow_log_metrics(self.metrics_agg, step=episodes, run_id=run_id)  # use episode number as step
             self.metrics_agg = defaultdict(list)
 
-    def save_to_replay_buffer(self, data: dict, datas: list, episodes: int) -> int:  # TODO: save_to_file
+    def save_to_replay_buffer(self, data: dict, datas: list, episodes: int) -> int:  # TODO: it's save_to_file actually
         accumulator = 0
         data_episodes = len(data)
         datas_steps = len(data['reset']) - 1
