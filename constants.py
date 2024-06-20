@@ -1,7 +1,7 @@
 print_QCar_info: bool = False  # print "QCar configured successfully." in qcar.py or not
 max_action: float = 0.5
 discount: float = 0.99
-state_dim: int = 10
+state_dim: int = 400
 action_dim: int = 2
 lr: float = 1e-4  # 3e-4
 tau: float = 0.005

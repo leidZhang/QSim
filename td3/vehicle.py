@@ -31,6 +31,7 @@ class WaypointCar(VirtualCar):
             slop = MAX_LOOKAHEAD_INDICES - self.next_waypoints.shape[0]
             self.next_waypoints = np.concatenate([self.next_waypoints, self.waypoints[:slop]])
         # add waypoints info to observation
+        # print(f'before convert of close waypoint: {self.next_waypoints[0]}')
         self.observation['waypoints'] = np.matmul(self.next_waypoints[:MAX_LOOKAHEAD_INDICES] - orig, rot)
 
     def setup(self, waypoints: np.ndarray, init_waypoint_index: int = 0) -> None:
