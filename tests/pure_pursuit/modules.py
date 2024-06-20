@@ -12,7 +12,7 @@ from core.qcar.monitor import Monitor
 from core.qcar.vehicle import PhysicalCar
 from core.qcar.constants import QCAR_ACTOR_ID
 from core.datatypes.pose import MockPose
-from core.utils.performance import elapsed_time
+from core.utils.performance import elapsed_time, realtime_message_output
 from constants import MAX_LOOKAHEAD_INDICES
 from .exceptions import ReachGoalException
 
@@ -46,6 +46,7 @@ class PurePursuiteCar(PhysicalCar): # for simulation purpose
         self.qlabs: QuanserInteractiveLabs = qlabs
         self.client: MockOptitrackClient = MockOptitrackClient(self.data_queue)
         self.policy: BasePolicy = PurePursuiteAdaptor()
+        self.completed_task_length: int = 0
         self.observation: dict = {}
 
     def get_ego_state(self) -> np.ndarray:
@@ -108,12 +109,14 @@ class PurePursuiteCar(PhysicalCar): # for simulation purpose
         self.handle_observation(orig, rot)
 
     def check_new_tasks(self, task_queue: MPQueue) -> None:
-        if task_queue is not None:
+        if task_queue is not None and not task_queue.empty():
             task_data: Tuple[List[int], np.ndarray] = task_queue.get()
+            
             print(f"Get the new task {task_data[0]}, task length: {len(task_data[1])}") # get the new task
             self.next_waypoints = np.concatenate([self.waypoints[self.current_waypoint_index:], task_data[1]])
+            self.completed_task_length = len(self.waypoints)
             self.waypoints = np.concatenate([self.waypoints, task_data[1]]) # update the waypoints
-        else:
+        else: # we will stop the car if there is no new task
             raise ReachGoalException("Reached the goal")
 
     def execute(self, task_queue: MPQueue = None) -> None:
@@ -124,11 +127,12 @@ class PurePursuiteCar(PhysicalCar): # for simulation purpose
         action[1] = action[1] * self.steering_coeff
         self.running_gear.read_write_std(throttle=action[0], steering=action[1])
         self.update_state() # update the state
-        if self.current_waypoint_index >= len(self.waypoints) - 30:
+        if self.current_waypoint_index >= len(self.waypoints) - 50:
             self.check_new_tasks(task_queue)
         # calculate the estimated speed
         # linear_speed: float = self.estimate_speed()
         # calculate the sleep time
         execute_time: float = elapsed_time(start_time)
-        sleep_time: float = 0.1 - execute_time
+        sleep_time: float = 0.01 - execute_time
+        realtime_message_output(f"Current index {self.current_waypoint_index - self.completed_task_length}")
         time.sleep(max(sleep_time, 0)) # mock delay

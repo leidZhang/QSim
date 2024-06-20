@@ -7,6 +7,7 @@ from multiprocessing import Process
 import numpy as np
 
 from qvl.qlabs import QuanserInteractiveLabs
+from core.roadmap.dispatcher import TaskDispacher
 from tests.performance_environment import prepare_test_environment, destroy_map
 from .modules import PurePursuiteCar, MockOptitrackClient
 from .executions import TaskDispatcherExec, BaseProcessExec
