@@ -131,4 +131,4 @@ class PurePursuiteCar(PhysicalCar): # for simulation purpose
         # calculate the sleep time
         execute_time: float = elapsed_time(start_time)
         sleep_time: float = 0.1 - execute_time
-        time.sleep(max(sleep_time, 0)) # mock delay
+        # time.sleep(max(sleep_time, 0)) # mock delay

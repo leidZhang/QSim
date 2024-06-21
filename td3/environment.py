@@ -131,7 +131,7 @@ class WaypointEnvironment(QLabEnvironment):
 
 
         # Max boundary
-        if norm_dist[dist_ix] >= 0.10:
+        if norm_dist[dist_ix] >= 0.20:
             # max_boundary_reward = -44
             # print(f'max_boundary_reward {max_boundary_reward}')
             # reward += max_boundary_reward
@@ -197,7 +197,7 @@ class WaypointEnvironment(QLabEnvironment):
         start_index: int = 0
         # waypoint_index = 420
         # self.goal = self.waypoint_sequence[start_index + 400]
-        self.goal = self.waypoint_sequence[-100]
+        self.goal = self.waypoint_sequence[-10]
         location, orientation = self.handle_spawn_pos(waypoint_index=start_index)
         observation, reward, done, info = super().reset(location, orientation)
 

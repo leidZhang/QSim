@@ -38,7 +38,9 @@ class DataConverter:
         traj: Dict[str, np.ndarray] = {}
 
         # calculate the next_state
-        state: np.ndarray = data['state']
+        state: np.ndarray = data['waypoints']
+        state = state.reshape(state.shape[0], -1)
+        # print(f'shape of state: {state.shape}')
         next_state: np.ndarray = np.zeros_like(state)
         for i in range(len(state) - 1):
             next_state[i] = state[i + 1]
@@ -72,7 +74,7 @@ class DataConverter:
 def test_reinformer_util():
     project_path: str = os.getcwd()
     print(f"Current working directory: {project_path[:-11]}")
-    local_path: str = r"mlruns\0\64f95931665541f0910cd7b58a6a9e56\artifacts\episodes_train\0"
+    local_path: str = r"mlruns\0\e4eef53e8c3a49a0b2967fa6be338fd2\artifacts\episodes_train\0"
     npz_folder_path: str = os.path.join(project_path[:-11], local_path)
     data_converter: DataConverter = DataConverter(local_path)
     trajectories: List[Dict[str, np.ndarray]] = data_converter.execute()
@@ -82,4 +84,8 @@ def test_reinformer_util():
     # with open("assets/trajectories.pkl", "rb") as f:
     #     data = pickle.load(f)
     # print(len(data))
+
+def format_numbers(numbers):
+    formatted_numbers = ", ".join(f"{num:.8e}" for num in numbers)
+    return formatted_numbers
     

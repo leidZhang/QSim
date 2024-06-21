@@ -14,7 +14,7 @@ from .settings import *
 def test_reinformer_car() -> None:
     # prepare environment
     destroy_map()
-    waypoints: np.ndarray = prepare_test_environment(node_id=4)
+    waypoints: np.ndarray = prepare_test_environment(node_id=10)
     # nn module
     model: ReinFormer = ReinFormer(
         state_dim=STATE_DIM,
@@ -30,12 +30,12 @@ def test_reinformer_car() -> None:
     # prepare policy
     max_steps: int = 100000
     state_mean: np.ndarray = np.array([
-        0.31054742, 1.86853108, 0.21911925, 1.0992513, -0.05376846, 0.02852992,
-        0.31109767, 1.86911335, 0.29368724, 1.88617678
+        -0.69423042, 0.07053646, -0.04422028, 0.79320842, -0.04397981, 0.06815367,
+                     -0.69712795, 0.07171669, -0.68570901, 0.06814906
     ])
     state_std: np.ndarray = np.array([
-        1.66867512, 2.05809646, 1.86923593, 11.89393242, 12.85943864,
-        562.16986934, 1.67460848, 2.06462373, 1.69343701, 2.04808915
+        0.76712374, 0.76531872, 1.81853425, 2.38263837, 11.70511559,
+        114.15543157, 0.74577846, 0.75330879, 0.74456589, 0.75382333
     ])
     policy: PTPolicy = ReinformerPolicy(model, model_path=MODEL_PATH)
     policy.setup(
