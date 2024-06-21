@@ -1,7 +1,11 @@
 import os
+import json
+from typing import Any
 
 import cv2
 import numpy as np
+
+from .performance import skip
 
 
 class ImageWriter:
@@ -43,3 +47,34 @@ class ImageReader:
             image = cv2.imread(image_path)
             cv2.imshow('Image', image)
             cv2.waitKey(30)
+
+
+class DataWriter:
+    def __init__(self, folder_path: str, file_path: str) -> None:
+        self.history: list = []
+        self.process_data = skip
+        self.folder_path: str = os.path.join(
+            os.getcwd(), folder_path
+        )
+        # check if the output path exists
+        if not os.path.exists(self.folder_path):
+            os.makedirs(self.folder_path)
+        # check if the file path exists
+        self.path: str = os.path.join(self.folder_path, file_path)
+        if not os.path.exists(self.path):
+            open(self.path, 'w').close()
+        
+    def add_data(self, data: Any) -> None:
+        self.history.append(data.copy())
+
+    def _write_to_json(self, file) -> None:
+        for i in len(self.history):
+            data: Any = self.history[i]
+            self.process_data(data, i)
+            json.dump(data, file, indent=4)
+        file.write('\n')
+
+    def write_data(self) -> None:
+        with open(self.path, 'w') as f:
+            self._write_to_json(f)
+        self.history = []
