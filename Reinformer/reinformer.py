@@ -10,7 +10,7 @@ class ReinFormer(nn.Module):
         state_dim, 
         act_dim, 
         n_blocks, 
-        h_dim, 
+        h_dim,  # h_dim: hidden dimension
         context_len,
         n_heads, 
         drop_p, 
@@ -24,6 +24,7 @@ class ReinFormer(nn.Module):
         self.state_dim = state_dim
         self.act_dim = act_dim
         self.h_dim = h_dim
+        self.context_len = context_len
 
 
         ### transformer blocks
@@ -73,7 +74,7 @@ class ReinFormer(nn.Module):
         returns_to_go,
     ):
 
-        B, T, _ = states.shape
+        B, T, _ = states.shape  # B: batch size T: time steps
 
         time_embeddings = self.embed_timestep(timesteps)
         # time embeddings are treated similar to positional embeddings
@@ -86,8 +87,8 @@ class ReinFormer(nn.Module):
         h = (
             torch.stack(
                 (
-                    state_embeddings, 
-                    rtg_embeddings, 
+                    state_embeddings,
+                    rtg_embeddings,
                     action_embeddings,
                 ),
                 dim=1,

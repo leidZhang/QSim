@@ -131,7 +131,7 @@ class WaypointEnvironment(QLabEnvironment):
 
 
         # Max boundary
-        if norm_dist[dist_ix] >= 0.10:
+        if norm_dist[dist_ix] >= 0.20:
             # max_boundary_reward = -44
             # print(f'max_boundary_reward {max_boundary_reward}')
             # reward += max_boundary_reward
@@ -155,8 +155,8 @@ class WaypointEnvironment(QLabEnvironment):
         # time.sleep(0.05)  # sleep for 0.05 seconds
 
         # extra obs info
-        close_index: int = self.vehicle.current_waypoint_index
-        far_index: int = (self.vehicle.current_waypoint_index + 49) % self.waypoint_sequence.shape[0]
+        close_index: int = self.vehicle.current_waypoint_index  # 0
+        far_index: int = (self.vehicle.current_waypoint_index + 49) % self.waypoint_sequence.shape[0]  # 49
         global_close: np.ndarray = self.waypoint_sequence[close_index]
         global_far: np.ndarray = self.waypoint_sequence[far_index]
         # print(f'global_far: {global_far}')
@@ -177,10 +177,15 @@ class WaypointEnvironment(QLabEnvironment):
         state_info: np.ndarray = np.concatenate((ego_state, global_close, global_far))
         observation['state'] = self.recover_state_info(state_info, RECOVER_INDICES)
         observation["waypoints"] = self.vehicle.observation["waypoints"]
+        # print(f'close:       {global_close}')
+        # print(f'waypoint 1:  {observation["waypoints"][0]}')
+        # print(f'far:         {global_far}')
+        # print(f'waypoint 50: {observation["waypoints"][49]}')
 
         self.episode_steps += 1
         self.pre_pos = self.vehicle.current_waypoint_index
         # print(f'reward: {reward}')
+        # print(f'observation: {observation}')
         return observation, reward, episode_done, info
 
     def handle_spawn_pos(self, waypoint_index: int=0) -> Tuple[list, list]:
@@ -192,7 +197,7 @@ class WaypointEnvironment(QLabEnvironment):
         start_index: int = 0
         # waypoint_index = 420
         # self.goal = self.waypoint_sequence[start_index + 400]
-        self.goal = self.waypoint_sequence[-1]
+        self.goal = self.waypoint_sequence[-10]
         location, orientation = self.handle_spawn_pos(waypoint_index=start_index)
         observation, reward, done, info = super().reset(location, orientation)
 
@@ -217,5 +222,4 @@ class WaypointEnvironment(QLabEnvironment):
         observation['waypoints'] = self.vehicle.observation['waypoints'] if self.privileged else None
         # init fault tolerance
         self.detector: EpisodeMonitor = EpisodeMonitor(start_orig=self.start_orig)
-
         return observation, reward, done, info

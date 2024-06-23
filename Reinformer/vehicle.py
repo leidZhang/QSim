@@ -47,7 +47,8 @@ class ReinformerPolicy(PTPolicy):
         )
 
     def execute(self, observation: dict) -> Tuple[np.ndarray, dict]:
-        self.states[0, self.step_counter] = torch.from_numpy(observation['state']).to(self.device)
+        observation_shape = self.states[0, self.step_counter].shape
+        self.states[0, self.step_counter] = torch.from_numpy(observation['waypoints'].reshape(observation_shape)).to(self.device)
         self.states[0, self.step_counter] = (self.states[0, self.step_counter] - self.state_mean) / self.state_std
         if self.step_counter < self.context_len:
             _, action_predict, _ = self.model.forward(
@@ -82,7 +83,7 @@ class ReinformerCar(WaypointCar):
 
     def handle_observation(self, orig: np.ndarray, rot: np.ndarray) -> None:
         super().handle_observation(orig, rot)
-        far_index: int = (self.current_waypoint_index + 39) % self.waypoints.shape[0]
+        far_index: int = (self.current_waypoint_index + 49) % self.waypoints.shape[0]
         self.observation['state'] = np.concatenate((
             self.ego_state, # ego state
             self.waypoints[self.current_waypoint_index], # closest waypoint

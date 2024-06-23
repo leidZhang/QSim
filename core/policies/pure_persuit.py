@@ -2,6 +2,8 @@ from typing import Tuple
 
 import torch
 import numpy as np
+import random
+
 #project imports
 from core.models.torch.model import Model
 from core.data.preprocessor import Preprocessor
@@ -43,6 +45,20 @@ class PurePursuitPolicy:
         l: float = np.sqrt((x - tx)**2 + (y - ty)**2)
         theta: float = np.arctan2(2 * 0.256 * np.sin(alpha), l)
         action[1] = theta / 0.5
+
+        # add noise
+        with torch.no_grad():
+            action_yaw = torch.from_numpy(np.array(action[1]))
+            # epsilon = max(1 - data_size / 400_000, 0.04)
+            epsilon = 0.31
+            rand_action_yaw = torch.rand(action_yaw.shape)
+            rand_action_yaw = rand_action_yaw * 2 - 1
+            if random.uniform(0, 1) < epsilon:
+                action_yaw = rand_action_yaw
+
+            action_yaw = action_yaw.cpu().data.numpy().flatten()
+
+        action = np.concatenate((np.array([1.0]), action_yaw), axis=0)
 
         return action, metrics
     
@@ -119,5 +135,17 @@ class PurePursuitNetworkPolicy(NetworkPolicy):
         l = np.sqrt((x - tx)**2 + (y - ty)**2)
         theta = np.arctan2(2 * 0.256 * np.sin(alpha), l)
         action[1] = theta
+
+        # # add noise
+        # with torch.no_grad():
+        #     action_yaw = torch.from_numpy(np.array(theta))
+        #     epsilon = max(1 - data_size / 400_000, 0.04)
+        #     # epsilon = 0
+        #     rand_action_yaw = torch.rand(action_yaw.shape)
+        #     rand_action_yaw = rand_action_yaw * 2 - 1
+        #     if random.uniform(0, 1) < epsilon:
+        #         action_yaw = rand_action_yaw
+        #
+        #     action_yaw = action_yaw.cpu().data.numpy().flatten()
 
         return action, metrics

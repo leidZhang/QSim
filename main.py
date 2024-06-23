@@ -183,6 +183,7 @@ if __name__ == '__main__':
     # fill with file name of your experiment, set to '' to start new experiment
     resume_run_id = RUN_ID
     offset: Tuple[float, float] = (0, 0)
-    nodes, waypoints = prepare_map_info(node_sequence=[10, 4, 14, 20, 22, 10])
+    # nodes, waypoints = prepare_map_info(node_sequence=[10, 4, 14, 20, 22, 10])
+    nodes, waypoints = prepare_map_info(node_sequence=[10, 1, 8, 10])
     nodes, waypoints = add_offset_to_map(nodes=nodes, waypoint_sequence=waypoints, offset=offset)
     start_system(resume_run_id=resume_run_id, nodes=nodes, waypoints=waypoints, offset=offset)

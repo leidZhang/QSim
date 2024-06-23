@@ -257,6 +257,7 @@ class PurePursuiteCar(PhysicalCar): # for simulation purpose
 
             # polling for the new tasks
             self.check_new_tasks(task_queue)
+
             # update the car state
             self.update_state(image) 
             # transmit the data to the data writer

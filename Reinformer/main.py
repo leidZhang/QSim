@@ -4,6 +4,7 @@ import os
 import random
 from datetime import datetime
 import time
+import os
 
 # import d4rl
 import gym
@@ -12,6 +13,7 @@ import torch
 import wandb
 from torch.utils.data import DataLoader
 
+from settings import STATE_DIM, ACT_DIM, CONTEXT_LEN, BATCH_SIZE
 from dataset import D4RLTrajectoryDataset
 from trainer import ReinFormerTrainer
 from eval import Reinformer_eval
@@ -68,20 +70,21 @@ def experiment(variant):
 
     data_iter = iter(traj_data_loader)
     state_mean, state_std = traj_dataset.get_state_stats()
+    formatted_state_mean = ", ".join(f"{num:.8e}" for num in state_mean)
+    formatted_state_std = ", ".join(f"{num:.8e}" for num in state_std)
     print(f"{type(state_mean)} {type(state_std)}")
     print("state mean: ", state_mean, "state std: ", state_std)
+    print(f'{type(formatted_state_mean)} {type(formatted_state_std)}')
+    print(f'formatted_state_mean: {formatted_state_mean}, formatted_state_std: {formatted_state_std}')
     # env = gym.make(d4rl_env)
     # env.seed(seed)
-
-    state_dim = 10
-    act_dim = 2
 
     model_type = variant["model_type"]
 
     if model_type == "Reinformer":
         Trainer = ReinFormerTrainer(
-            state_dim=state_dim,
-            act_dim=act_dim,
+            state_dim=STATE_DIM,
+            act_dim=ACT_DIM,
             device=device,
             variant=variant
         )
@@ -144,9 +147,9 @@ def experiment(variant):
                     }
                 )
         t2 = time.time()
-        normalized_d4rl_score = evaluator(
-            model=Trainer.model
-        )
+        # normalized_d4rl_score = evaluator(
+        #     model=Trainer.model
+        # )
         t3 = time.time()
         # normalized_d4rl_score_list.append(normalized_d4rl_score)
         if args.use_wandb:
@@ -175,6 +178,8 @@ def experiment(variant):
 
 
 if __name__ == "__main__":
+    os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
+
     logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser()
@@ -184,20 +189,20 @@ if __name__ == "__main__":
     # parser.add_argument("--num_eval_ep", type=int, default=10)
     # parser.add_argument("--max_eval_ep_len", type=int, default=1000)
     parser.add_argument("--dataset_dir", type=str, default="assets")
-    parser.add_argument("--context_len", type=int, default=100)
+    parser.add_argument("--context_len", type=int, default=CONTEXT_LEN)
     parser.add_argument("--n_blocks", type=int, default=4)
-    parser.add_argument("--embed_dim", type=int, default=256)  
-    parser.add_argument("--n_heads", type=int, default=8)
+    parser.add_argument("--embed_dim", type=int, default=512)
+    parser.add_argument("--n_heads", type=int, default=2)
     parser.add_argument("--dropout_p", type=float, default=0.1)
     parser.add_argument("--grad_norm", type=float, default=0.25)
     parser.add_argument("--tau", type=float, default=0.99)
-    parser.add_argument("--batch_size", type=int, default=64)
+    parser.add_argument("--batch_size", type=int, default=BATCH_SIZE)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--wd", type=float, default=1e-4)
     parser.add_argument("--warmup_steps", type=int, default=5000)
     parser.add_argument("--max_train_iters", type=int, default=10)
     parser.add_argument("--num_updates_per_iter", type=int, default=5000) # 5000
-    parser.add_argument("--device", type=str, default="cuda:0")
+    parser.add_argument("--device", type=str, default="cuda:1")
     parser.add_argument("--seed", type=int, default=2024)
     parser.add_argument("--init_temperature", type=float, default=0.1)
     # use_wandb = False
