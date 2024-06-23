@@ -14,6 +14,15 @@ def convert_ndarray_to_int_list(data: np.ndarray) -> List[int]:
     return [int(data[i]) for i in range(len(data))]
 
 
+def read_npz_file(file_path: str) -> Union[dict, None]:
+    data: dict = np.load(file_path)
+    try:
+        data['sentinel'] # test the data integrity
+    except Exception as e:
+        print(f"{file_path} Corrupted!")
+        return None
+    return data
+
 class ImageWriter:
     def __init__(self, output_path: str) -> None:
         self.output_path: str = output_path
@@ -122,12 +131,14 @@ class NPZDataWriter(DataWriter):
         # initialize the episode data
         timestamp: str = self.history[0]['timestamp']
         task: str = self.history[0]['task']
+        task_length: int = self.history[0]['task_length']
         filename: str = os.path.join(
             self.folder_path, "npzs", f"episode_{timestamp}.npz"
         )
         episode_data = {
             "timestamp": timestamp,
             "task": task,
+            "task_length": task_length,
             "steps": [],
         }
         # process the data
@@ -136,6 +147,7 @@ class NPZDataWriter(DataWriter):
             self.process_data(data, i)
             episode_data["steps"].append(data)
         # save the data to the npz file
+        episode_data["sentinel"] = True # for data integrity checking
         np.savez(filename, **episode_data)
 
     def write_data(self) -> None:
