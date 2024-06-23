@@ -4,6 +4,7 @@ import os
 import random
 from datetime import datetime
 import time
+import os
 
 # import d4rl
 import gym
@@ -12,7 +13,7 @@ import torch
 import wandb
 from torch.utils.data import DataLoader
 
-from settings import STATE_DIM,ACT_DIM
+from settings import STATE_DIM, ACT_DIM, CONTEXT_LEN, BATCH_SIZE
 from dataset import D4RLTrajectoryDataset
 from trainer import ReinFormerTrainer
 from eval import Reinformer_eval
@@ -177,6 +178,8 @@ def experiment(variant):
 
 
 if __name__ == "__main__":
+    os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
+
     logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser()
@@ -186,20 +189,20 @@ if __name__ == "__main__":
     # parser.add_argument("--num_eval_ep", type=int, default=10)
     # parser.add_argument("--max_eval_ep_len", type=int, default=1000)
     parser.add_argument("--dataset_dir", type=str, default="assets")
-    parser.add_argument("--context_len", type=int, default=100)
+    parser.add_argument("--context_len", type=int, default=CONTEXT_LEN)
     parser.add_argument("--n_blocks", type=int, default=4)
     parser.add_argument("--embed_dim", type=int, default=512)
-    parser.add_argument("--n_heads", type=int, default=8)
+    parser.add_argument("--n_heads", type=int, default=2)
     parser.add_argument("--dropout_p", type=float, default=0.1)
     parser.add_argument("--grad_norm", type=float, default=0.25)
     parser.add_argument("--tau", type=float, default=0.99)
-    parser.add_argument("--batch_size", type=int, default=64)
+    parser.add_argument("--batch_size", type=int, default=BATCH_SIZE)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--wd", type=float, default=1e-4)
     parser.add_argument("--warmup_steps", type=int, default=5000)
     parser.add_argument("--max_train_iters", type=int, default=10)
     parser.add_argument("--num_updates_per_iter", type=int, default=5000) # 5000
-    parser.add_argument("--device", type=str, default="cuda:0")
+    parser.add_argument("--device", type=str, default="cuda:1")
     parser.add_argument("--seed", type=int, default=2024)
     parser.add_argument("--init_temperature", type=float, default=0.1)
     # use_wandb = False

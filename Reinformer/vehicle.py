@@ -47,7 +47,8 @@ class ReinformerPolicy(PTPolicy):
         )
 
     def execute(self, observation: dict) -> Tuple[np.ndarray, dict]:
-        self.states[0, self.step_counter] = torch.from_numpy(observation['waypoints']).to(self.device)
+        observation_shape = self.states[0, self.step_counter].shape
+        self.states[0, self.step_counter] = torch.from_numpy(observation['waypoints'].reshape(observation_shape)).to(self.device)
         self.states[0, self.step_counter] = (self.states[0, self.step_counter] - self.state_mean) / self.state_std
         if self.step_counter < self.context_len:
             _, action_predict, _ = self.model.forward(
