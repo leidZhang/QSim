@@ -9,6 +9,7 @@ import numpy as np
 from core.utils.ipc_utils import fetch_latest_in_queue
 
 
+# TODO: Change to UDP for faster transmission
 class VideoServer:
     def __init__(self, port: int = 8080) -> None:
         self.server_socket: socket = socket(AF_INET, SOCK_STREAM)

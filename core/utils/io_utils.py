@@ -1,11 +1,17 @@
 import os
 import json
-from typing import Any
+from abc import ABC, abstractmethod
+from typing import Any, Union, List
 
 import cv2
 import numpy as np
 
 from .performance import skip
+
+
+def convert_ndarray_to_int_list(data: np.ndarray) -> List[int]:
+    data = data.tolist()
+    return [int(data[i]) for i in range(len(data))]
 
 
 class ImageWriter:
@@ -49,32 +55,91 @@ class ImageReader:
             cv2.waitKey(30)
 
 
-class DataWriter:
-    def __init__(self, folder_path: str, file_path: str) -> None:
+class DataWriter(ABC):
+    def __init__(self, folder_path: str) -> None:
         self.history: list = []
         self.process_data = skip
         self.folder_path: str = os.path.join(
             os.getcwd(), folder_path
         )
+    
+    def add_data(self, data: Any) -> None:
+        self.history.append(data)
+
+    @abstractmethod
+    def write_data(self) -> None:
+        ...
+
+
+class JSONDataWriter(DataWriter):
+    def __init__(self, folder_path: str) -> None:
+        super().__init__(folder_path)
         # check if the output path exists
         if not os.path.exists(self.folder_path):
             os.makedirs(self.folder_path)
-        # check if the file path exists
-        self.path: str = os.path.join(self.folder_path, file_path)
-        if not os.path.exists(self.path):
-            open(self.path, 'w').close()
+            os.makedirs(os.path.join(self.folder_path, "jsons"))
         
-    def add_data(self, data: Any) -> None:
-        self.history.append(data.copy())
-
-    def _write_to_json(self, file) -> None:
-        for i in len(self.history):
-            data: Any = self.history[i]
+    def _write_to_json(self) -> None:
+        # initialize the episode data
+        timestamp: str = self.history[0]['timestamp']
+        task: str = self.history[0]['task']
+        task_length: int = self.history[0]['task_length']
+        filename: str = os.path.join(
+            self.folder_path, "jsons", f"episode_{timestamp}.json"
+        )
+        episode_data = {
+            "timestamp": timestamp,
+            "task": task,
+            "task_length": task_length,
+            "steps": [],
+        }
+        # process the data
+        history_len = len(self.history)
+        for i in range(history_len):
+            data: dict = self.history.pop(0)
             self.process_data(data, i)
-            json.dump(data, file, indent=4)
-        file.write('\n')
+            episode_data["steps"].append(data)
+        # save the data to the json file
+        with open(filename, "w") as f:
+            json.dump(episode_data, f)
+    
+    def write_data(self) -> None:
+        if len(self.history) > 0:
+            self._write_to_json()
+            self.history = []
+            print("Data written to json file!")
+
+
+class NPZDataWriter(DataWriter):
+    def __init__(self, folder_path: str) -> None:
+        super().__init__(folder_path)
+        # check if the output path exists
+        if not os.path.exists(self.folder_path):
+            os.makedirs(self.folder_path)
+            os.makedirs(os.path.join(self.folder_path, "npzs"))
+
+    def _write_to_npz(self) -> None:
+        # initialize the episode data
+        timestamp: str = self.history[0]['timestamp']
+        task: str = self.history[0]['task']
+        filename: str = os.path.join(
+            self.folder_path, "npzs", f"episode_{timestamp}.npz"
+        )
+        episode_data = {
+            "timestamp": timestamp,
+            "task": task,
+            "steps": [],
+        }
+        # process the data
+        for i in range(len(self.history)):
+            data: dict = self.history[i]
+            self.process_data(data, i)
+            episode_data["steps"].append(data)
+        # save the data to the npz file
+        np.savez(filename, **episode_data)
 
     def write_data(self) -> None:
-        with open(self.path, 'w') as f:
-            self._write_to_json(f)
-        self.history = []
+        if len(self.history) > 0:
+            self._write_to_npz()
+            self.history = []
+            print("Data written to npz file!")

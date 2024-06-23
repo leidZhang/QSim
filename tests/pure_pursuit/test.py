@@ -10,7 +10,7 @@ from qvl.qlabs import QuanserInteractiveLabs
 from core.roadmap.dispatcher import TaskDispacher
 from tests.performance_environment import prepare_test_environment, destroy_map
 from .modules import PurePursuiteCar, MockOptitrackClient
-from .executions import TaskDispatcherExec, BaseProcessExec
+from .executions import TaskDispatcherExec, BaseProcessExec, RecordDataWriterExec
 from .executions import PurePursuiteCarExec, BaseThreadExec
 from .settings import START_NODE
 
@@ -19,15 +19,24 @@ def test_dispatch_task_to_car() -> None:
     destroy_map() # destroy all spawned actors
     prepare_test_environment(node_id=START_NODE)
 
-    # create a task dispatcher process
+    # initialize the IPC queues
+    obs_queue: MPQueue = MPQueue()
     task_queue: MPQueue = MPQueue(5)
+    # create a processes
     dispatcher_exec: BaseProcessExec = TaskDispatcherExec()
+    data_writer_exec: BaseProcessExec = RecordDataWriterExec()
     dispatcher_process: Process = Process(target=dispatcher_exec.run_process, args=(task_queue,))
+    data_writer_process: Process = Process(target=data_writer_exec.run_process, args=(obs_queue,))
+    # start the processes
     dispatcher_process.start()
+    data_writer_process.start()
 
     # create a car thread
     try:
-        car_exec: BaseThreadExec = PurePursuiteCarExec(task_queue=task_queue)
+        car_exec: BaseThreadExec = PurePursuiteCarExec(
+            task_queue=task_queue,
+            obs_queue=obs_queue
+        )
         car_exec.run_thread()
     except Exception as e:
         print(e)
