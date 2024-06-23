@@ -51,6 +51,7 @@ class TaskDispacher:
     
     def _will_add_node_to_sequence(self, node_sequence: List[int]) -> bool:
         if 4 < len(node_sequence) < 16 and self.origin[node_sequence[-1]] == 1:
+            print(f"New task {self.node_sequence} generated!")
             return False
         return True
     
@@ -60,7 +61,7 @@ class TaskDispacher:
         else: # starting a new task here
             waypoints: np.ndarray = self.road_map.generate_path(self.node_sequence)
             wait_for_empty_queue_space(data_queue) # wait for the queue to have space
-            print(f"Generating new task...")
             data_queue.put((self.node_sequence, waypoints))
             self.node_sequence = [self.node_sequence[-1]]
+
     
