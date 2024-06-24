@@ -9,6 +9,6 @@ from tests.replay.test import test_replay_car
 
 if __name__ == "__main__":
     # test_dispatch_task_to_car()
-    test_replay_car()
-    # test_reinformer_util()
+    # test_replay_car()
+    test_reinformer_util()
 

@@ -17,6 +17,7 @@ class DataConverter:
         print(f"Reading files in {self.folder_path}")
         search_path: str = self.folder_path + '/*.npz'
         self.file_list = glob.glob(search_path)
+        print(f"Found {len(self.file_list)} files")
         self.file_list.sort(key=os.path.getmtime)
     
     def read_npz_files(self) -> list:
@@ -24,8 +25,6 @@ class DataConverter:
         for npz_file in self.file_list:
             try: 
                 data = np.load(npz_file)
-                for file in data.files:
-                    data[file] # test the data integrity
                 available_data.append(data)
             except Exception as e:
                 available_data.append(None)
@@ -37,13 +36,21 @@ class DataConverter:
     def convert_to_traj(self, data: dict) -> dict:
         traj: Dict[str, np.ndarray] = {}
 
-        # calculate the next_state
-        state: np.ndarray = data['waypoints']
-        state = state.reshape(state.shape[0], -1)
+        # concatenate the waypoints and tasks
+        waypoints: np.ndarray = data['waypoints']
+        waypoints = waypoints.reshape(waypoints.shape[0], waypoints.shape[1] * waypoints.shape[2])
+        task: np.ndarray = np.array(data['task'])
+        place_holder: np.ndarray = np.zeros((len(data['task']), 15 - len(data['task'][0])))
+        print(f'waypoints shape: {waypoints}, task shape: {task} placeholder shape: {place_holder}')
+        state = np.concatenate((waypoints, task, place_holder), axis=1)
+        print(f'state shape: {state}')
+        # state: np.ndarray = waypoints.reshape(waypoints.shape[0], 1)
+        
         # print(f'shape of state: {state.shape}')
         next_state: np.ndarray = np.zeros_like(state)
         for i in range(len(state) - 1):
             next_state[i] = state[i + 1]
+
         # calculate the return_to_go
         reward: np.ndarray = data['reward']
         return_to_go: np.ndarray = np.zeros_like(reward)
@@ -51,6 +58,7 @@ class DataConverter:
         for i in range(len(reward) - 1, -1, -1):
             accumulated_reward += reward[i]
             return_to_go[i] = accumulated_reward
+
         # assign the data to the dictionary
         traj['observations'] = state
         traj['next_observations'] = next_state
@@ -73,10 +81,10 @@ class DataConverter:
 
 def test_reinformer_util():
     project_path: str = os.getcwd()
-    print(f"Current working directory: {project_path[:-11]}")
-    local_path: str = r"mlruns\0\e4eef53e8c3a49a0b2967fa6be338fd2\artifacts\episodes_train\0"
-    npz_folder_path: str = os.path.join(project_path[:-11], local_path)
-    data_converter: DataConverter = DataConverter(local_path)
+    print(f"Current working directory: {project_path}")
+    local_path: str = r"test_data\npzs"
+    npz_folder_path: str = os.path.join(project_path, local_path)
+    data_converter: DataConverter = DataConverter(npz_folder_path)
     trajectories: List[Dict[str, np.ndarray]] = data_converter.execute()
 
     with open("assets/trajectories.pkl", "wb") as f:

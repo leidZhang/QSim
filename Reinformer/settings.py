@@ -21,6 +21,6 @@ DEVICE: str = "cuda:1" if torch.cuda.is_available() else "cpu"
 SEED: int = 2024
 INIT_TEMPERATURE: float = 0.1
 USE_WANDB: bool = True
-STATE_DIM: int = 400
+STATE_DIM: int = 415
 ACT_DIM: int = 2
 MODEL_PATH: str = os.path.join(os.getcwd(), "Reinformer/models/latest_checkpoint.pt")

@@ -17,7 +17,7 @@ from settings import STATE_DIM, ACT_DIM, CONTEXT_LEN, BATCH_SIZE
 from dataset import D4RLTrajectoryDataset
 from trainer import ReinFormerTrainer
 from eval import Reinformer_eval
-from td3.environment import WaypointEnvironment
+# from td3.environment import WaypointEnvironment
 
 
 
@@ -46,7 +46,7 @@ def experiment(variant):
     #         variant["batch_size"] = 256
     
     # dataset_path = os.path.join(variant["dataset_dir"], f"trajectories.pkl")
-    dataset_path = r'C:\Users\SDCNLab_P720\PycharmProjects\qsim\assets\trajectories.pkl'
+    dataset_path = r'C:\Users\sdcnlab025\Desktop\Yida\qsim\assets\trajectories.pkl'
     device = torch.device(variant["device"])
 
     start_time = datetime.now().replace(microsecond=0)
