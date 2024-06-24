@@ -7,7 +7,7 @@ from multiprocessing import Process
 import cv2
 
 from core.qcar.sensor import VirtualRGBDCamera, VirtualCSICamera
-from tests.master_slave.test import test_master_slave
+from tests.traditional.test import test_master_slave
 from tests.cam_threads.test import test_camera_threads
 from core.utils.executions import BaseProcessExec
 from Reinformer.utils import test_reinformer_util

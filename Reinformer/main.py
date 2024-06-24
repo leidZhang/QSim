@@ -13,15 +13,16 @@ import torch
 import wandb
 from torch.utils.data import DataLoader
 
-from settings import STATE_DIM, ACT_DIM, CONTEXT_LEN, BATCH_SIZE
-from dataset import D4RLTrajectoryDataset
-from trainer import ReinFormerTrainer
-from eval import Reinformer_eval
+from .settings import STATE_DIM, ACT_DIM, CONTEXT_LEN, BATCH_SIZE
+from .dataset import D4RLTrajectoryDataset
+from .trainer import ReinFormerTrainer
+from .eval import Reinformer_eval
 # from td3.environment import WaypointEnvironment
 
 
 
 def experiment(variant):
+    use_wandb = variant["use_wandb"]
     # seeding
     # seed = variant["seed"]
     # random.seed(seed)
@@ -140,7 +141,7 @@ def experiment(variant):
                 rewards=rewards,
                 traj_mask=traj_mask
             )
-            if args.use_wandb:
+            if use_wandb:
                 wandb.log(
                     data={
                         "training/loss" : loss,
@@ -152,7 +153,7 @@ def experiment(variant):
         # )
         t3 = time.time()
         # normalized_d4rl_score_list.append(normalized_d4rl_score)
-        if args.use_wandb:
+        if use_wandb:
             wandb.log(
                 data={
                         "training/time" : t2 - t1,
@@ -177,7 +178,7 @@ def experiment(variant):
     print("=" * 60)
 
 
-if __name__ == "__main__":
+def run_reinformer_trainer():
     os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
 
     logging.basicConfig(level=logging.INFO)

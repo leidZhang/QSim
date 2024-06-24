@@ -48,7 +48,10 @@ class ReinformerPolicy(PTPolicy):
 
     def execute(self, observation: dict) -> Tuple[np.ndarray, dict]:
         observation_shape = self.states[0, self.step_counter].shape
-        self.states[0, self.step_counter] = torch.from_numpy(observation['waypoints'].reshape(observation_shape)).to(self.device)
+        # print(f"Current pointer: {self.step_counter}")
+        # print(self.states[0, self.step_counter])
+        # print(f"State shape: {observation['state'].shape}, Observation shape: {observation_shape}")
+        self.states[0, self.step_counter] = torch.from_numpy(observation['state'].reshape(observation_shape)).to(self.device)
         self.states[0, self.step_counter] = (self.states[0, self.step_counter] - self.state_mean) / self.state_std
         if self.step_counter < self.context_len:
             _, action_predict, _ = self.model.forward(
@@ -72,23 +75,31 @@ class ReinformerPolicy(PTPolicy):
 class ReinformerCar(WaypointCar):
     def setup(
         self, 
+        task: list,
         waypoints: np.ndarray, 
         init_waypoint_index: int, 
         policy: ReinformerPolicy
     ) -> None:
         if policy is None:
             raise ValueError("Policy cannot be None")
-        super().setup(waypoints, init_waypoint_index)
+        if len(task) > 15:
+            raise ValueError("Task cannot be longer than 15")
         self.policy: ReinformerPolicy = policy
-
+        self.task: np.ndarray = np.array(task)
+        self.task = np.concatenate((self.task, np.zeros((15 - len(self.task)))))
+        print(f"Task: {self.task}")
+        super().setup(waypoints, init_waypoint_index)
+        
     def handle_observation(self, orig: np.ndarray, rot: np.ndarray) -> None:
         super().handle_observation(orig, rot)
-        far_index: int = (self.current_waypoint_index + 49) % self.waypoints.shape[0]
+        reshaped_waypoints: np.ndarray = self.observation['waypoints'].reshape(400)
         self.observation['state'] = np.concatenate((
+            reshaped_waypoints,
             self.ego_state, # ego state
-            self.waypoints[self.current_waypoint_index], # closest waypoint
-            self.waypoints[far_index] # far waypoint
+            self.task, # task info
         )) # state info
+        # print(f"State in car: {self.observation['state']}, shape: {self.observation['state'].shape}")
+        self.observation.pop('waypoints', None)
 
     def execute(self) -> None:
         # get the start time of the loop
@@ -96,7 +107,7 @@ class ReinformerCar(WaypointCar):
         # get the action from the policy
         action, _ = self.policy.execute(self.observation)
         # apply the action to the vehicle
-        self.running_gear.read_write_std(action[0] * 0.08, action[1])
+        self.running_gear.read_write_std(action[0], action[1])
         self.update_state()
         # sleep for the remaining time
         execute_time: float = elapsed_time(start_time)

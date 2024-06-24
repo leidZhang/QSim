@@ -5,8 +5,8 @@ from datetime import datetime
 import torch
 import torch.nn.functional as F
 import logging
-from reinformer import ReinFormer
-from lamb import Lamb
+from .reinformer import ReinFormer
+from .lamb import Lamb
 
 
 class ReinFormerTrainer:

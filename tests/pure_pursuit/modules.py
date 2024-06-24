@@ -29,14 +29,14 @@ ARRAY_KEYS: List[str] = ["state", "action", "noise"]
 
 class RecordDataWriter:
     def __init__(self, folder_path: str) -> None:
-        self.data_writer: DataWriter = NPZDataWriter(folder_path)
+        self.data_writer: DataWriter = JSONDataWriter(folder_path)
         self.data_writer.process_data = self.preprocess
         self.last_timestamp: str = None
         self.last_task_length: int = 0
 
     def _convert_data_format(self, data: dict) -> None:
         # convert the waypoints to base64 since it is a large array
-        # data["waypoints"] = base64.encodebytes(data["waypoints"].tobytes()).decode("utf-8")
+        data["waypoints"] = base64.encodebytes(data["waypoints"].tobytes()).decode("utf-8")
         # convert the state, action, and noise to float since they are small arrays
         for key in ARRAY_KEYS:
             converted_data: list = []
