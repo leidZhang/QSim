@@ -50,7 +50,7 @@ class TaskDispacher:
         return node_sequence + [next_index]
     
     def _will_add_node_to_sequence(self, node_sequence: List[int]) -> bool:
-        if 4 < len(node_sequence) < 16 and self.origin[node_sequence[-1]] == 1:
+        if 2 < len(node_sequence) < 9 and self.origin[node_sequence[-1]] == 1:
             print(f"New task {self.node_sequence} generated!")
             return False
         return True
