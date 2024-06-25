@@ -54,7 +54,7 @@ class TaskDispacher:
     def _will_add_node_to_sequence(self, node_sequence: List[int]) -> bool:
         if len(node_sequence) >= self.task_length:
             print(f"New task {self.node_sequence} generated!")
-            self.task_length = random.randint(3, 9)
+            self.task_length = random.randint(5, 9)
             return False
         return True
     

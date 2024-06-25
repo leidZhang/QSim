@@ -2,7 +2,7 @@ import os
 from queue import Queue
 from typing import List
 from multiprocessing import Queue as MPQueue
-from multiprocessing import Process
+from multiprocessing import Process, Event
 
 import numpy as np
 
@@ -19,12 +19,13 @@ def test_dispatch_task_to_car() -> None:
     destroy_map() # destroy all spawned actors
     prepare_test_environment(node_id=START_NODE)
 
-    # initialize the IPC queues
+    # initialize the IPC 
+    stop_event = Event()
     obs_queue: MPQueue = MPQueue()
     task_queue: MPQueue = MPQueue(5)
     # create a processes
     dispatcher_exec: BaseProcessExec = TaskDispatcherExec()
-    data_writer_exec: BaseProcessExec = RecordDataWriterExec()
+    data_writer_exec: BaseProcessExec = RecordDataWriterExec(stop_event=stop_event)
     dispatcher_process: Process = Process(target=dispatcher_exec.run_process, args=(task_queue,))
     data_writer_process: Process = Process(target=data_writer_exec.run_process, args=(obs_queue,))
     # start the processes
@@ -34,6 +35,7 @@ def test_dispatch_task_to_car() -> None:
     # create a car thread
     try:
         car_exec: BaseThreadExec = PurePursuiteCarExec(
+            stop_event=stop_event,
             task_queue=task_queue,
             obs_queue=obs_queue
         )

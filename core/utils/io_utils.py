@@ -2,6 +2,7 @@ import os
 import json
 from abc import ABC, abstractmethod
 from typing import Any, Union, List
+from multiprocessing import Queue
 
 import cv2
 import numpy as np
@@ -65,7 +66,8 @@ class ImageReader:
 
 
 class DataWriter(ABC):
-    def __init__(self, folder_path: str) -> None:
+    def __init__(self, folder_path: str, image_queue: Queue = None) -> None:
+        self.image_queue: Queue = image_queue
         self.history: list = []
         self.process_data = skip
         self.folder_path: str = os.path.join(

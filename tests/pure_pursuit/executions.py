@@ -8,14 +8,19 @@ import numpy as np
 from qvl.qlabs import QuanserInteractiveLabs
 from core.utils.executions import BaseProcessExec
 from core.utils.executions import BaseThreadExec
+from core.utils.io_utils import ImageWriter
 from core.roadmap.dispatcher import TaskDispacher
 from .modules import PurePursuiteCar, RecordDataWriter
 from .settings import START_NODE
 
 
 class RecordDataWriterExec(BaseProcessExec):
+    def __init__(self, stop_event, watchdog_event=None) -> None:
+        super().__init__(watchdog_event)
+        self.stop_event = stop_event
+
     def create_instance(self) -> RecordDataWriter:
-        return RecordDataWriter(folder_path='test_data')
+        return RecordDataWriter(folder_path='test_data', stop_event=self.stop_event)
 
 
 class TaskDispatcherExec(BaseProcessExec):
@@ -28,9 +33,11 @@ class PurePursuiteCarExec(BaseThreadExec):
         self, 
         task_queue: Queue, 
         obs_queue: Queue, 
+        stop_event = None,
         watchdog_event: Event = None
     ) -> None:
         super().__init__(watchdog_event)
+        self.stop_event = stop_event
         self.obs_queue: Queue = obs_queue
         self.task_queue: Queue = task_queue
         self.car: PurePursuiteCar = None
@@ -47,7 +54,7 @@ class PurePursuiteCarExec(BaseThreadExec):
         qlabs: QuanserInteractiveLabs = QuanserInteractiveLabs()
         qlabs.open('localhost') # connect to the UE4
         # create the car instance
-        self.car = PurePursuiteCar(qlabs=qlabs, throttle_coeff=0.08)
+        self.car = PurePursuiteCar(qlabs=qlabs, stop_event=self.stop_event, throttle_coeff=0.08)
         self.car.setup(
             node_sequence=node_sequence,
             waypoints=waypoints, 

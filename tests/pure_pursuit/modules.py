@@ -28,7 +28,8 @@ ARRAY_KEYS: List[str] = ["state", "action", "noise"]
 
 
 class RecordDataWriter:
-    def __init__(self, folder_path: str) -> None:
+    def __init__(self, folder_path: str, stop_event) -> None:
+        self.stop_event = stop_event
         self.data_writer: DataWriter = JSONDataWriter(folder_path)
         self.data_writer.process_data = self.preprocess
         self.last_timestamp: str = None
@@ -89,6 +90,8 @@ class RecordDataWriter:
             self.last_task_length: int = self.data_writer.history[0]["task_length"]
             self.last_timestamp = data["timestamp"]
             self.data_writer.write_data()
+            if len(self.data_writer.history) > 50_000:
+                self.data_writer.history.set()
         # add to the buffer
         self.data_writer.add_data(data)
 
@@ -113,12 +116,14 @@ class MockOptitrackClient:
 class PurePursuiteCar(PhysicalCar): # for simulation purpose
     def __init__(
         self, 
+        stop_event,
         qlabs: QuanserInteractiveLabs,
         throttle_coeff: float = 0.3, 
-        steering_coeff: float = 0.5
+        steering_coeff: float = 0.5,
     ) -> None:
         super().__init__(throttle_coeff, steering_coeff)
         # initialize the variables
+        self.stop_event = stop_event
         self.start_time: float = None
         self.linear_speed: float = 0.0
         self.task_start_index: int = 0
@@ -233,6 +238,11 @@ class PurePursuiteCar(PhysicalCar): # for simulation purpose
             raise ReachGoalException("Reached the goal")
         
     def handle_data_transmit(self, obs_queue: MPQueue = None) -> None:
+        if self.stop_event.is_set():
+            self.running_gear.halt_car()
+            time.sleep(1000) # wait for the data writer to finish
+            raise ReachGoalException("Reached the goal")
+
         # transmit data to the data writer process
         if obs_queue.full():
             obs_queue.get()
