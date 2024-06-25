@@ -29,7 +29,7 @@ class TaskDispacher:
         # generate the origin dict
         self._prepare_origin_dict() 
         # generate the random task length
-        self.task_length: int = random.randint(3, 9)
+        # self.task_length: int = random.randint(5, 9)
 
     def _prepare_used_dict(self) -> None:
         self.used: Dict[int, Set[int]] = {}
@@ -52,9 +52,9 @@ class TaskDispacher:
         return node_sequence + [next_index]
     
     def _will_add_node_to_sequence(self, node_sequence: List[int]) -> bool:
-        if len(node_sequence) == self.task_length:
+        if 4 < len(node_sequence) < 16 and self.origin[node_sequence[-1]] == 1:
             print(f"New task {self.node_sequence} generated!")
-            self.task_length = random.randint(3, 9)
+            # self.task_length = random.randint(5, 9)
             return False
         return True
     
