@@ -90,13 +90,15 @@ class JSONDataWriter(DataWriter):
             os.makedirs(self.folder_path)
             os.makedirs(os.path.join(self.folder_path, "jsons"))
         
-    def _write_to_json(self) -> None:
+    def _write_to_json(self, folder_path: str) -> None:
         # initialize the episode data
         timestamp: str = self.history[0]['timestamp']
         task: str = self.history[0]['task']
         task_length: int = self.history[0]['task_length']
         filename: str = os.path.join(
-            self.folder_path, "jsons", f"episode_{timestamp}.json"
+            self.folder_path, 
+            folder_path,
+            f"episode_{timestamp}.json"
         )
         episode_data = {
             "timestamp": timestamp,
@@ -108,15 +110,16 @@ class JSONDataWriter(DataWriter):
         history_len = len(self.history)
         for i in range(history_len):
             data: dict = self.history.pop(0)
-            self.process_data(data, i)
+            self.process_data(data, i, folder_path)
             episode_data["steps"].append(data)
         # save the data to the json file
         with open(filename, "w") as f:
             json.dump(episode_data, f)
     
-    def write_data(self) -> None:
+    def write_data(self, folder_path: str) -> None:
         if len(self.history) > 0:
-            self._write_to_json()
+            os.makedirs(os.path.join(self.folder_path, folder_path))
+            self._write_to_json(folder_path)
             self.history = []
             print("Data written to json file!")
 

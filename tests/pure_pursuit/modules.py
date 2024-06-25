@@ -50,10 +50,10 @@ class RecordDataWriter:
             data.pop(key, None)
         data.pop("last_index", None)
 
-    def _write_image(self, data: dict) -> None:
+    def _write_image(self, data: dict, folder_path: str) -> None:
         # Generate a unique name for the image based on the episode timestamp
         image_path: str = f"image_{data['timestamp']}_{data['id']}.jpg"
-        abs_image_path: str = f"{self.data_writer.folder_path}/images/{image_path}"
+        abs_image_path: str = f"{self.data_writer.folder_path}/{folder_path}/{image_path}"
         # Write the image to the output path
         cv2.imwrite(abs_image_path, data["front_csi_image"])
         # replace the image with the image path
@@ -72,9 +72,9 @@ class RecordDataWriter:
         if data["current_index"] < 0:
             data["current_index"] = self.last_task_length + data["current_index"]
 
-    def preprocess(self, data: dict, index: int) -> None:
+    def preprocess(self, data: dict, index: int, folder_path: str) -> None:
         self.cal_required_data(data, index)
-        self._write_image(data)
+        self._write_image(data, folder_path)
         self._convert_data_format(data)
         self._delete_keys(data)
 
@@ -87,11 +87,12 @@ class RecordDataWriter:
             self.last_timestamp = data["timestamp"]
 
         if data["timestamp"] != self.last_timestamp and data["current_index"] >= 0:
+            print(f"Current buffer size: {len(self.data_writer.history)}")
             self.last_task_length: int = self.data_writer.history[0]["task_length"]
             self.last_timestamp = data["timestamp"]
-            self.data_writer.write_data()
-            if len(self.data_writer.history) > 50_000:
-                self.data_writer.history.set()
+            self.data_writer.write_data(data["timestamp"])
+            # if len(self.data_writer.history) > 50_000:
+            #     self.data_writer.history.set()
         # add to the buffer
         self.data_writer.add_data(data)
 
@@ -238,10 +239,10 @@ class PurePursuiteCar(PhysicalCar): # for simulation purpose
             raise ReachGoalException("Reached the goal")
         
     def handle_data_transmit(self, obs_queue: MPQueue = None) -> None:
-        if self.stop_event.is_set():
-            self.running_gear.halt_car()
-            time.sleep(1000) # wait for the data writer to finish
-            raise ReachGoalException("Reached the goal")
+        # if self.stop_event.is_set():
+        #     self.running_gear.halt_car()
+        #     time.sleep(1000) # wait for the data writer to finish
+        #     raise ReachGoalException("Reached the goal")
 
         # transmit data to the data writer process
         if obs_queue.full():
