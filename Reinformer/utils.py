@@ -38,14 +38,13 @@ class DataConverter:
 
         # concatenate the waypoints and tasks
         waypoints: np.ndarray = data['waypoints']
-        print(waypoints)
         waypoints = waypoints.reshape(waypoints.shape[0], waypoints.shape[1] * waypoints.shape[2])
         state: np.ndarray = data['state']
         task: np.ndarray = np.array(data['task'])
         place_holder: np.ndarray = np.zeros((len(data['task']), 15 - len(data['task'][0])))
-        print(f'waypoints shape: {waypoints}, task shape: {task} placeholder shape: {place_holder}')
+        # print(f'waypoints shape: {waypoints}, task shape: {task} placeholder shape: {place_holder}')
         state = np.concatenate((waypoints, state, task, place_holder), axis=1)
-        print(f'state shape: {state}')
+        # print(f'state shape: {state}')
         # state: np.ndarray = waypoints.reshape(waypoints.shape[0], 1)
         
         # print(f'shape of state: {state.shape}')

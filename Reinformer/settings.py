@@ -4,7 +4,7 @@ import torch
 
 MODEL_TYPE: str = "Reinformer"
 DATASET_DIR: str = "assets"
-CONTEXT_LEN: int = 40
+CONTEXT_LEN: int = 5
 N_BLOCKS: int = 4
 EMBED_DIM: int = 512
 N_HEADS: int = 2

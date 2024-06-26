@@ -1,12 +1,42 @@
+import time
+import pickle
 import logging
 from socket import *
-from typing import Tuple
-from multiprocessing import Queue
+from typing import Tuple, Any, Union
+from queue import Queue
+from multiprocessing import Queue as MPQueue
 
 import cv2
 import numpy as np
 
 from core.utils.ipc_utils import fetch_latest_in_queue
+
+
+class UDPSever:
+    def __init__(self, ip: str = '0.0.0.0', port: int = 8080) -> None:
+        self.server_socket: socket = socket(AF_INET, SOCK_DGRAM)
+        self.address: Tuple[str, int] = (ip, port)
+
+    def _send_data(self, data_queue: Union[Queue, MPQueue], callback) -> None:
+        if data_queue is None:
+            time.sleep(0.001)
+            return
+
+        data: Any = data_queue.get()
+        data: Any = callback(data)
+        serialized_data: bytes = pickle.dumps(data)
+        self.server_socket.sendto(serialized_data, self.address)
+
+    def _receive_data(self) -> Any:
+        serialized_data, _ = self.server_socket.recvfrom(1024)
+        return pickle.loads(serialized_data)
+    
+    def execute(self, data_queue: Union[Queue, MPQueue], callback) -> None:
+        try:
+            self._send_data(data_queue, callback)
+            self._receive_data()
+        except Exception as e:
+            logging.warning(str(e))
 
 
 # TODO: Change to UDP for faster transmission
@@ -27,7 +57,7 @@ class VideoServer:
         # send image to the client
         self.server_socket.sendall(send_data.tobytes())
 
-    def execute(self, data_queue: Queue, quality: int = 100) -> None:
+    def execute(self, data_queue: MPQueue, quality: int = 100) -> None:
         # wait for client to connect to the server
         logging.info("The video server module is ready to accept connection...")
         self.client_socket, self.client_address = self.server_socket.accept()

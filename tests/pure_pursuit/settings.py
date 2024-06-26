@@ -1,1 +1,1 @@
-START_NODE: int = 13
+START_NODE: int = 10
