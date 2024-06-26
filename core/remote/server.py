@@ -1,3 +1,4 @@
+import sys
 import time
 import pickle
 import logging
@@ -12,18 +13,17 @@ import numpy as np
 from core.utils.ipc_utils import fetch_latest_in_queue
 
 
-class UDPSever:
+class UDPServer:
     def __init__(self, ip: str = '0.0.0.0', port: int = 8080) -> None:
         self.server_socket: socket = socket(AF_INET, SOCK_DGRAM)
         self.address: Tuple[str, int] = (ip, port)
 
-    def _send_data(self, data_queue: Union[Queue, MPQueue], callback) -> None:
-        if data_queue is None:
+    def _send_data(self, data_queue: Union[Queue, MPQueue]) -> None:
+        if data_queue.empty():
             time.sleep(0.001)
             return
 
         data: Any = data_queue.get()
-        data: Any = callback(data)
         serialized_data: bytes = pickle.dumps(data)
         self.server_socket.sendto(serialized_data, self.address)
 
@@ -31,12 +31,12 @@ class UDPSever:
         serialized_data, _ = self.server_socket.recvfrom(1024)
         return pickle.loads(serialized_data)
     
-    def execute(self, data_queue: Union[Queue, MPQueue], callback) -> None:
-        try:
-            self._send_data(data_queue, callback)
-            self._receive_data()
-        except Exception as e:
-            logging.warning(str(e))
+    def execute(self, data_queue: Union[Queue, MPQueue]) -> None:
+        # try:
+            self._send_data(data_queue)
+            # self._receive_data()
+        # except Exception as e:
+        #     logging.warning(str(e))
 
 
 # TODO: Change to UDP for faster transmission
