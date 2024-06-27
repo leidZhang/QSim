@@ -46,13 +46,12 @@ class ReinformerPolicy(PTPolicy):
             device=device,
         )
 
-    def execute(self, observation: dict) -> Tuple[np.ndarray, dict]:
+    def _preprocess_states(self, observation: dict) -> None:
         observation_shape = self.states[0, self.step_counter].shape
-        # print(f"Current pointer: {self.step_counter}")
-        # print(self.states[0, self.step_counter])
-        # print(f"State shape: {observation['state'].shape}, Observation shape: {observation_shape}")
         self.states[0, self.step_counter] = torch.from_numpy(observation['state'].reshape(observation_shape)).to(self.device)
         self.states[0, self.step_counter] = (self.states[0, self.step_counter] - self.state_mean) / self.state_std
+
+    def _take_action(self) -> torch.Tensor:
         if self.step_counter < self.context_len:
             _, action_predict, _ = self.model.forward(
                 self.timesteps[:, :self.context_len],
@@ -60,6 +59,7 @@ class ReinformerPolicy(PTPolicy):
                 self.actions[:, :self.context_len],
                 self.returns_to_go[:, :self.context_len],
             )
+            return action_predict.mean.reshape(1, -1, self.act_dim)[0, self.step_counter].detach()
         else:
             _, action_predict, _ = self.model.forward(
                 self.timesteps[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
@@ -67,7 +67,32 @@ class ReinformerPolicy(PTPolicy):
                 self.actions[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
                 self.returns_to_go[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
             )
-        action: torch.Tensor = action_predict.mean.reshape(1, -1, self.act_dim)[0, -1].detach()
+            return action_predict.mean.reshape(1, -1, self.act_dim)[0, -1].detach()
+
+    def _predict_return_to_go(self) -> None:
+        if self.step_counter < self.context_len:
+            returns_to_go_predict, _, _ = self.model.forward(
+                self.timesteps[:, :self.context_len],
+                self.states[:, :self.context_len],
+                self.actions[:, :self.context_len],
+                self.returns_to_go[:, :self.context_len],
+            )
+            return_to_go: tensor.Tensor = returns_to_go_predict[0, self.step_counter].detach()
+        else:
+            returns_to_go_predict, _, _ = self.model.forward(
+                self.timesteps[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
+                self.states[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
+                self.actions[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
+                self.returns_to_go[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
+            )
+            return_to_go: tensor.Tensor = returns_to_go_predict[0, -1].detach()
+        self.returns_to_go[0, self.step_counter] = return_to_go
+
+    def execute(self, observation: dict) -> Tuple[np.ndarray, dict]:
+        self._preprocess_states(observation)
+        self._predict_return_to_go()
+        action: tensor.Tensor = self._take_action()
+        self.actions[0, self.step_counter] = action
         self.step_counter += 1
         return action.cpu().numpy(), {}
 

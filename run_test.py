@@ -14,6 +14,6 @@ if __name__ == "__main__":
     # test_dispatch_task_to_car()
     # test_replay_car()
     # test_reinformer_util()
-    # run_reinformer_trainer()
-    test_client_server()
+    run_reinformer_trainer()
+    # test_client_server()
 
