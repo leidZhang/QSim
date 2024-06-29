@@ -1,7 +1,7 @@
 import argparse
 import logging
 import os
-import random
+import json
 from datetime import datetime
 import time
 import os
@@ -77,10 +77,21 @@ def experiment(variant):
     print("state mean: ", state_mean, "state std: ", state_std)
     print(f'{type(formatted_state_mean)} {type(formatted_state_std)}')
     print(f'formatted_state_mean: {formatted_state_mean}, formatted_state_std: {formatted_state_std}')
+
+    params: dict = {
+        "state_mean": formatted_state_mean,
+        "state_std": formatted_state_std,
+    }
+
+    params_json = json.dumps(params)
     # env = gym.make(d4rl_env)
     # env.seed(seed)
 
     model_type = variant["model_type"]
+    json_path = os.path.join(os.getcwd(), "Reinformer" ,"params.json")
+    with open(json_path, "w") as json_file:
+        json_file.write(params_json)
+    print(f"Params saved to {json_path}")
 
     if model_type == "Reinformer":
         Trainer = ReinFormerTrainer(

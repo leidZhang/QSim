@@ -61,6 +61,7 @@ class WaypointCar(VirtualCar):
         self.next_waypoints = self.next_waypoints[self.dist_ix:] 
         # add waypoint to the observation
         self.handle_observation(orig, rot)
+        # print(f"Current position: {self.ego_state[:2]}, Current waypoint: {self.current_waypoint_index}, Init waypoint: {self.waypoints[0]}")
 
     def estimate_speed(self) -> float:
         encoder_counts: np.ndarray = self.running_gear.motorEncoder

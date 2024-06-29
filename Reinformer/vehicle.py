@@ -53,46 +53,53 @@ class ReinformerPolicy(PTPolicy):
 
     def _take_action(self) -> torch.Tensor:
         if self.step_counter < self.context_len:
+            print("1")
             _, action_predict, _ = self.model.forward(
                 self.timesteps[:, :self.context_len],
                 self.states[:, :self.context_len],
                 self.actions[:, :self.context_len],
                 self.returns_to_go[:, :self.context_len],
             )
-            return action_predict.mean.reshape(1, -1, self.act_dim)[0, self.step_counter].detach()
+            action = action_predict.mean.reshape(1, -1, self.act_dim)[0, self.step_counter].detach()
         else:
+            print("2")
             _, action_predict, _ = self.model.forward(
                 self.timesteps[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
                 self.states[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
                 self.actions[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
                 self.returns_to_go[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
             )
-            return action_predict.mean.reshape(1, -1, self.act_dim)[0, -1].detach()
+            action = action_predict.mean.reshape(1, -1, self.act_dim)[0, -1].detach()
+        self.actions[0, self.step_counter] = action
+        return action
 
     def _predict_return_to_go(self) -> None:
         if self.step_counter < self.context_len:
+            print("1")
             returns_to_go_predict, _, _ = self.model.forward(
                 self.timesteps[:, :self.context_len],
                 self.states[:, :self.context_len],
                 self.actions[:, :self.context_len],
                 self.returns_to_go[:, :self.context_len],
             )
-            return_to_go: tensor.Tensor = returns_to_go_predict[0, self.step_counter].detach()
+            return_to_go: torch.Tensor = returns_to_go_predict[0, self.step_counter].detach()
         else:
+            print("2")
             returns_to_go_predict, _, _ = self.model.forward(
                 self.timesteps[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
                 self.states[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
                 self.actions[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
                 self.returns_to_go[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
             )
-            return_to_go: tensor.Tensor = returns_to_go_predict[0, -1].detach()
+            return_to_go: torch.Tensor = returns_to_go_predict[0, -1].detach()
         self.returns_to_go[0, self.step_counter] = return_to_go
+        # print(f"{return_to_go}")
 
     def execute(self, observation: dict) -> Tuple[np.ndarray, dict]:
         self._preprocess_states(observation)
         self._predict_return_to_go()
-        action: tensor.Tensor = self._take_action()
-        self.actions[0, self.step_counter] = action
+        action: torch.Tensor = self._take_action()
+        # print(f"Action: {action}")
         self.step_counter += 1
         return action.cpu().numpy(), {}
 
@@ -109,9 +116,10 @@ class ReinformerCar(WaypointCar):
             raise ValueError("Policy cannot be None")
         if len(task) > 15:
             raise ValueError("Task cannot be longer than 15")
+        
         self.policy: ReinformerPolicy = policy
         self.task: np.ndarray = np.array(task)
-        self.task = np.concatenate((self.task, np.zeros((15 - len(self.task)))))
+        self.task = np.concatenate((self.task, np.full((15 - len(self.task)), -99)))
         print(f"Task: {self.task}")
         super().setup(waypoints, init_waypoint_index)
         
@@ -124,7 +132,7 @@ class ReinformerCar(WaypointCar):
             self.task, # task info
         )) # state info
         # print(f"State in car: {self.observation['state']}, shape: {self.observation['state'].shape}")
-        self.observation.pop('waypoints', None)
+        # self.observation.pop('waypoints', None)
 
     def execute(self) -> None:
         # get the start time of the loop
@@ -132,9 +140,11 @@ class ReinformerCar(WaypointCar):
         # get the action from the policy
         action, _ = self.policy.execute(self.observation)
         # apply the action to the vehicle
-        self.running_gear.read_write_std(action[0], action[1])
+        self.running_gear.read_write_std(0.08, action[1])
         self.update_state()
+        # print(f"Current index: {self.current_waypoint_index}")
         # sleep for the remaining time
         execute_time: float = elapsed_time(start_time)
-        sleep_time: float = self.monitor.dt - execute_time
+        # print(f"Execute time: {execute_time}")
+        sleep_time: float = 0.017 - execute_time
         time.sleep(max(0, sleep_time))

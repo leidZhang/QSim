@@ -9,6 +9,7 @@ import numpy as np
 class DataConverter:
     def __init__(self, folder_path: str) -> None:
         project_path: str = os.getcwd()
+        self.counter = 0
         # folder_path is the relative path from the project folder
         self.folder_path: str = os.path.join(project_path, folder_path)
         self.file_list: list = []
@@ -24,10 +25,11 @@ class DataConverter:
         available_data: list = []
         for npz_file in self.file_list:
             try: 
-                data = np.load(npz_file)
+                data = np.load(npz_file, allow_pickle=True)
                 available_data.append(data)
+                self.counter += 1
             except Exception as e:
-                available_data.append(None)
+                # available_data.append(None)
                 print(f"{npz_file} Corrupted, skipping...")
                 continue
 
@@ -41,7 +43,7 @@ class DataConverter:
         waypoints = waypoints.reshape(waypoints.shape[0], waypoints.shape[1] * waypoints.shape[2])
         state: np.ndarray = data['state']
         task: np.ndarray = np.array(data['task'])
-        place_holder: np.ndarray = np.zeros((len(data['task']), 15 - len(data['task'][0])))
+        place_holder: np.ndarray = np.full((len(data['task']), 15 - len(data['task'][0])), -99)
         # print(f'waypoints shape: {waypoints}, task shape: {task} placeholder shape: {place_holder}')
         state = np.concatenate((waypoints, state, task, place_holder), axis=1)
         # print(f'state shape: {state}')
@@ -87,7 +89,7 @@ def test_reinformer_util():
     npz_folder_path: str = os.path.join(project_path, local_path)
     data_converter: DataConverter = DataConverter(npz_folder_path)
     trajectories: List[Dict[str, np.ndarray]] = data_converter.execute()
-
+    print(f"Number of trajectories: {len(trajectories)}")
     with open("assets/trajectories.pkl", "wb") as f:
         pickle.dump(trajectories, f)
     # with open("assets/trajectories.pkl", "rb") as f:
