@@ -100,20 +100,21 @@ def experiment(variant):
             device=device,
             variant=variant
         )
-        # def evaluator(model):
-        #     return_mean, _, _, _ = Reinformer_eval(
-        #         model=model,
-        #         device=device,
-        #         context_len=variant["context_len"],
-        #         env = env,
-        #         state_mean=state_mean,
-        #         state_std=state_std,
-        #         num_eval_ep=variant["num_eval_ep"],
-        #         max_test_ep_len=variant["max_eval_ep_len"]
-        #     )
-        #     return env.get_normalized_score(
-        #         return_mean
-        #     ) * 100
+        
+        def evaluator(model):
+            return_mean, _, _, _ = Reinformer_eval(
+                model=model,
+                device=device,
+                context_len=variant["context_len"],
+                env = env,
+                state_mean=state_mean,
+                state_std=state_std,
+                num_eval_ep=variant["num_eval_ep"],
+                max_test_ep_len=variant["max_eval_ep_len"]
+            )
+            return env.get_normalized_score(
+                return_mean
+            ) * 100
 
     max_train_iters = variant["max_train_iters"]
     num_updates_per_iter = variant["num_updates_per_iter"]
@@ -159,27 +160,27 @@ def experiment(variant):
                     }
                 )
         t2 = time.time()
-        # normalized_d4rl_score = evaluator(
-        #     model=Trainer.model
-        # )
+        normalized_d4rl_score = evaluator(
+            model=Trainer.model
+        )
         t3 = time.time()
         # normalized_d4rl_score_list.append(normalized_d4rl_score)
         if use_wandb:
             wandb.log(
                 data={
                         "training/time" : t2 - t1,
-                        # "evaluation/score" : normalized_d4rl_score,
-                        # "evaluation/time": t3 - t2
+                        "evaluation/score" : normalized_d4rl_score,
+                        "evaluation/time": t3 - t2
                     }
             )
 
-    # if args.use_wandb:
-    #     wandb.log(
-    #         data={
-    #             "evaluation/max_score" : max(normalized_d4rl_score_list),
-    #             "evaluation/last_score" : normalized_d4rl_score_list[-1]
-    #         }
-    #     )
+    if use_wandb:
+        wandb.log(
+            data={
+                "evaluation/max_score" : max(normalized_d4rl_score_list),
+                "evaluation/last_score" : normalized_d4rl_score_list[-1]
+            }
+        )
     # print(normalized_d4rl_score_list)
     print("=" * 60)
     print("finished training!")

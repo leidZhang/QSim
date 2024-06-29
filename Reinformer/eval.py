@@ -1,5 +1,21 @@
+from typing import Tuple
+
 import torch
 import numpy as np
+
+from core.policies.pt_policy import PTPolicy
+from .vehicle import ReinformerPolicy
+
+
+def custom_eval(
+    model,
+    device,
+    context_len,
+    env,
+    num_eval_ep=10,
+    max_test_ep_len=1000,
+) -> Tuple[float, float, float, float]:
+    pass
 
 
 def Reinformer_eval(

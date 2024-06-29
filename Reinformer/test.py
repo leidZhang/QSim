@@ -66,13 +66,13 @@ def test_reinformer_car() -> None:
         steering_coeff=0.5,
     )
     car.setup(
-        task=[10, 2, 4, 14, 20], # [20, 22],
+        task=[4, 6, 8, 10, 2], # [20, 22],
         waypoints=waypoints, 
         init_waypoint_index=0, 
         policy=policy
     )
     # start the simulation
-    while counter <= 100000:
+    while counter <= 850:
         car.execute()
         counter += 1
     car.running_gear.read_write_std(0, 0)
