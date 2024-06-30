@@ -10,14 +10,15 @@ from qvl.qlabs import QuanserInteractiveLabs
 from td3.vehicle import WaypointCar
 
 
+# TODO: Solve long parameter list in the setup function
 class ReinformerPolicy(PTPolicy):
     def setup(
-        self, 
+        self,
         eval_batch_size: int,
         max_test_ep_len: int,
         context_len: int,
-        state_mean: float,
-        state_std: float,
+        state_mean: torch.Tensor,
+        state_std: torch.Tensor,
         state_dim: int,
         act_dim: int,
         device: str
@@ -130,23 +131,23 @@ class ReinformerPolicy(PTPolicy):
 
 class ReinformerCar(WaypointCar):
     def setup(
-        self, 
+        self,
         task: list,
-        waypoints: np.ndarray, 
-        init_waypoint_index: int, 
+        waypoints: np.ndarray,
+        init_waypoint_index: int,
         policy: ReinformerPolicy
     ) -> None:
         if policy is None:
             raise ValueError("Policy cannot be None")
         if len(task) > 15:
             raise ValueError("Task cannot be longer than 15")
-        
+
         self.policy: ReinformerPolicy = policy
         self.task: np.ndarray = np.array(task)
         self.task = np.concatenate((self.task, np.full((15 - len(self.task)), -99)))
         print(f"Task: {self.task}")
         super().setup(waypoints, init_waypoint_index)
-        
+
     def handle_observation(self, orig: np.ndarray, rot: np.ndarray) -> None:
         super().handle_observation(orig, rot)
         reshaped_waypoints: np.ndarray = self.observation['waypoints'].reshape(400)

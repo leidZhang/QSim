@@ -1,21 +1,77 @@
+import random
 from typing import Tuple
 
 import torch
+import torch.nn as nn
 import numpy as np
+from gym import Env
 
 from core.policies.pt_policy import PTPolicy
+from core.roadmap.dispatcher import TaskDispacher
+from core.policies.pure_persuit import PurePursuiteAdaptor, PolicyAdapter
+from .environment import ReinformerQLabEnv
 from .vehicle import ReinformerPolicy
+from .settings import ACT_DIM, STATE_DIM
 
 
-def custom_eval(
-    model,
-    device,
-    context_len,
-    env,
-    num_eval_ep=10,
-    max_test_ep_len=1000,
+# TODO: Solve ong parameter list in the this function
+def reinformer_car_eval(
+    model: nn.Module,
+    model_path: str,
+    device: str,
+    context_len: int,
+    state_mean: torch.Tensor,
+    state_std: torch.Tensor,
+    num_eval_ep: int = 10,
+    max_test_ep_len: int = 1000,
 ) -> Tuple[float, float, float, float]:
-    pass
+    # initialize the environment
+    env: Env = ReinformerQLabEnv()
+    # initialize the agent and the expert
+    agent: PTPolicy = ReinformerPolicy(model=model, model_path=model_path)
+    expert: PolicyAdapter = PurePursuiteAdaptor()
+
+    # initialize returns
+    returns, lengths = [], []
+    for _ in range(num_eval_ep):
+        # initialize the task assigner
+        start_index: int = random.randint(0, 24)
+        task_assigner: TaskDispacher = TaskDispacher(start_node=start_index)
+        task, waypoints = task_assigner.get_one_task()
+        # Reinitialize the environment
+        state, reward, done, _ = env.reset(task, waypoints)
+        episode_return: float = 0
+        episode_length: float = 0
+        # setup the agent
+        agent.setup(
+            eval_batch_size=1,
+            max_test_ep_len=max_test_ep_len,
+            context_len=context_len,
+            state_mean=state_mean,
+            state_std=state_std,
+            state_dim=STATE_DIM,
+            act_dim=ACT_DIM,
+            device=device
+        )
+
+        # execute the steps
+        for _ in range(max_test_ep_len):
+            expert_action, _ = expert.execute(state)
+            agent_action, _ = agent.execute(state)
+            state, reward, done, _ = env.step(agent_action, expert_action)
+            episode_return += reward
+            episode_length += 1
+            if done:
+                returns.append(episode_return)
+                lengths.append(episode_length)
+                break
+
+    return (
+        np.array(returns).mean(),
+        np.array(returns).std(),
+        np.array(lengths).mean(),
+        np.array(lengths).std()
+    )
 
 
 def Reinformer_eval(
@@ -120,5 +176,5 @@ def Reinformer_eval(
                     returns.append(episode_return)
                     lengths.append(episode_length)
                     break
-    
+
     return np.array(returns).mean(), np.array(returns).std(), np.array(lengths).mean(), np.array(lengths).mean()

@@ -3,7 +3,7 @@ import random
 from copy import deepcopy
 from queue import Queue
 from multiprocessing import Queue as MPQueue
-from typing import Dict, List, Set, Union
+from typing import Dict, List, Set, Union, Tuple
 
 import numpy as np
 
@@ -14,9 +14,9 @@ from .constants import ACC_GRAPH_RIGHT
 
 class TaskDispacher:
     def __init__(
-        self,  
+        self,
         start_node: int = 4,
-        graph: Dict[int, Set[int]] = ACC_GRAPH_RIGHT, 
+        graph: Dict[int, Set[int]] = ACC_GRAPH_RIGHT,
     ) -> None:
         # initialize the roadmap
         self.road_map: ACCRoadMap = ACCRoadMap()
@@ -25,9 +25,9 @@ class TaskDispacher:
         # use deepcopy to avoid changing the original dict
         self.graph: Dict[int, Set[int]] = deepcopy(graph)
         # generate an empty used dict
-        self._prepare_used_dict() 
+        self._prepare_used_dict()
         # generate the origin dict
-        self._prepare_origin_dict() 
+        self._prepare_origin_dict()
         # generate the random task length
         # self.task_length: int = random.randint(5, 9)
 
@@ -50,14 +50,19 @@ class TaskDispacher:
             self.graph[final_node_index] = self.used[final_node_index]
             self.used[final_node_index] = set() # reset the used set
         return node_sequence + [next_index]
-    
+
     def _will_add_node_to_sequence(self, node_sequence: List[int]) -> bool:
         if 4 < len(node_sequence) < 16 and self.origin[node_sequence[-1]] == 1:
             print(f"New task {self.node_sequence} generated!")
             # self.task_length = random.randint(5, 9)
             return False
         return True
-    
+
+    def get_one_task(self) -> Tuple[list, np.ndarray]:
+        while self._will_add_node_to_sequence(self.node_sequence):
+            self.node_sequence = self._get_next_node(self.node_sequence)
+        return self.node_sequence, self.road_map.generate_path(self.node_sequence)
+
     def execute(self, data_queue: Union[Queue, MPQueue]) -> None:
         if self._will_add_node_to_sequence(self.node_sequence):
             self.node_sequence = self._get_next_node(self.node_sequence)
@@ -66,5 +71,3 @@ class TaskDispacher:
             wait_for_empty_queue_space(data_queue) # wait for the queue to have space
             data_queue.put((self.node_sequence, waypoints))
             self.node_sequence = [self.node_sequence[-1]]
-
-    
