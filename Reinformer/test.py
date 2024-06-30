@@ -1,6 +1,7 @@
 from typing import Tuple
 
 import numpy as np
+from gym import Env
 
 from qvl.qlabs import QuanserInteractiveLabs
 
@@ -8,6 +9,7 @@ from tests.performance_environment import destroy_map
 from tests.performance_environment import prepare_test_environment
 from core.policies.pt_policy import PTPolicy
 from .eval import reinformer_car_eval
+from .environment import ReinformerQLabEnv
 from .vehicle import ReinformerCar, ReinformerPolicy
 from .reinformer import ReinFormer
 from .settings import *
@@ -82,7 +84,13 @@ def test_reinformer_car() -> None:
     car.running_gear.read_write_std(0, 0)
 
 
-def test_reinformer_car_eval() -> None:
+def test_reinformer_car_eval(
+    state_mean: torch.Tensor = STATE_MEAN,
+    state_std: torch.Tensor = STATE_STD
+) -> None:
+    # render the map
+    env: Env = ReinformerQLabEnv()
+    # initialize the model
     model: ReinFormer = ReinFormer(
         state_dim=STATE_DIM,
         act_dim=ACT_DIM,
@@ -99,9 +107,10 @@ def test_reinformer_car_eval() -> None:
         model=model,
         model_path=MODEL_PATH,
         device=DEVICE,
+        env=env,
         context_len=CONTEXT_LEN,
-        state_mean=STATE_MEAN,
-        state_std=STATE_STD
+        state_mean=state_mean,
+        state_std=state_std
     )
 
-    print(f"Result Std: {result[0]}, Result Mean: {result[1]}, Length Mean: {result[3]}, Length Std: {result[4]}")
+    print(f"Result Std: {result[0]}, Result Mean: {result[1]}, Length Mean: {result[2]}, Length Std: {result[3]}")

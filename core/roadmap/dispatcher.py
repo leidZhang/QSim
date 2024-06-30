@@ -58,9 +58,11 @@ class TaskDispacher:
             return False
         return True
 
-    def get_one_task(self) -> Tuple[list, np.ndarray]:
+    def get_one_task(self, node: int) -> Tuple[list, np.ndarray]:
+        self.node_sequence = [node]
         while self._will_add_node_to_sequence(self.node_sequence):
             self.node_sequence = self._get_next_node(self.node_sequence)
+        self.graph: Dict[int, Set[int]] = deepcopy(ACC_GRAPH_RIGHT)
         return self.node_sequence, self.road_map.generate_path(self.node_sequence)
 
     def execute(self, data_queue: Union[Queue, MPQueue]) -> None:

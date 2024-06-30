@@ -15,6 +15,12 @@ class ACCRoadMap(RoadMap):
     """
     The road map class for the ACC2024 competition
     """
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(ACCRoadMap, cls).__new__(cls)
+        return cls._instance
 
     def __init__(self) -> None:
         """
@@ -34,6 +40,12 @@ class ACCRoadMap(RoadMap):
         for edge in edges:
             edge[2] = edge[2] * ACC_SCALE
             self.add_edge(*edge)
+
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
 
     def generate_random_cycle(self, start: int, min_length:int = 3) -> list:
         """

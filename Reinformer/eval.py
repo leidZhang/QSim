@@ -19,25 +19,24 @@ def reinformer_car_eval(
     model: nn.Module,
     model_path: str,
     device: str,
+    env: Env,
     context_len: int,
     state_mean: torch.Tensor,
     state_std: torch.Tensor,
     num_eval_ep: int = 10,
     max_test_ep_len: int = 1000,
 ) -> Tuple[float, float, float, float]:
-    # initialize the environment
-    env: Env = ReinformerQLabEnv()
     # initialize the agent and the expert
     agent: PTPolicy = ReinformerPolicy(model=model, model_path=model_path)
     expert: PolicyAdapter = PurePursuiteAdaptor()
+    task_assigner: TaskDispacher = TaskDispacher()
 
     # initialize returns
     returns, lengths = [], []
     for _ in range(num_eval_ep):
         # initialize the task assigner
-        start_index: int = random.randint(0, 24)
-        task_assigner: TaskDispacher = TaskDispacher(start_node=start_index)
-        task, waypoints = task_assigner.get_one_task()
+        start_index: int = random.randint(0, 23)
+        task, waypoints = task_assigner.get_one_task(start_index)
         # Reinitialize the environment
         state, reward, done, _ = env.reset(task, waypoints)
         episode_return: float = 0
@@ -56,6 +55,7 @@ def reinformer_car_eval(
 
         # execute the steps
         for _ in range(max_test_ep_len):
+            print(state.keys())
             expert_action, _ = expert.execute(state)
             agent_action, _ = agent.execute(state)
             state, reward, done, _ = env.step(agent_action, expert_action)

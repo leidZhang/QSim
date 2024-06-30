@@ -11,6 +11,16 @@ from td3.vehicle import WaypointCar
 
 
 class ReinformerQLabEnv(QLabEnvironment):
+    def __init__(
+        self, 
+        dt: float = 0.05, 
+        action_size: int = 2, 
+        privileged: bool = False, 
+        offsets: Tuple[float] = (0, 0)
+    ) -> None:
+        super().__init__(dt, action_size, privileged, offsets)
+        self.simulator.render_map()
+
     def handle_reward(
         self,
         action: list,
@@ -32,11 +42,14 @@ class ReinformerQLabEnv(QLabEnvironment):
         self.pre_index = index
 
         # Max boundary
-        if norm_dist[dist_ix] >= 0.30:
+        if norm_dist[dist_ix] >= 0.80:
             done = True
+            print(f"Max boundary reached!")
             self.vehicle.halt()  # stop the car
+
         if np.linalg.norm(self.goal - ego_state[:2]) < GOAL_THRESHOLD:
             done = True  # stop episode after this step
+            print(f"Reached the goal!")
             self.vehicle.halt()  # stop the car
 
         return reward, done
@@ -57,9 +70,10 @@ class ReinformerQLabEnv(QLabEnvironment):
         )
 
         ego_state = self.vehicle.ego_state
-        local_waypoints = self.vehicle.observation['waypoints']
+        local_waypoints: np.ndarray = self.vehicle.observation['waypoints']
+        observation['waypoints'] = local_waypoints
         observation['state'] = np.concatenate(
-            (local_waypoints, ego_state, self.task), axis=1
+            [local_waypoints.reshape(-1), ego_state, self.task]
         )
 
         return observation, reward, done, info
@@ -72,6 +86,7 @@ class ReinformerQLabEnv(QLabEnvironment):
     ) -> Tuple[dict, float, bool, dict]:
         # prepare the qcar spawn position
         self.waypoint_sequence: np.ndarray = wayponts
+        self.goal: np.ndarray = wayponts[-1]
         location, orientation = self.spawn_on_waypoints(waypoint_index=start_index)
         observation, reward, done, info = super().reset(location, orientation)
 
@@ -89,13 +104,13 @@ class ReinformerQLabEnv(QLabEnvironment):
 
         # prepare the observations
         self.task: np.ndarray = np.array(task)
-        place_holder: np.ndarray = np.full((len(task), 15 - len(task)), -99)
-        self.task = np.concatenate(self.task, place_holder)
+        place_holder: np.ndarray = np.full(15 - len(task), -99)
+        self.task = np.concatenate([self.task, place_holder])
         ego_state: np.ndarray = self.vehicle.ego_state
         local_waypoints: np.ndarray = self.vehicle.observation['waypoints']
         observation['waypoints'] = local_waypoints
         observation['state'] = np.concatenate(
-            (local_waypoints, ego_state, self.task), axis=1
+            [local_waypoints.reshape(-1), ego_state, self.task]
         )
 
         # init fault tolerance
