@@ -24,6 +24,7 @@ def read_npz_file(file_path: str) -> Union[dict, None]:
         return None
     return data
 
+
 class ImageWriter:
     def __init__(self, output_path: str) -> None:
         self.output_path: str = output_path
@@ -48,7 +49,7 @@ class ImageReader:
     def __init__(self, input_path: str) -> None:
         self.input_path: str = input_path
         self.images: list = self._get_image_files()
-    
+
     def _get_image_files(self) -> list:
         # Get all files in the input path
         files = os.listdir(self.input_path)
@@ -56,7 +57,7 @@ class ImageReader:
         image_files = [file for file in files if os.path.splitext(file)[1] in ['.jpg', '.png', '.jpeg']]
         image_files = sorted(image_files, key=lambda x: int(x.split('_')[-1].split('.')[0]))
         return image_files
-    
+
     def read_images(self) -> list:
         for image_file in self.images:
             image_path = os.path.join(self.input_path, image_file)
@@ -73,7 +74,7 @@ class DataWriter(ABC):
         self.folder_path: str = os.path.join(
             os.getcwd(), folder_path
         )
-    
+
     def add_data(self, data: Any) -> None:
         self.history.append(data)
 
@@ -89,14 +90,14 @@ class JSONDataWriter(DataWriter):
         if not os.path.exists(self.folder_path):
             os.makedirs(self.folder_path)
             os.makedirs(os.path.join(self.folder_path, "jsons"))
-        
+
     def _write_to_json(self, folder_path: str) -> None:
         # initialize the episode data
         timestamp: str = self.history[0]['timestamp']
         task: str = self.history[0]['task']
         task_length: int = self.history[0]['task_length']
         filename: str = os.path.join(
-            self.folder_path, 
+            self.folder_path,
             folder_path,
             f"episode_{timestamp}.json"
         )
@@ -115,7 +116,7 @@ class JSONDataWriter(DataWriter):
         # save the data to the json file
         with open(filename, "w") as f:
             json.dump(episode_data, f)
-    
+
     def write_data(self, folder_path: str) -> None:
         if len(self.history) > 0:
             os.makedirs(os.path.join(self.folder_path, folder_path))

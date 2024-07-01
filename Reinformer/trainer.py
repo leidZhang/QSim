@@ -11,14 +11,14 @@ from .lamb import Lamb
 
 class ReinFormerTrainer:
     def __init__(
-        self, 
+        self,
         state_dim,
         act_dim,
         device,
         variant
     ):
         super().__init__()
-                
+
         self.state_dim = state_dim
         self.act_dim = act_dim
         self.device = device
@@ -58,7 +58,7 @@ class ReinFormerTrainer:
         )
         self.timer: float = time.time()
 
-    
+
     def train_step(
         self,
         timesteps,
@@ -78,7 +78,7 @@ class ReinFormerTrainer:
         returns_to_go = returns_to_go.to(self.device).unsqueeze(
             dim=-1
         )                                          # B x T x 1
-        
+
         rewards = rewards.to(self.device).unsqueeze(
             dim=-1
         )                                          # B x T x 1
@@ -129,7 +129,7 @@ class ReinFormerTrainer:
         self.optimizer.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(
-            self.model.parameters(), 
+            self.model.parameters(),
             self.grad_norm
         )
         self.optimizer.step()
@@ -171,4 +171,3 @@ class ReinFormerTrainer:
                 self.timer = time.time()
         except IOError as e:
             logging.error(f"Failed to save checkpoint at {checkpoint_path}: {e}")
-    

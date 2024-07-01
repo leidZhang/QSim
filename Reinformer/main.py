@@ -30,7 +30,7 @@ def experiment(variant):
 
     # env = variant["env"]
     # dataset = variant["dataset"]
-    
+
     # if dataset == "complete":
     #     variant["batch_size"] = 16
     # if env == "kitchen":
@@ -44,7 +44,7 @@ def experiment(variant):
     # if env == "hopper":
     #     if dataset == "medium" or dataset == "meidum-replay":
     #         variant["batch_size"] = 256
-    
+
     # dataset_path = os.path.join(variant["dataset_dir"], f"trajectories.pkl")
     dataset_path = r'C:\Users\sdcnlab025\Desktop\Yida\qsim\assets\trajectories.pkl'
     device = torch.device(variant["device"])
@@ -99,7 +99,7 @@ def experiment(variant):
             device=device,
             variant=variant
         )
-        
+
         # def evaluator(model):
         #     return_mean, _, _, _ = Reinformer_eval(
         #         model=model,
@@ -159,9 +159,7 @@ def experiment(variant):
                     }
                 )
         t2 = time.time()
-        # normalized_d4rl_score = evaluator(
-        #     model=Trainer.model
-        # )
+
         t3 = time.time()
         # normalized_d4rl_score_list.append(normalized_d4rl_score)
         if use_wandb:

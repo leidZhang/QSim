@@ -8,8 +8,7 @@ from qvl.qlabs import QuanserInteractiveLabs
 from tests.performance_environment import destroy_map
 from tests.performance_environment import prepare_test_environment
 from core.policies.pt_policy import PTPolicy
-from .eval import reinformer_car_eval
-from .environment import ReinformerQLabEnv
+from .environment import ReinformerQLabEnv, reinformer_car_eval
 from .vehicle import ReinformerCar, ReinformerPolicy
 from .reinformer import ReinFormer
 from .settings import *

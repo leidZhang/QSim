@@ -1,21 +1,86 @@
-from typing import Tuple
+import random
+from typing import Tuple, List
 
+import torch
 import numpy as np
+import torch.nn as nn
+import numpy as np
+from gym import Env
 
 from qvl.qlabs import QuanserInteractiveLabs
 
 from core.environment import QLabEnvironment
 from core.environment.detector import EpisodeMonitor
-from constants import GOAL_THRESHOLD, RECOVER_INDICES
+from constants import GOAL_THRESHOLD
 from td3.vehicle import WaypointCar
+from core.policies.pt_policy import PTPolicy
+from core.roadmap.dispatcher import SingleTaskGenerator
+from core.policies.pure_persuit import PurePursuiteAdaptor, PolicyAdapter
+from .vehicle import ReinformerPolicy
+from .settings import ACT_DIM, STATE_DIM
+
+
+# TODO: Solve ong parameter list in the this function
+def reinformer_car_eval(
+    model: nn.Module,
+    model_path: str,
+    device: str,
+    env: Env,
+    context_len: int,
+    state_mean: torch.Tensor,
+    state_std: torch.Tensor,
+    num_eval_ep: int = 10,
+    max_test_ep_len: int = 1000,
+) -> Tuple[List[float], List[float]]:
+    # initialize the agent and the expert
+    agent: PTPolicy = ReinformerPolicy(model=model, model_path=model_path)
+    expert: PolicyAdapter = PurePursuiteAdaptor()
+    task_assigner: SingleTaskGenerator = SingleTaskGenerator()
+
+    # initialize returns
+    returns, lengths = [], []
+    for _ in range(num_eval_ep):
+        # initialize the task assigner
+        start_index: int = random.randint(0, 23)
+        task, waypoints = task_assigner.get_task(start_index)
+        # Reinitialize the environment
+        state, reward, done, _ = env.reset(task, waypoints)
+        episode_return: float = 0
+        episode_length: float = 0
+        # setup the agent
+        agent.setup(
+            eval_batch_size=1,
+            max_test_ep_len=max_test_ep_len,
+            context_len=context_len,
+            state_mean=state_mean,
+            state_std=state_std,
+            state_dim=STATE_DIM,
+            act_dim=ACT_DIM,
+            device=device
+        )
+
+        # execute the steps
+        for _ in range(max_test_ep_len):
+            print(state.keys())
+            expert_action, _ = expert.execute(state)
+            agent_action, _ = agent.execute(state)
+            state, reward, done, _ = env.step(agent_action, expert_action)
+            episode_return += reward
+            episode_length += 1
+            if done:
+                returns.append(episode_return)
+                lengths.append(episode_length)
+                break
+
+    return returns, lengths
 
 
 class ReinformerQLabEnv(QLabEnvironment):
     def __init__(
-        self, 
-        dt: float = 0.05, 
-        action_size: int = 2, 
-        privileged: bool = False, 
+        self,
+        dt: float = 0.05,
+        action_size: int = 2,
+        privileged: bool = False,
         offsets: Tuple[float] = (0, 0)
     ) -> None:
         super().__init__(dt, action_size, privileged, offsets)
