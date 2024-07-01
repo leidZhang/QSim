@@ -150,7 +150,7 @@ class WaypointEnvironment(QLabEnvironment):
 
     def step(self, action: np.ndarray, metrics: dict, compare_action: np.ndarray) -> Tuple[dict, float, bool, dict]:
         episode_done: bool = self.episode_steps >= self.max_episode_steps
-        observation, reward, info = self.init_step_params()
+        observation, reward, info = self._init_step_params()
         action: np.ndarray = self.vehicle.execute(action)
         # time.sleep(0.05)  # sleep for 0.05 seconds
 

@@ -46,7 +46,7 @@ def test_reinformer_car() -> None:
     # prepare policy
     max_steps: int = 100000
 
-    policy: PTPolicy = ReinformerPolicy(model, model_path=MODEL_PATH)
+    policy: PTPolicy = ReinformerPolicy(model, weight_path=WEIGHT_PATH)
     policy.setup(
         eval_batch_size=1,
         max_test_ep_len=max_steps,
@@ -104,7 +104,7 @@ def test_reinformer_car_eval(
 
     result: Tuple[float, float, float, float] = reinformer_car_eval(
         model=model,
-        model_path=MODEL_PATH,
+        weight_path=WEIGHT_PATH,
         device=DEVICE,
         env=env,
         context_len=CONTEXT_LEN,

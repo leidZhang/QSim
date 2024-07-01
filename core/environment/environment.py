@@ -10,9 +10,42 @@ from constants import DEFAULT_MAX_STEPS
 
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+class BaseQLabEnv(Env):
+    def _init_step_params(self) -> tuple:
+        observation: dict = {}
+        reward: float = 0.0
+        info: dict = {}
+        return observation, reward, info
 
-class QLabEnvironment(Env):
-    def __init__(self, dt: float = 0.05, action_size: int = 2, privileged: bool = False, offsets: Tuple[float] = (0, 0)) -> None:
+    @abstractmethod
+    def handle_reward(self, *args) -> Tuple[float, bool]:
+        ...
+
+    @abstractmethod
+    def step(self, action: np.ndarray, metrics: np.ndarray, *args) -> Tuple[dict, float, bool, dict]:
+        ...
+
+
+class OfflineQLabEnv(BaseQLabEnv):
+    def __init__(self, reference_max_score: float, reference_min_score: float) -> None:
+        self.reference_max_score: float = reference_max_score
+        self.reference_min_score: float = reference_min_score
+
+    def get_normalized_score(self, score: float) -> float:
+        return (score - self.reference_min_score) / (self.reference_max_score - self.reference_min_score)
+
+    @abstractmethod
+    def get_dataset(self, *args) -> None:
+        ...
+
+class OnlineQLabEnv(BaseQLabEnv):
+    def __init__(
+        self,
+        dt: float = 0.05,
+        action_size: int = 2,
+        privileged: bool = False,
+        offsets: Tuple[float] = (0, 0)
+    ) -> None:
         self.dt: float = dt
         self.action_size: int = action_size
         self.offsets: Tuple[float] = offsets
@@ -32,12 +65,6 @@ class QLabEnvironment(Env):
         self.waypoint_sequence: np.ndarray = sequence
         self.goal: np.ndarray = self.waypoint_sequence[-1]
 
-    def init_step_params(self) -> tuple:
-        observation: dict = {}
-        reward: float = 0.0
-        info: dict = {}
-        return observation, reward, info
-    
     def recover_state_info(self, state: np.ndarray, recover_indices: list) -> np.ndarray:
         recovered_state: np.ndarray = state.copy()
         for index in recover_indices:
@@ -45,7 +72,7 @@ class QLabEnvironment(Env):
             recovered_state[index + 1] -= self.offsets[1]
         return recovered_state
 
-    def cal_waypoint_angle(self, delta_x: float, delta_y: float) -> float:
+    def _cal_waypoint_angle(self, delta_x: float, delta_y: float) -> float:
         if delta_x < 0 and delta_y == 0:
             return math.pi # up to bottom
         elif delta_x == 0 and delta_y > 0:
@@ -65,7 +92,7 @@ class QLabEnvironment(Env):
 
     def spawn_on_waypoints(self, waypoint_index: int = 0) -> Tuple[list, list]:
         if waypoint_index < 0 or waypoint_index >= len(self.waypoint_sequence):
-            raise ValueError('Invalid Waypoint index format')
+            raise ValueError('Invalid Waypoint index format!')
 
         # handle final index
         if waypoint_index < len(self.waypoint_sequence) - 1:
@@ -80,13 +107,13 @@ class QLabEnvironment(Env):
         # calcualte angle
         delta_x: float = next_waypoint[0] - current_waypoint[0]
         delta_y: float = next_waypoint[1] - current_waypoint[1]
-        orientation: float = self.cal_waypoint_angle(delta_x, delta_y)
+        orientation: float = self._cal_waypoint_angle(delta_x, delta_y)
 
         return [x_position, y_position, 0], [0, 0, orientation]
 
     def spawn_on_nodes(self, node_index: int) -> Tuple[list, list]:
         if node_index not in self.nodes.keys():
-            raise ValueError("Index not exist!")
+            raise ValueError("Index does not exist!")
         node_pose: np.ndarray = self.nodes[node_index]
         x_position, y_position, orientation = node_pose
         return [x_position, y_position, 0], [0, 0, orientation]
@@ -94,7 +121,7 @@ class QLabEnvironment(Env):
     def reset(self, location, orientation) -> Tuple[dict, float, bool, dict]:
         self.simulator.reset_map(location=location, orientation=orientation)
         done: bool = False
-        observation, reward, info = self.init_step_params()
+        observation, reward, info = self._init_step_params()
         self.deviate_steps: int = 0
         self.episode_steps: int = 0
         return observation, reward, done, info
@@ -103,10 +130,4 @@ class QLabEnvironment(Env):
     def handle_spawn_pos(self, *args) -> Tuple[list, list]:
         ...
 
-    @abstractmethod
-    def handle_reward(self, *args) -> Tuple[float, bool]:
-        ...
-
-    @abstractmethod
-    def step(self, action: np.ndarray, metrics: np.ndarray, *args) -> Tuple[dict, float, bool, dict]:
-        ...
+QLabEnvironment = OnlineQLabEnv

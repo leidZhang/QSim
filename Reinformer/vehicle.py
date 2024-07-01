@@ -55,47 +55,48 @@ class ReinformerPolicy(PTPolicy):
         self.states[0, self.step_counter] = torch.from_numpy(observation['state']).to(self.device)
         self.states[0, self.step_counter] = (self.states[0, self.step_counter] - self.state_mean) / self.state_std
 
-    def _take_action(self) -> torch.Tensor:
-        if self.step_counter < self.context_len:
-            _, action_predict, _ = self.model.forward(
-                self.timesteps[:, :self.context_len],
-                self.states[:, :self.context_len],
-                self.actions[:, :self.context_len],
-                self.returns_to_go[:, :self.context_len],
-            )
-            action = action_predict.mean.reshape(1, -1, self.act_dim)[0, self.step_counter].detach()
-        else:
-            _, action_predict, _ = self.model.forward(
-                self.timesteps[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
-                self.states[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
-                self.actions[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
-                self.returns_to_go[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
-            )
-            action = action_predict.mean.reshape(1, -1, self.act_dim)[0, -1].detach()
-        self.actions[0, self.step_counter] = action
-        return action
+    # def _predict_action(self) -> torch.Tensor:
+    #     if self.step_counter < self.context_len:
+    #         _, action_predict, _ = self.model.forward(
+    #             self.timesteps[:, :self.context_len],
+    #             self.states[:, :self.context_len],
+    #             self.actions[:, :self.context_len],
+    #             self.returns_to_go[:, :self.context_len],
+    #         )
+    #         action = action_predict.mean.reshape(1, -1, self.act_dim)[0, self.step_counter].detach()
+    #     else:
+    #         _, action_predict, _ = self.model.forward(
+    #             self.timesteps[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
+    #             self.states[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
+    #             self.actions[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
+    #             self.returns_to_go[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
+    #         )
+    #         action = action_predict.mean.reshape(1, -1, self.act_dim)[0, -1].detach()
+    #     self.actions[0, self.step_counter] = action
+    #     return action
 
-    def _predict_return_to_go(self) -> None:
-        if self.step_counter < self.context_len:
-            returns_to_go_predict, _, _ = self.model.forward(
-                self.timesteps[:, :self.context_len],
-                self.states[:, :self.context_len],
-                self.actions[:, :self.context_len],
-                self.returns_to_go[:, :self.context_len],
-            )
-            return_to_go: torch.Tensor = returns_to_go_predict[0, self.step_counter].detach()
-        else:
-            returns_to_go_predict, _, _ = self.model.forward(
-                self.timesteps[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
-                self.states[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
-                self.actions[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
-                self.returns_to_go[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
-            )
-            return_to_go: torch.Tensor = returns_to_go_predict[0, -1].detach()
-        self.returns_to_go[0, self.step_counter] = return_to_go
-        print(f"{self.returns_to_go}")
+    # def _predict_return_to_go(self) -> None:
+    #     if self.step_counter < self.context_len:
+    #         returns_to_go_predict, _, _ = self.model.forward(
+    #             self.timesteps[:, :self.context_len],
+    #             self.states[:, :self.context_len],
+    #             self.actions[:, :self.context_len],
+    #             self.returns_to_go[:, :self.context_len],
+    #         )
+    #         return_to_go: torch.Tensor = returns_to_go_predict[0, self.step_counter].detach()
+    #     else:
+    #         returns_to_go_predict, _, _ = self.model.forward(
+    #             self.timesteps[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
+    #             self.states[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
+    #             self.actions[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
+    #             self.returns_to_go[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
+    #         )
+    #         return_to_go: torch.Tensor = returns_to_go_predict[0, -1].detach()
+    #     self.returns_to_go[0, self.step_counter] = return_to_go
+    #     print(f"{self.returns_to_go}")
 
-    def test_forward(self) -> torch.Tensor:
+    def _predict_and_update(self) -> torch.Tensor:
+        # one time forward to get return to go and action simultanously
         if self.step_counter < self.context_len:
             returns_to_go_predict, action_predict, _ = self.model.forward(
                 self.timesteps[:, :self.context_len],
@@ -114,16 +115,18 @@ class ReinformerPolicy(PTPolicy):
             )
             return_to_go: torch.Tensor = returns_to_go_predict[0, -1].detach()
             action = action_predict.mean.reshape(1, -1, self.act_dim)[0, -1].detach()
+
+        # update the the history buffer
         self.returns_to_go[0, self.step_counter] = return_to_go
         self.actions[0, self.step_counter] = action
-        print(f"{return_to_go}")
+
         return action
 
     def execute(self, observation: dict) -> Tuple[np.ndarray, dict]:
         self._preprocess_states(observation)
         # self._predict_return_to_go()
-        # action: torch.Tensor = self._take_action()
-        action = self.test_forward()
+        # action: torch.Tensor = self._predict_action()
+        action = self._predict_and_update()
         # print(f"Action: {action}")
         self.step_counter += 1
         return action.cpu().numpy(), {}

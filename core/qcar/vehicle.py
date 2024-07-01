@@ -101,7 +101,7 @@ class VirtualCar(BaseCar):
 
     def cal_vehicle_state(self, ego_state: np.ndarray) -> Tuple[np.ndarray, float, np.ndarray]:
         """
-        Gets the position, yaw and rotation of the vehicle
+        Gets the position, yaw and rotation matrix of the vehicle
 
         Parameters:
         - ego_state: np.ndarray: The ego state of the car

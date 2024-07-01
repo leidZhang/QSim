@@ -37,7 +37,7 @@ class BaseTaskGenerator(ABC):
         return node_sequence + [next_index]
 
 
-class SingleTaskGenerator(BaseTaskGenerator):
+class OneTimeTaskGenerator(BaseTaskGenerator):
     def __init__(
         self,
         max_task_length: int = 5,
