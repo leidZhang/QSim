@@ -11,7 +11,7 @@ from constants import DEFAULT_MAX_STEPS
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class BaseQLabEnv(Env):
-    def _init_step_params(self) -> tuple:
+    def _init_step_params(self) -> Tuple[dict, float, dict]:
         observation: dict = {}
         reward: float = 0.0
         info: dict = {}
@@ -28,6 +28,7 @@ class BaseQLabEnv(Env):
 
 class OfflineQLabEnv(BaseQLabEnv):
     def __init__(self, reference_max_score: float, reference_min_score: float) -> None:
+        self.episode_steps: int = 0
         self.reference_max_score: float = reference_max_score
         self.reference_min_score: float = reference_min_score
 
