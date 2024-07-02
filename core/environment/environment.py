@@ -27,13 +27,18 @@ class BaseQLabEnv(Env):
 
 
 class OfflineQLabEnv(BaseQLabEnv):
-    def __init__(self, reference_max_score: float, reference_min_score: float) -> None:
+    def __init__(
+        self, 
+        reference_max_score_per_step: float, 
+        reference_min_score_per_step: float
+    ) -> None:
         self.episode_steps: int = 0
-        self.reference_max_score: float = reference_max_score
-        self.reference_min_score: float = reference_min_score
+        self.reference_max_score_per_step: float = reference_max_score_per_step
+        self.reference_min_score_per_step: float = reference_min_score_per_step
 
     def get_normalized_score(self, score: float) -> float:
-        return (score - self.reference_min_score) / (self.reference_max_score - self.reference_min_score)
+        return (score - self.reference_min_score_per_step) / \
+            (self.reference_max_score_per_step - self.reference_min_score_per_step)
 
     @abstractmethod
     def get_dataset(self, *args) -> None:

@@ -1,17 +1,18 @@
 import os
 import glob
 import pickle   
+import random
 from typing import List, Dict
 
 import numpy as np
 
 
 class DataConverter:
-    def __init__(self, folder_path: str) -> None:
-        project_path: str = os.getcwd()
+    def __init__(self, folder_path: str, eval_foler_path: str) -> None:
         self.counter = 0
         # folder_path is the relative path from the project folder
-        self.folder_path: str = os.path.join(project_path, folder_path)
+        self.folder_path: str = folder_path
+        self.eval_folder_path: str = eval_foler_path
         self.file_list: list = []
 
     def read_file_list(self) -> None:
@@ -75,19 +76,25 @@ class DataConverter:
         self.read_file_list()
         data_list: List[dict] = self.read_npz_files()
         trajectories: List[Dict[str, np.ndarray]] = []
-        for data in data_list:
+        for i in range(len(data_list)):
+            data: dict = data_list[i]
             if data is None:
                 continue
             traj: Dict[str, np.ndarray] = self.convert_to_traj(data)
-            trajectories.append(traj)
+            if (eval_index := random.randint(0, 9)) == 0:
+                np.savez(f"{self.eval_folder_path}/traj_{i}.npz", **traj)
+            else:
+                trajectories.append(traj)
         return trajectories
 
 def test_reinformer_util():
     project_path: str = os.getcwd()
     print(f"Current working directory: {project_path}")
     local_path: str = r"test_data\npzs"
+    eval_path: str = r"assets\reinformer_eval_data"
     npz_folder_path: str = os.path.join(project_path, local_path)
-    data_converter: DataConverter = DataConverter(npz_folder_path)
+    eval_folder_path: str = os.path.join(project_path, eval_path)
+    data_converter: DataConverter = DataConverter(npz_folder_path, eval_folder_path)
     trajectories: List[Dict[str, np.ndarray]] = data_converter.execute()
     print(f"Number of trajectories: {len(trajectories)}")
     with open("assets/trajectories.pkl", "wb") as f:

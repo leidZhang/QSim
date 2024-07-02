@@ -122,9 +122,8 @@ def experiment(variant):
     # env = gym.make(d4rl_env)
     # env.seed(seed)
     env: OfflineQLabEnv = OfflineWaypointEnv(
-        max_episode_length=500,
-        reference_max_score=65,
-        reference_min_score=0
+        reference_max_score_per_step=0.25,
+        reference_min_score_per_step=0
     )
     env.get_dataset('test_data/eval')
 
