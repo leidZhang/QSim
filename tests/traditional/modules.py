@@ -35,12 +35,13 @@ class ObserverWrapper:
         image: np.ndarray = fetch_latest_in_queue(request)
         if image is not None:
             # send the image to the observer
-            self.enhancer.enhanced_img(image)
+            # self.enhancer.enhanced_img(image)
+            self.enhancer.enhance(image)
             self.observer(image)
             # get the detection flags
             result: dict = self.observer.detection_flags
             # put the data in the response queue
-            put_latest_in_queue(result, response)
+            put_latest_in_queue(result.copy(), response)
             # set watch dog event
 
 

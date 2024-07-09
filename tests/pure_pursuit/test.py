@@ -25,12 +25,12 @@ def test_dispatch_task_to_car() -> None:
     task_queue: MPQueue = MPQueue(5)
     # create a processes
     dispatcher_exec: BaseProcessExec = TaskDispatcherExec()
-    data_writer_exec: BaseProcessExec = RecordDataWriterExec(stop_event=stop_event)
+    #data_writer_exec: BaseProcessExec = RecordDataWriterExec(stop_event=stop_event)
     dispatcher_process: Process = Process(target=dispatcher_exec.run_process, args=(task_queue,))
-    data_writer_process: Process = Process(target=data_writer_exec.run_process, args=(obs_queue,))
+    #data_writer_process: Process = Process(target=data_writer_exec.run_process, args=(obs_queue,))
     # start the processes
     dispatcher_process.start()
-    data_writer_process.start()
+    #data_writer_process.start()
 
     # create a car thread
     try:

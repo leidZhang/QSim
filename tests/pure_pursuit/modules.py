@@ -262,13 +262,13 @@ class PurePursuiteCar(PhysicalCar): # for simulation purpose
             self.action[0] = action[0] * self.throttle_coeff
             self.action[1] = action[1] * self.steering_coeff
             self.running_gear.read_write_std(
-                throttle=0, # self.action[0] + self.noise[0], 
-                steering=self.action[1] + self.noise[1]
+                throttle=0.1, # self.action[0] + self.noise[0], 
+                steering=self.action[1]# + self.noise[1]
             )
 
             # polling for the new tasks
             self.check_new_tasks(task_queue)
-            print(f"Current position: {self.ego_state[:2]}, Current waypoint: {self.current_waypoint_index}, Init waypoint: {self.waypoints[0]}")
+            #print(f"Current position: {self.ego_state[:2]}, Current waypoint: {self.current_waypoint_index}, Init waypoint: {self.waypoints[0]}")
             # update the car state
             self.update_state(image) 
             # transmit the data to the data writer

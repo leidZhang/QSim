@@ -23,4 +23,4 @@ INIT_TEMPERATURE: float = 0.1
 USE_WANDB: bool = True
 STATE_DIM: int = 421
 ACT_DIM: int = 2
-WEIGHT_PATH: str = os.path.join(os.getcwd(), "Reinformer/models/latest_checkpoint.pt")
+WEIGHT_PATH: str = os.path.join(os.getcwd(), "Reinformer/models/latest_checkpoint_protype.pt")

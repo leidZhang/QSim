@@ -118,7 +118,7 @@ class BaseCoordinator(ABC):
     manage the processes and threads.
     """
 
-    def __init__(self, watchdogs: Dict[str, WatchDogTimer]) -> None:
+    def __init__(self, watchdogs: Dict[str, WatchDogTimer] = None) -> None:
         """
         Initialize the BaseCoordinator with the watchdogs.
 

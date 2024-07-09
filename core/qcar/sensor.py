@@ -1,20 +1,26 @@
+import os
 import time 
 import math 
 from typing import List, Dict
 
 import numpy as np 
 
+try:
+    from quanser.common import Timeout
+except:
+    from quanser.communications import Timeout
+from pal.utilities.stream import BasicStream
+from pal.products.qcar import QCarGPS, IS_PHYSICAL_QCAR
 from pal.utilities.vision import Camera2D
 from pal.utilities.vision import Camera3D 
-from pal.products.qcar import QCarGPS 
 
 from .constants import CSI_CAMERA_SETTING
 from .constants import RGBD_CAMERA_SETTING
 
 
 class VirtualCSICamera: # wrapper class, implement more functions if needed 
-    def __init__(self, id=3) -> None: 
-        self.id = id 
+    def __init__(self, id: int = 3) -> None: 
+        self.id: int = id 
         self.camera: Camera2D = Camera2D(
             cameraId=str(id) + "@tcpip://localhost:"  + str(18961+id), 
             frameWidth=CSI_CAMERA_SETTING['frame_width'],
@@ -42,7 +48,7 @@ class VirtualCSICamera: # wrapper class, implement more functions if needed
 
 class VirtualRGBDCamera: 
     def __init__(self) -> None: 
-        self.camera = Camera3D(
+        self.camera: Camera3D = Camera3D(
             mode=RGBD_CAMERA_SETTING['mode'], 
             frameWidthRGB=RGBD_CAMERA_SETTING['frame_width_rgb'], 
             frameHeightRGB=RGBD_CAMERA_SETTING['frame_height_rgb'], 
@@ -101,11 +107,126 @@ class VirtualLidar:
     def __init__(self) -> None: 
         pass # will start implementation after the error -15 fixed 
 
+
+class LidarSLAM(QCarGPS):
+    GPS_URI: str = "tcpip://localhost:18967"
+    LIDAR_URI: str = "tcpip://localhost:18968"
+    CONNECTION_TIMEOUT: int = 5  # seconds
+
+    def __init__(self, initialPose: List[float] = [0, 0, 0], recalibrate: bool = False) -> None:
+        print(f"Initializing LidarSLAM")
+        if IS_PHYSICAL_QCAR:
+            self._init_lidar_to_gps(initialPose, recalibrate)
+
+        self._timeout = Timeout(seconds=0, nanoseconds=1)
+
+        # Setup GPS client and connect to GPS server
+        self.position = np.zeros((3))
+        self.orientation = np.zeros((3))
+
+        self._gps_data = np.zeros((6), dtype=np.float32)
+        gps_buffer_size: int = (self._gps_data.size * self._gps_data.itemsize)
+        self._gps_client = self.__setup_client(self.GPS_URI, self._gps_data, gps_buffer_size)
+
+        # Setup Lidar data client and connect to Lidar data server
+        self.scanTime = 0
+        self.angles = np.zeros(384)
+        self.distances = np.zeros(384)
+
+        self._lidar_data = np.zeros(384*2 + 1, dtype=np.float64)
+        lidar_buffer_size: int = 8*(384*2 + 1)
+        self._lidar_client = self.__setup_client(self.LIDAR_URI, self._lidar_data, lidar_buffer_size)
+
+        self.enableFiltering = True
+        self.angularResolution = 1*np.pi/180
+        self._phi = np.linspace(0, 2*np.pi, np.int_(np.round(2*np.pi/self.angularResolution)))
+        print("LidarSLAM initialized")
+
+    def __setup_client(self, uri, data_buffer, buffer_size):
+        client = BasicStream(
+            uri=uri,
+            agent='C',
+            receiveBuffer=data_buffer,
+            sendBufferSize=1,
+            recvBufferSize=buffer_size,
+            nonBlocking=True
+        )
+        t0 = time.time()
+        while not client.connected:
+            if time.time() - t0 > self.CONNECTION_TIMEOUT:
+                print(f"Couldn't Connect to Server at {uri}")
+                return None
+            client.checkConnection()
+        return client
+
+    def terminate(self):
+        """ Terminates the GPS client. """
+        self._gps_client.terminate()
+        self._lidar_client.terminate()
+        if IS_PHYSICAL_QCAR:
+            self._stop_lidar_to_gps()
+
+    def _stop_lidar_to_gps(self):
+        # Quietly stop qcarLidarToGPS if it is already running:
+        # the -q flag kills the executable
+        # the -Q flag kills quietly (no errors thrown if its not running)
+        os.system(
+            'sudo quarc_run -t tcpip://localhost:17000 -q -Q'
+            + ' qcarLidarToGPS.rt-linux_nvidia'
+        )
+
+    def _init_lidar_to_gps(self, initialPose: List[float], recalibrate: bool) -> None:
+        self.__initialPose: List[float] = initialPose
+        self._stop_lidar_to_gps()
+
+        if recalibrate:
+            self.calibrate()
+            # wait period to complete calibration completely
+            time.sleep(8)
+        time.sleep(8)
+        print("Initializing GPS Server...")
+        self._emulate_gps()
+        time.sleep(4)
+        print('GPS Server started.')
+
+    def calibrate(self) -> None:
+        print('Calibrating QCar at position ', self.__initialPose[0:2],
+            ' (m) and heading ', self.__initialPose[2], ' (rad).')
+
+        captureScanfile = os.path.join(
+            '/home/nvidia/Documents/Quanser/libraries/',
+            'resources/applications/QCarScanMatching/'
+                + 'qcarCaptureScan.rt-linux_nvidia'
+        )
+
+        os.system(
+            'sudo quarc_run -t tcpip://localhost:17000 '
+            + captureScanfile + ' -d ' + os.getcwd()
+        )
+        
+        print('Calibration complete.')
+
+    def _emulate_gps(self) -> None:
+        # setup the path to the qcarLidarToGPS file
+        lidarToGPSfile = os.path.join(
+            '/home/nvidia/Documents/Quanser/libraries/',
+            'resources/applications/QCarScanMatching/'
+                + 'qcarLidarToGPS.rt-linux_nvidia'
+        )
+        os.system(
+            'sudo quarc_run -t tcpip://localhost:17000 '
+            + lidarToGPSfile + ' -d ' + os.getcwd()
+            + ' -pose_0 ' + str(self.__initialPose[0])
+            + ',' + str(self.__initialPose[1])
+            + ',' + str(self.__initialPose[2])
+        )
+
+
+# TODO: Refactor the class
 class VirtualGPS: 
-    def __init__(self) -> None: 
-        self.gps = QCarGPS() 
+    def __init__(self, initial_pose: List[float] = [0, 0, 0]) -> None: 
+        self.gps: QCarGPS = LidarSLAM(initial_pose) 
         self.speed_vector = None
-        self.speed_history = [] 
 
     def terminate(self) -> None: 
         self.gps.terminate() 

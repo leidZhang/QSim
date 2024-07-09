@@ -20,7 +20,7 @@ from .environment import reinformer_qcar_eval, OfflineWaypointEnv
 from .settings import *
 from .dataset import D4RLTrajectoryDataset
 from .trainer import ReinFormerTrainer
-from .eval import Reinformer_eval, reinformer_car_eval
+from .eval import Reinformer_eval
 
 
 # def evaluator(model):

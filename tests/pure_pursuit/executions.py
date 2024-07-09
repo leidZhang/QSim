@@ -50,6 +50,8 @@ class PurePursuiteCarExec(BaseThreadExec):
         task_data: Tuple[List[int], np.ndarray] = self.task_queue.get()
         node_sequence: List[int] = task_data[0] # get the node sequence data
         waypoints: np.ndarray = task_data[1] # get the waypoints data
+        # print(f'waypoints: {waypoints}')
+        # print(f'waypoints shape: {waypoints.shape}')
         # connect to the qlab
         qlabs: QuanserInteractiveLabs = QuanserInteractiveLabs()
         qlabs.open('localhost') # connect to the UE4
@@ -63,6 +65,7 @@ class PurePursuiteCarExec(BaseThreadExec):
 
     def execute(self) -> None:
         self.car.execute(self.task_queue, self.obs_queue)
+        print(f'self.obs_queue {self.obs_queue}')
 
     def run_thread(self) -> None:
         super().run_thread()

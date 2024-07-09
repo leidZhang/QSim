@@ -23,10 +23,11 @@ def destroy_map() -> int:
     qlabs.destroy_all_spawned_actors()
     qlabs.close()
 
-def prepare_test_environment(node_id: int = 4) -> np.ndarray:
+def prepare_test_environment(node_id: int = 6) -> np.ndarray:
     roadmap: ACCRoadMap = ACCRoadMap()
     x_pos, y_pose, angle = roadmap.nodes[node_id].pose
-    waypoint_sequence = roadmap.generate_path([4, 6, 8, 10, 2])
+    node_sequence = [10, 2, 14, 20, 22] * 10
+    waypoint_sequence = roadmap.generate_path(node_sequence)
     simulator: QLabEnvironment = PerformanceTestEnvironment(dt=0.05, privileged=True)
     simulator.setup(nodes=None, sequence=waypoint_sequence)
     simulator.reset(location=[x_pos, y_pose, 0], orientation=[0, 0, angle])

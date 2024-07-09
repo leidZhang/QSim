@@ -8,7 +8,7 @@ from qvl.qlabs import QuanserInteractiveLabs
 from tests.performance_environment import destroy_map
 from tests.performance_environment import prepare_test_environment
 from core.policies.pt_policy import PTPolicy
-from .environment import ReinformerQLabEnv, reinformer_car_eval
+# from .environment import ReinformerQLabEnv, reinformer_car_eval
 from .vehicle import ReinformerCar, ReinformerPolicy
 from .reinformer import ReinFormer
 from .settings import *
@@ -71,45 +71,46 @@ def test_reinformer_car() -> None:
         steering_coeff=0.5,
     )
     car.setup(
-        task=[4, 6, 8, 10, 2], # [20, 22],
+        task=[10, 2, 4, 6, 8, 10, 1, 13, 19, 17, 16, 17, 20], # [20, 22],
+        # task=[6, 8, 23, 21, 16],
         waypoints=waypoints,
         init_waypoint_index=0,
         policy=policy
     )
     # start the simulation
-    while counter <= 850:
+    while counter <= 4000:
         car.execute()
         counter += 1
     car.running_gear.read_write_std(0, 0)
 
 
-def test_reinformer_car_eval(
-    state_mean: torch.Tensor = STATE_MEAN,
-    state_std: torch.Tensor = STATE_STD
-) -> None:
-    # render the map
-    env: Env = ReinformerQLabEnv()
-    # initialize the model
-    model: ReinFormer = ReinFormer(
-        state_dim=STATE_DIM,
-        act_dim=ACT_DIM,
-        n_blocks=N_BLOCKS,
-        h_dim=EMBED_DIM,
-        context_len=CONTEXT_LEN,
-        n_heads=N_HEADS,
-        drop_p=DROPOUT_P,
-        init_temperature=INIT_TEMPERATURE,
-        target_entropy=-ACT_DIM,
-    ).to(DEVICE)
+# def test_reinformer_car_eval(
+#     state_mean: torch.Tensor = STATE_MEAN,
+#     state_std: torch.Tensor = STATE_STD
+# ) -> None:
+#     # render the map
+#     env: Env = ReinformerQLabEnv()
+#     # initialize the model
+#     model: ReinFormer = ReinFormer(
+#         state_dim=STATE_DIM,
+#         act_dim=ACT_DIM,
+#         n_blocks=N_BLOCKS,
+#         h_dim=EMBED_DIM,
+#         context_len=CONTEXT_LEN,
+#         n_heads=N_HEADS,
+#         drop_p=DROPOUT_P,
+#         init_temperature=INIT_TEMPERATURE,
+#         target_entropy=-ACT_DIM,
+#     ).to(DEVICE)
 
-    result: Tuple[float, float, float, float] = reinformer_car_eval(
-        model=model,
-        weight_path=WEIGHT_PATH,
-        device=DEVICE,
-        env=env,
-        context_len=CONTEXT_LEN,
-        state_mean=state_mean,
-        state_std=state_std
-    )
+#     result: Tuple[float, float, float, float] = reinformer_car_eval(
+#         model=model,
+#         weight_path=WEIGHT_PATH,
+#         device=DEVICE,
+#         env=env,
+#         context_len=CONTEXT_LEN,
+#         state_mean=state_mean,
+#         state_std=state_std
+#     )
 
-    print(f"Result Std: {result[0]}, Result Mean: {result[1]}, Length Mean: {result[2]}, Length Std: {result[3]}")
+#     print(f"Result Std: {result[0]}, Result Mean: {result[1]}, Length Mean: {result[2]}, Length Std: {result[3]}")
