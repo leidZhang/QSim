@@ -2,7 +2,7 @@ import time
 from threading import Thread
 from multiprocessing import Process
 
-from tests.performance_environment import destroy_map, prepare_test_environment
+from demos.performance_environment import destroy_map, prepare_test_environment
 from .scripts import run_rgbd_thread, run_csi_thread
 from .scripts import run_hardware_process
 

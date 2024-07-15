@@ -19,12 +19,12 @@ from core.datatypes.pose import MockPose
 from core.utils.io_utils import DataWriter, JSONDataWriter, NPZDataWriter
 from core.utils.control_utils import get_yaw_noise
 from core.utils.performance import elapsed_time, realtime_message_output
-from constants import MAX_LOOKAHEAD_INDICES
 from .reward_funcs import reward_based_on_indices_and_noise
 from .exceptions import ReachGoalException
 
 EPISODE_KEYS: List[str] = ["timestamp", "task", "task_length"]
 ARRAY_KEYS: List[str] = ["state", "action", "noise"]
+MAX_LOOKAHEAD_INDICES: int = 200
 
 
 class RecordDataWriter:

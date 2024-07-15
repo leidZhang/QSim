@@ -6,7 +6,7 @@ import torch.nn as nn
 import cv2
 import numpy as np
 
-from tests.resnet.model import ObstacleDetection
+from demos.resnet.model import ObstacleDetection
 
 
 class ResNetDetector:

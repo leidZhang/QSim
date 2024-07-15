@@ -3,7 +3,6 @@ from typing import List
 from core.utils.filters import ThresholdFilter, VariableThresholdFilter
 
 
-@pytest.mark.unit_test
 def test_thresh_filter_1() -> None:
     # test use low pass from start
     filter: ThresholdFilter = ThresholdFilter(use_low_pass=True, threshold=0.3)
@@ -17,7 +16,6 @@ def test_thresh_filter_1() -> None:
         assert singals >= 0.3, "Low signals should be filtered!"
 
 
-@pytest.mark.unit_test
 def test_variable_threshold_filter_1() -> None:
     # test use low pass from start
     filter: VariableThresholdFilter = VariableThresholdFilter(

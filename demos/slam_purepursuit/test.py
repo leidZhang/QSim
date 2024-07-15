@@ -10,8 +10,8 @@ import numpy as np
 
 from core.utils.executions import BaseCoordinator
 from core.utils.executions import BaseThreadExec, BaseProcessExec
-from tests.performance_environment import prepare_test_environment, destroy_map
-from tests.traditional.executions import ObserveExec
+from demos.performance_environment import prepare_test_environment, destroy_map
+from demos.traditional.executions import ObserveExec
 from .modules import PurepursuitCar, PhysicalCar
 from .executions import PurepursuitCarComm, ObservationComm
 from .executions import WaypointProcessorExec, ResNetDetectorExec

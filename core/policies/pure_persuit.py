@@ -11,8 +11,6 @@ from core.data.preprocessor import Preprocessor
 from core.policies.network import NetworkPolicy
 from core.utils.agg_utils import map_structure
 from core.policies.base_policy import PolicyAdapter
-from constants import action_v
-
 
 class PurePursuitPolicy:
     def __init__(self, max_lookahead_distance: float = 0.5) -> None:

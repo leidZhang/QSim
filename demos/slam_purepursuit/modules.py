@@ -12,9 +12,9 @@ from core.utils.ipc_utils import put_latest_in_queue
 from core.utils.performance import elapsed_time
 from core.policies.pure_persuit import PurePursuiteAdaptor
 from core.qcar.vehicle import PhysicalCar
-from tests.resnet.model import ObstacleDetection
-from tests.resnet.detector import ResNetDetector
-from tests.traditional.exceptions import HaltException
+from demos.resnet.model import ObstacleDetection
+from demos.resnet.detector import ResNetDetector
+from demos.traditional.exceptions import HaltException
 # from constants import MAX_LOOKAHEAD_INDICES
 
 MAX_LOOKAHEAD_INDICES = 200
@@ -25,7 +25,7 @@ class ResNetWrapper:
     def __init__(self) -> None:
         project_path: str = os.getcwd()
         model: ObstacleDetection = ObstacleDetection()
-        weights_path: str = os.path.join(project_path, "tests/resnet/obs_model.pth")
+        weights_path: str = os.path.join(project_path, "demos/resnet/obs_model.pth")
         self.detector: ResNetDetector = ResNetDetector(model=model, weights_path=weights_path)
 
     def execute(self, data_queue: MPQueue, response_queue: MPQueue) -> None:

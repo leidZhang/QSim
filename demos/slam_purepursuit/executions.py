@@ -12,7 +12,7 @@ from core.utils.ipc_utils import put_latest_in_queue
 from core.utils.performance import skip
 from core.qcar import VirtualCSICamera
 from core.qcar import LidarSLAM
-from tests.performance_environment import prepare_test_environment
+from demos.performance_environment import prepare_test_environment
 from .utils import correct_traj, prepare_task
 # from settings import TASK, DEFAULT_PWM, DESIRED_SPEED
 from .modules import WaypointProcessor, ResNetWrapper

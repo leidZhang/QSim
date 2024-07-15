@@ -15,6 +15,10 @@ from .constants import ACC_GRAPH_RIGHT
 class BaseTaskGenerator(ABC):
     def __init__(self, graph: Dict[int, Set[int]]) -> None:
         self.graph: Dict[int, Set[int]] = deepcopy(graph)
+        # generate an empty used dict
+        self._prepare_used_dict()
+        # generate the origin dict
+        self._prepare_origin_dict()
 
     def _prepare_used_dict(self) -> None:
         self.used: Dict[int, Set[int]] = {}
@@ -74,10 +78,6 @@ class TaskDispacher(BaseTaskGenerator):
         self.node_sequence: List[int] = [start_node]
         # use deepcopy to avoid changing the original dict
         self.graph: Dict[int, Set[int]] = deepcopy(graph)
-        # generate an empty used dict
-        self._prepare_used_dict()
-        # generate the origin dict
-        self._prepare_origin_dict()
         # generate the random task length
         # self.task_length: int = random.randint(5, 9)
 

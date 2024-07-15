@@ -4,7 +4,6 @@ from core.environment.detector import EpisodeMonitor
 from core.environment.exception import AnomalousEpisodeException
 
 
-@pytest.mark.unit_test
 def test_episode_monitor_1() -> None:
     # test action[0] > 0.045 and no position change
     test_init_pos: np.ndarray = np.array([1.4, 1.4])
@@ -16,7 +15,6 @@ def test_episode_monitor_1() -> None:
     assert "Error happened in the episode!" in str(exc_info.value)
 
 
-@pytest.mark.unit_test
 def test_episode_monitor_2() -> None:
     # test action[0] = 0.045 and no position change
     test_init_pos: np.ndarray = np.array([1.4, 1.4])
@@ -28,7 +26,6 @@ def test_episode_monitor_2() -> None:
     assert "Error happened in the episode!" in str(exc_info.value)
 
 
-@pytest.mark.unit_test
 def test_episode_monitor_3() -> None:
     # test action[0] > 0.045 and have position change
     test_init_pos: np.ndarray = np.array([1.4, 1.4])
@@ -39,7 +36,6 @@ def test_episode_monitor_3() -> None:
     assert monitor.accumulator > 0
 
 
-@pytest.mark.unit_test
 def test_episode_monitor_4() -> None:
     # test action[0] = 0.045 and have position change
     test_init_pos: np.ndarray = np.array([1.4, 1.4])
@@ -50,7 +46,6 @@ def test_episode_monitor_4() -> None:
     assert monitor.accumulator > 0
 
 
-@pytest.mark.unit_test
 def test_episode_monitor_5() -> None:
     # test action[0] = 0.045 and no position change but haven't full the queue yet
     test_init_pos: np.ndarray = np.array([1.4, 1.4])
@@ -61,7 +56,6 @@ def test_episode_monitor_5() -> None:
     assert monitor.accumulator == 0
 
 
-@pytest.mark.unit_test
 def test_episode_monitor_6() -> None:
     # test action[0] = 0.045 and have position change but haven't full the queue yet
     test_init_pos: np.ndarray = np.array([1.4, 1.4])
@@ -72,7 +66,6 @@ def test_episode_monitor_6() -> None:
     assert monitor.accumulator > 0
 
 
-@pytest.mark.unit_test
 def test_episode_monitor_7() -> None:
     # test action[0] > 0.045 and have position change but haven't full the queue yet
     test_init_pos: np.ndarray = np.array([1.4, 1.4])
@@ -83,7 +76,6 @@ def test_episode_monitor_7() -> None:
     assert monitor.accumulator == 0
 
 
-@pytest.mark.unit_test
 def test_episode_monitor_8() -> None:
     # test action[0] < 0.045 and no position change but haven't full the queue yet
     test_init_pos: np.ndarray = np.array([1.4, 1.4])
@@ -94,7 +86,6 @@ def test_episode_monitor_8() -> None:
     assert monitor.accumulator > 0
 
 
-@pytest.mark.unit_test
 def test_episode_monitor_9() -> None:
     # test action[0] < 0.045 and no position change
     test_init_pos: np.ndarray = np.array([1.4, 1.4])
@@ -105,7 +96,6 @@ def test_episode_monitor_9() -> None:
     assert monitor.accumulator > 0
 
 
-@pytest.mark.unit_test
 def test_episode_monitor_10() -> None:
     # test action[0] < 0.045 and no position change, just full the queue
     test_init_pos: np.ndarray = np.array([1.4, 1.4])
@@ -116,7 +106,6 @@ def test_episode_monitor_10() -> None:
     assert monitor.accumulator > 0
 
 
-@pytest.mark.unit_test
 def test_episode_monitor_11() -> None:
     # test action[0] > 0.045 and no position change, just full the queue
     test_init_pos: np.ndarray = np.array([1.4, 1.4])
@@ -128,7 +117,6 @@ def test_episode_monitor_11() -> None:
     assert "Error happened in the episode!" in str(exc_info.value)
 
 
-@pytest.mark.unit_test
 def test_episode_monitor_12() -> None:
     # test action[0] = 0.045 and no position change, just full the queue
     test_init_pos: np.ndarray = np.array([1.4, 1.4])

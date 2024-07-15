@@ -6,8 +6,8 @@ from gym import Env
 import numpy as np
 
 from .simulator import QLabSimulator
-from constants import DEFAULT_MAX_STEPS
 
+DEFAULT_MAX_STEPS: int = 1000
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class BaseQLabEnv(Env):
@@ -78,7 +78,7 @@ class OnlineQLabEnv(BaseQLabEnv):
             recovered_state[index + 1] -= self.offsets[1]
         return recovered_state
 
-    def _cal_waypoint_angle(self, delta_x: float, delta_y: float) -> float:
+    def cal_waypoint_angle(self, delta_x: float, delta_y: float) -> float:
         if delta_x < 0 and delta_y == 0:
             return math.pi # up to bottom
         elif delta_x == 0 and delta_y > 0:
@@ -113,7 +113,7 @@ class OnlineQLabEnv(BaseQLabEnv):
         # calcualte angle
         delta_x: float = next_waypoint[0] - current_waypoint[0]
         delta_y: float = next_waypoint[1] - current_waypoint[1]
-        orientation: float = self._cal_waypoint_angle(delta_x, delta_y)
+        orientation: float = self.cal_waypoint_angle(delta_x, delta_y)
 
         return [x_position, y_position, 0], [0, 0, orientation]
 
@@ -132,7 +132,6 @@ class OnlineQLabEnv(BaseQLabEnv):
         self.episode_steps: int = 0
         return observation, reward, done, info
 
-    @abstractmethod
     def handle_spawn_pos(self, *args) -> Tuple[list, list]:
         ...
 

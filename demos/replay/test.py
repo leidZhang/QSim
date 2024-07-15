@@ -4,7 +4,7 @@ import numpy as np
 
 from qvl.qlabs import QuanserInteractiveLabs
 from qvl.basic_shape import QLabsBasicShape
-from tests.performance_environment import prepare_test_environment, destroy_map
+from demos.performance_environment import prepare_test_environment, destroy_map
 from core.utils.io_utils import read_npz_file
 from core.policies.pure_persuit import PurePursuiteAdaptor
 from .vehicle import ReplayCar
