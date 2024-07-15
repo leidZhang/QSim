@@ -1,7 +1,7 @@
+import time
 from typing import Tuple, Dict
 # 3rd party imports
 import keyboard
-import numpy as np
 # custom imports
 from .constants import *
 
@@ -83,7 +83,7 @@ class KeyboardController:
 
         return slider_signal
 
-    def execute(self) -> None:
+    def read(self) -> None:
         # Handle signals for key pairs control axis
         for _, type in self.buttons.items(): 
             for key, val in type.items():
