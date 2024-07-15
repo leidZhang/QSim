@@ -116,7 +116,7 @@ class PurepursuitCar(PhysicalCar):
     ) -> None:
         super().__init__(throttle_coeff, steering_coeff)
         self.desired_speed: float = desired_speed
-        self.brake_time: float = (desired_speed * 10 - 1.0) / 1.60
+        self.brake_time: float = max((desired_speed * 10 - 1.0) / 1.60, 3.0)
         self.observation: dict = {}
         self.policy: PurePursuiteAdaptor = PurePursuiteAdaptor(max_lookahead_distance=0.5)
 
