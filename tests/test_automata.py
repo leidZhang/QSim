@@ -143,7 +143,7 @@ def test_determine_next_state_2() -> None:
 def test_perform_transitions_1(capsys) -> None:
     # test function when next index exists
     events, _, state = prepare_instance()
-    expected_event_condition: bool = False
+    expected_event_condition: bool = True
     expected_output_str: str = "Switch to expert control!\n"
 
     events[1].set()

@@ -27,30 +27,40 @@ def clear_queue(data_queue: Queue) -> None:
         data_queue.get()
 
 
-class EventQueue:
-    def __init__(self, size: int = 1) -> None:
+class DoubleBuffer:
+    def __init__(self, size: int) -> None:
         self.buffer: Queue = Queue(size)
         self.queue: Queue = Queue(size)
-        self.event = Event() # multiprocessing event
 
-    def _switch_queue_and_buffer(self) -> Tuple[Queue, Queue]:
-        temp: Queue = self.queue
-        self.queue = self.buffer
-        self.buffer = temp
+    def _switch_queue_and_buffer(self) -> None:
+        self.queue, self.buffer = self.buffer, self.queue
 
     def put(self, data: Any) -> None:
         if self.buffer.full():
             self.buffer.get()
         self.buffer.put(data)
 
+    def get(self) -> Any:
+        self._switch_queue_and_buffer()
+        if not self.queue.empty():
+            return self.queue.get()
+        return None
+
+
+class EventDoubleBuffer(DoubleBuffer):
+    def __init__(self, size: int = 1) -> None:
+        super().__init__(size)
+        self.event = Event() # multiprocessing event
+
+    def put(self, data: Any) -> None:
+        super().put(data)
         if not self.event.is_set():
             self.event.set()
 
     def get(self) -> Any:
         if self.event.is_set():
             self.event.clear()
-            self._switch_queue_and_buffer()
-            return self.queue.get()
+            return super().get()
         return None
 
 # class StructedDataTypeFactory:
