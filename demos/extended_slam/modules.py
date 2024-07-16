@@ -1,16 +1,16 @@
 import time
-from typing import List, Tuple
-from threading import Event
+from typing import List, Tuple, Union
+from threading import Event as MtEvent
+from multiprocessing import Event as MpEvent
 
 import numpy as np
 
-from core.qcar.vehicle import PhysicalCar
-from core.utils.ipc_utils import EventQueue
-from core.utils.performance import skip
+from core.qcar import PhysicalCar
+from core.utils.ipc_utils import DoubleBuffer
 from core.policies.pure_persuit import PurePursuiteAdaptor
-from .filters import RollingAverageFilter
 
 MAX_LOOKAHEAD_INDICES = 200
+Event = Union[MtEvent, MpEvent]
 
 
 class WaypointProcessor:
@@ -22,14 +22,14 @@ class WaypointProcessor:
             max_lookahead_distance=max_lookahead_distance
         )
 
-    def setup(self, init_waypoint_index: int, data_queue: EventQueue) -> None:
+    def setup(self, init_waypoint_index: int, data_queue: DoubleBuffer) -> None:
         ego_state: np.ndarray = self.get_ego_state(data_queue)
         orig, _, rot = self.cal_vehicle_state(ego_state)
         self.current_waypoint_index: int = init_waypoint_index
         self.next_waypoints: np.ndarray = self.waypoints[self.current_waypoint_index:]
         self.handle_observation(orig, rot)
         
-    def get_ego_state(self, data_queue: EventQueue) -> np.ndarray:
+    def get_ego_state(self, data_queue: DoubleBuffer) -> np.ndarray:
         return data_queue.get()
     
     def cal_vehicle_state(
@@ -67,7 +67,7 @@ class WaypointProcessor:
         # add waypoints info to observation
         self.local_waypoints = np.matmul(self.next_waypoints[:MAX_LOOKAHEAD_INDICES] - orig, rot)
 
-    def execute(self, data_queue: EventQueue, response_queue: EventQueue) -> None:
+    def execute(self, data_queue: DoubleBuffer, response_queue: DoubleBuffer) -> None:
         ego_state = self.get_ego_state(data_queue) 
         if ego_state is None:
             return
@@ -92,36 +92,29 @@ class SLAMCar(PhysicalCar):
     ) -> None:
         super().__init__(0.08, 0.5)
         # observation attributes
-        self.observation: dict = {}    
-        # detection attributes
-        self.events: List[Event] = events
-        self.last_stop_sign: float = 0
-        self.brake_time: float = max((desired_speed * 10 - 1.0) / 1.60, 0)        
-        self.traffic_filters: List[RollingAverageFilter] = [
-            RollingAverageFilter(events[1], 0.5, 3), # for stop sign detection
-            RollingAverageFilter(events[2], 0.3, 10) # for traffic light detection
-        ]
+        self.observation: dict = {}   
+        self.events: List[Event] = events 
         # control attributes    
+        self.desired_speed: float = desired_speed        
         self.action: np.ndarray = np.array([0.0, 0.0])
-        self.desired_speed: float = desired_speed
+        self.brake_time: float = max((desired_speed * 10 - 1.0) / 1.60, 0)          
         self.policy: PurePursuiteAdaptor = PurePursuiteAdaptor(max_lookahead_distance)
 
     def terminate(self) -> None:
         self.running_gear.terminate()
 
-    def handle_detection(self, detection_queue: EventQueue) -> None:
-        res: int = detection_queue.get()
-        if res is not None:
-            self.traffic_filters[0](res, time.time() - self.last_stop_sign >= 5)
-            self.traffic_filters[1](res)
+    def open_front_lights(self) -> None:
+        self.leds = np.concatenate([self.leds[:6], [1, 1]])
+
+    def resume_car(self) -> None:
+        self.leds = np.concatenate([self.leds[:4], [0, 0, 0, 0]])
+        self.running_gear.read_write_std(0, self.action[1] * self.steering_coeff, self.leds)
         
     def handle_stop_sign(self) -> None:
-        self.halt_car(self.action[1], self.brake_time)
         time.sleep(3.0) # stop for 3 seconds
-        self.last_stop_sign = time.time()
         self.events[1].clear()    
 
-    def handle_control(self, control_queue: EventQueue) -> None:
+    def handle_control(self, control_queue: DoubleBuffer) -> None:
         local_waypoints: np.ndarray = control_queue.get()
         if local_waypoints is not None:
             self.observation['waypoints'] = local_waypoints
@@ -129,3 +122,5 @@ class SLAMCar(PhysicalCar):
             throttle: float = self.throttle_coeff * self.action[0]
             steering: float = self.steering_coeff * self.action[1]
             self.running_gear.read_write_std(throttle, steering, self.leds)
+
+

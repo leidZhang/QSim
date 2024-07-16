@@ -506,7 +506,7 @@ class DecisionMaker:
             self.pipeline.detected_area = 0.0
             self.detection_flags["horizontal_line"] = False
             # print(self.detection_flags)
-            return
+            return 0
             # return False, 0
         elif flag == 'stop':
             self.detection_flags["horizontal_line"] = False
@@ -514,10 +514,10 @@ class DecisionMaker:
                 self.last_stopped_time = time.time()
                 self.detection_flags["stop_sign"] = True
                 # print("Ignore stop sign")
-                return
+                return 
             # print("Found stop sign")
             self.detection_flags["stop_sign"] = False
-            return
+            return 1
         elif flag=='traffic':
             self.thesh_horizontal_line(img_back)
             if self.has_horizontal_line:
@@ -535,7 +535,7 @@ class DecisionMaker:
                 self.detection_flags["red_light"] = False
                 # print("Pass control zone")
                 # print(self.detection_flags)
-                return
+                return 0
 
             # print(self.classic_traffic_pipeline)
             if self.classic_traffic_pipeline: # and self.detection_flags["horizontal_line"]:
@@ -551,11 +551,11 @@ class DecisionMaker:
                 if result == "green light": # and signal < 1:
                     self.detection_flags["red_light"] = False
                     # print(self.detection_flags)
-                    return
+                    return 0
                 else:
                     self.detection_flags["red_light"] = True
                     # print(self.detection_flags)
-                    return
+                    return 2
             else:
                 # cv2.imshow('traffic', img)
                 # cv2.waitKey(1)
@@ -564,4 +564,4 @@ class DecisionMaker:
                 #     dec = dec==1
                 # self.detection_flags["unknown_error"] = dec
                 # print("unknown error")
-                return
+                return 0

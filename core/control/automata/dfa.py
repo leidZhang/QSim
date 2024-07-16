@@ -19,7 +19,7 @@ class EventDrivenDFA:
     def __init__(
         self,
         states: List[BaseState],
-        final_states: Set[BaseState],
+        final_states: Set[int],
         init_state: int = 0
     ) -> None:
         """
@@ -31,7 +31,7 @@ class EventDrivenDFA:
         - init_state: BaseState: Index of the initial state in the states
         """
         self.states: List[BaseState] = states
-        self.final_states: Set[BaseState] = final_states
+        self.final_states: Set[int] = final_states
         self.current_state: BaseState = self.states[init_state]
 
     def execute(self, *args: Any) -> None:

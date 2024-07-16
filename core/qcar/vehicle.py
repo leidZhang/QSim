@@ -223,8 +223,10 @@ class PhysicalCar(BaseCar):
         else:
             self.leds = np.array([0, 0, 0, 0, 0, 0, self.leds[6], self.leds[7]])
         # reverse indicator
-        if throttle < 0.02:
+        if throttle < -0.02:
             self.leds[5] = 1
+        elif -0.02 <= throttle < 0:
+            self.leds[4] = 1
 
     def estimate_speed(self) -> float:
         """
