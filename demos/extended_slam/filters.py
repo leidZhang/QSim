@@ -29,6 +29,7 @@ class StopSignTrigger(RollingAverageFilter):
             self.event.set()
 
 
+# TODO: Implement TrafficLightTrigger class
 class TrafficLightTrigger(RollingAverageFilter):
     def __call__(self, data: Union[float, int]) -> Any:
         super().handle_moving_average(data)

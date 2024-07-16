@@ -1,4 +1,4 @@
-import time
+import warnings
 from typing import Any, Tuple
 from queue import Empty, Full
 from multiprocessing import Queue, Event
@@ -6,6 +6,7 @@ from multiprocessing import Queue, Event
 
 
 def fetch_latest_in_queue(data_queue: Queue) -> None:
+    warnings.warn("fetch_latest_in_queue is deprecated, use DoubleBuffer.get() instead", DeprecationWarning)
     latest_data: Any = None
     try:
         latest_data = data_queue.get_nowait()
@@ -15,6 +16,7 @@ def fetch_latest_in_queue(data_queue: Queue) -> None:
 
 
 def put_latest_in_queue(data: Any, data_queue: Queue) -> None:
+    warnings.warn("fetch_latest_in_queue is deprecated, use DoubleBuffer.put() instead", DeprecationWarning)
     try:
         data_queue.put_nowait(data)
     except Full:
