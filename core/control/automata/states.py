@@ -62,7 +62,7 @@ class BaseState(ABC):
         if next_state not in self.transitions.keys():
             raise IndexError(f"{next_state} does not exist!")
         self.transitions[next_state]['pre_transition']()
-        self.transitions[next_state]['trigger'].clear()
+        # self.transitions[next_state]['trigger'].clear()
 
     @abstractmethod
     def handle_action(self, *args) -> Any:

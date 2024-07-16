@@ -1,6 +1,8 @@
 import os
 import sys
 
+from core.utils.ipc_utils import EventQueue
+
 
 if __name__ == "__main__":
     # pytest for unit tests
