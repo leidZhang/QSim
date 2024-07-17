@@ -1,3 +1,5 @@
+import warnings
+
 from core.utils.executions import BaseCoordinator
 from demos.performance_environment import destroy_map
 from demos.slam_purepursuit.coordinator import LidarSLAMCoordinator
@@ -12,4 +14,5 @@ def run_demo() -> None:
 
 
 if __name__ == "__main__":
+    warnings.warn("Demo code is only for reference and may not be able to exit gracefully.")
     run_demo()
