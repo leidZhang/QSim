@@ -18,7 +18,7 @@ class EpisodeMonitor:
     - threshold (float): The threshold to determine the anomaly
     """
 
-    def __init__(self, start_orig: np.ndarray, threshold: float = 0.45) -> None:
+    def __init__(self, start_orig: np.ndarray, threshold: float = 0.045) -> None:
         """
         Initializes the EpisodeMonitor object.
 

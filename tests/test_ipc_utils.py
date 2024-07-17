@@ -34,10 +34,12 @@ def test_get_2() -> None:
     event_queue: EventDoubleBuffer = EventDoubleBuffer(size=1)
     test_data: List[int] = [1, 2, 3]
     expected_data: int = 3
-
     for data in test_data:
         event_queue.put(data)
-    assert event_queue.get() == expected_data
+
+    assert event_queue.event.is_set() == True
+    res = event_queue.get()
+    assert res == expected_data
     assert event_queue.event.is_set() == False
 
 
