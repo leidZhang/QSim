@@ -5,7 +5,7 @@ from torch.nn import Module
 
 import torch
 
-from .base_policy import BasePolicy
+from ..templates.base_policy import BasePolicy
 
 
 class PTPolicy(BasePolicy):

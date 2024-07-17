@@ -2,6 +2,16 @@ import numpy as np
 
 
 def get_yaw_noise(action: np.ndarray, epsilon: float = 0.31) -> float:
+    """
+    Get the yaw noise based on the action and epsilon.
+
+    Parameters:
+    - action (np.ndarray): The action to get the yaw noise
+    - epsilon (float): The epsilon value
+
+    Returns:
+    - float: The yaw noise
+    """
     random: int = np.random.randint(0, 3)
     if random != 1:
          return 0.0

@@ -1,3 +1,4 @@
+import time
 import warnings
 from typing import Any, Tuple
 from queue import Empty, Full
@@ -38,20 +39,28 @@ class DoubleBuffer:
         self.queue, self.buffer = self.buffer, self.queue
 
     def put(self, data: Any) -> None:
-        if self.buffer.full():
-            self.buffer.get()
-        self.buffer.put(data)
-
+        try:
+            if self.buffer.full():
+                self.buffer.get()
+            self.buffer.put(data)
+        except Exception as e:
+            print(f"Error in DoubleBuffer.put: {e}")
+        
     def get(self) -> Any:
-        self._switch_queue_and_buffer()
-        if not self.queue.empty():
-            return self.queue.get()
-        return None
+        try:
+            self._switch_queue_and_buffer()
+            if not self.queue.empty():
+                res = self.queue.get()
+                return res
+            return None
+        except Exception as e:
+            print(f"Error in DoubleBuffer.get: {e}")
 
 
 class EventDoubleBuffer(DoubleBuffer):
     def __init__(self, size: int = 1) -> None:
         super().__init__(size)
+        self.timer = time.time()
         self.event = Event() # multiprocessing event
 
     def put(self, data: Any) -> None:
@@ -61,9 +70,11 @@ class EventDoubleBuffer(DoubleBuffer):
 
     def get(self) -> Any:
         if self.event.is_set():
-            self.event.clear()
-            return super().get()
+            data = super().get()
+            self.event.clear()  # Reset event after consuming data
+            return data
         return None
+
 
 # class StructedDataTypeFactory:
 #     def create_dtype(self, num_of_cmds: int, image_size: tuple) -> np.ndarray:

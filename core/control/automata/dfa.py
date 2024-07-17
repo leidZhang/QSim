@@ -1,3 +1,4 @@
+import time
 from typing import List, Any, Set
 
 from .states import BaseState
@@ -49,6 +50,7 @@ class EventDrivenDFA:
         # check final state
         if self.current_state.id in self.final_states:
             print(f"Currently in final state {self.current_state.id}")
+            time.sleep(1)
             return
 
         # check state transition
@@ -59,6 +61,15 @@ class EventDrivenDFA:
             self.current_state = self.states[next_state] # assign new state
         # execute state actions
         self.current_state.handle_action(*args)
+
+    def get_current_state(self) -> int:
+        """
+        This method returns the id of the current state of the DFA.
+
+        Returns:
+        - int: The id of the current state
+        """
+        return self.current_state.id
 
     def set_current_state(self, state_id: int) -> None:
         """

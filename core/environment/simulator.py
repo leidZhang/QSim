@@ -101,6 +101,12 @@ class QLabSimulator(Simulator):
         self.waypoints: np.ndarray = waypoints
 
     def set_regions(self) -> None:
+        """
+        Set the regions for the stop signs and traffic lights
+
+        Returns:
+        - None
+        """
         # set the regions for the stop signs and traffic lights
         self.regions['stop_signs'] = np.stack([
             np.array([

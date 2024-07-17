@@ -288,7 +288,7 @@ class BaseProcessExec(ABC):
         Returns:
         - None
         """
-        pass
+        ...
 
     @abstractmethod
     def create_instance(self) -> Any:
@@ -327,7 +327,7 @@ class BaseProcessExec(ABC):
             # set the watchdog or skip
             self.reach_new_stage()
         # final execution to close resources
-        self.final()
+        self.final(instance)
 
 
 class BaseThreadExec(ABC):
@@ -380,7 +380,7 @@ class BaseThreadExec(ABC):
         Returns:
         - None
         """
-        pass
+        ...
 
     @abstractmethod
     def setup_thread(self) -> None:

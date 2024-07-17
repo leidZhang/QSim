@@ -30,7 +30,7 @@ class KeyboardController:
             'v_slider': 0,
         }
 
-    def set_axis(self, key: str, values: Tuple[list, int, int]) -> None:
+    def add_axis(self, key: str, values: Tuple[list, int, int]) -> None:
         if values[0] is None or len(values[0]) != 2:
             raise ValueError("Key pair must be a tuple of two keys")
         if values[1] is None or values[1] <= 0:
@@ -40,7 +40,7 @@ class KeyboardController:
         
         self.buttons['axis'][key] = values
 
-    def set_slider(self, key: str, values: Tuple[str, int, int]) -> None:
+    def add_slider(self, key: str, values: Tuple[str, int, int]) -> None:
         if values[1] is None or values[1] <= 0:
             raise ValueError("Max signal must be a positive integer")
         if values[2] is None or values[2] <= 0:

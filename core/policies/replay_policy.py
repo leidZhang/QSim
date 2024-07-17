@@ -2,7 +2,7 @@
 from typing import Union, Tuple
 import numpy as np
 
-from .base_policy import BasePolicy, PolicyAdapter
+from ..templates.base_policy import BasePolicy, PolicyAdapter
 
 
 class ReplayPolicy(BasePolicy):
