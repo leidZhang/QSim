@@ -201,6 +201,9 @@ class PhysicalCar(BaseCar):
     def setup(self, *args) -> None:
         ...
 
+    def terminate(self) -> None:
+        self.running_gear.terminate()
+
     def handle_leds(self, throttle: float, steering: float) -> None:
         """
         The handle_leds method handles the LEDs of the car, when the

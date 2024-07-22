@@ -1,8 +1,8 @@
 import time
 import warnings
-from typing import Any, Tuple
+from typing import Any
 from queue import Empty, Full
-from multiprocessing import Queue, Event
+from multiprocessing import Queue, Event, Lock
 # from multiprocessing.shared_memory import SharedMemory
 
 
@@ -47,14 +47,25 @@ class DoubleBuffer:
             print(f"Error in DoubleBuffer.put: {e}")
         
     def get(self) -> Any:
-        try:
-            self._switch_queue_and_buffer()
-            if not self.queue.empty():
-                res = self.queue.get()
-                return res
-            return None
-        except Exception as e:
-            print(f"Error in DoubleBuffer.get: {e}")
+        self._switch_queue_and_buffer()
+        if not self.queue.empty():
+            res = self.queue.get()
+            return res
+        return None
+    
+    def terminate(self) -> None:
+        # clear the queues
+        while self.buffer.qsize() > 0:
+            self.buffer.get()        
+        while self.queue.qsize() > 0:
+            self.queue.get()        
+        # print(f"{self.buffer.qsize()}, {self.queue.qsize()}")
+        # close the queues
+        self.buffer.close()
+        self.queue.close()
+        # join the queues
+        self.buffer.join_thread()
+        self.queue.join_thread()
 
 
 class EventDoubleBuffer(DoubleBuffer):

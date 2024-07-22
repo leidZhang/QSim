@@ -9,6 +9,7 @@ from threading import Event as ThEvent
 from multiprocessing import Event as MpEvent
 from abc import ABC, abstractmethod
 
+from core.templates import LifeCycleWrapper
 from .performance import skip
 
 Event = Union[ThEvent, MpEvent]
@@ -19,7 +20,7 @@ class WatchDogException(Exception):
     The exception raised when the watchdog timer times out or the watchdog
     is not started before checking the timer.
     """
-    
+
     def __init__(self, message: str) -> None:
         """
         Initialize the WatchDogException with the message.
@@ -49,7 +50,7 @@ class WatchDogTimer:
 
     def start_watch_dog(self) -> None:
         """
-        Start the watchdog timer by waiting for the event to be set for the first 
+        Start the watchdog timer by waiting for the event to be set for the first
         time.
 
         Returns:
@@ -64,11 +65,11 @@ class WatchDogTimer:
 
     def check_timer(self) -> bool:
         """
-        Check the watchdog timer to see if the event is set or the timer has exceeded 
+        Check the watchdog timer to see if the event is set or the timer has exceeded
         the timeout.
 
         Returns:
-        - bool: True if the event is set or the timer has not exceeded the timeout, 
+        - bool: True if the event is set or the timer has not exceeded the timeout,
         False otherwise.
 
         Raises:
@@ -113,8 +114,8 @@ class WatchDogTimer:
 
 class BaseCoordinator(ABC):
     """
-    BaseCoordinator is an abstract class that defines the methods for the coordinator, 
-    which is used to monitor the system using watchdog timers in the main thread, and 
+    BaseCoordinator is an abstract class that defines the methods for the coordinator,
+    which is used to monitor the system using watchdog timers in the main thread, and
     manage the processes and threads.
     """
 
@@ -125,6 +126,7 @@ class BaseCoordinator(ABC):
         Parameters:
         - watchdogs: Dict[str, WatchDogTimer]: The watchdog timers for monitoring the system.
         """
+        self.sys_done = MpEvent()
         self.watchdogs: Dict[str, Dict[str, WatchDogTimer]] = watchdogs
         self.pools: Dict[str, List[Union[Process, Thread]]] = {'thread': [], 'process': []}
         if self.watchdogs is not None:
@@ -139,7 +141,7 @@ class BaseCoordinator(ABC):
 
     def _skip_monitoring(self) -> None:
         """
-        The time sleep to replace the monitoring of the system when the watchdogs 
+        The time sleep to replace the monitoring of the system when the watchdogs
         are not configured.
 
         Returns:
@@ -243,15 +245,16 @@ class BaseProcessExec(ABC):
     to be extended by concrete classes that implement specific process execution strategies.
     """
 
-    def __init__(self, watchdog_event = None) -> None:
+    def __init__(self, done, watchdog_event = None) -> None:
         """
         Initialize the BaseProcessExec with the watchdog event.
 
         Parameters:
+        - done: Event: The done event for terminating the process.
         - watchdog_event: Event: The watchdog event for monitoring the process.
         """
         # process event to control loop
-        self.done = MpEvent()
+        self.done = done # multi-processing Event
         # watchdog event for monitoring
         if watchdog_event is not None:
             self.watchdog_event = watchdog_event # multi-processing Event
@@ -280,7 +283,7 @@ class BaseProcessExec(ABC):
         self.done.set()
 
     # TODO: May need to delete this and create a template
-    def final(self) -> None:
+    def final(self, instance: LifeCycleWrapper) -> None:
         """
         This method is used to finalize the process execution by closing resources. Users can
         override this method to implement custom finalization logic.
@@ -288,7 +291,7 @@ class BaseProcessExec(ABC):
         Returns:
         - None
         """
-        ...
+        instance.terminate()
 
     @abstractmethod
     def create_instance(self) -> Any:
@@ -305,9 +308,9 @@ class BaseProcessExec(ABC):
     # TODO: May need to replace self.final() with instance.final()
     def run_process(self, *args) -> None:
         """
-        This method is used to run the whole lifecyle of the process. It initializes the process 
-        instance, sets the watchdog event as the start flag (or simply skip if the user did not 
-        set a watchdog) of the main process loop, executes the main loop of the process, and 
+        This method is used to run the whole lifecyle of the process. It initializes the process
+        instance, sets the watchdog event as the start flag (or simply skip if the user did not
+        set a watchdog) of the main process loop, executes the main loop of the process, and
         finalizes the process.
 
         Parameters:
@@ -316,18 +319,24 @@ class BaseProcessExec(ABC):
         Returns:
         - None
         """
-        # create the instance of the process
-        instance: Any = self.create_instance()
-        # setup the watchdog or skip
-        self.reach_new_stage()
-        # main loop of the process
-        while not self.done.is_set():
-            # module executions
-            instance.execute(*args)
-            # set the watchdog or skip
+        try:
+            # create the instance of the process
+            instance: Any = self.create_instance()
+            # setup the watchdog or skip
             self.reach_new_stage()
-        # final execution to close resources
-        self.final(instance)
+            # main loop of the process
+            while not self.done.is_set():
+                # module executions
+                instance.execute(*args)
+                # set the watchdog or skip
+                self.reach_new_stage()
+        except KeyboardInterrupt:
+            print("KeyboardInterrupt detected!")
+        except Exception as e:
+            logging.error(f"Error: {e}")
+        finally:
+            # final execution to close resources
+            self.final(instance)
 
 
 class BaseThreadExec(ABC):
@@ -338,16 +347,17 @@ class BaseThreadExec(ABC):
     for initializing, executing, and finalizing a thread. It is designed to be extended by
     concrete classes that implement specific thread execution strategies.
     """
-    
-    def __init__(self, watchdog_event: ThEvent = None) -> None:
+
+    def __init__(self, done, watchdog_event: ThEvent = None) -> None:
         """
         Initialize the BaseThreadExec with the watchdog event.
 
         Parameters:
+        - done: Event: The done event for terminating the thread.
         - watchdog_event: ThEvent: The watchdog event for monitoring the thread.
         """
         # thread event for thread loop
-        self.done: ThEvent = ThEvent()
+        self.done = done 
         # watchdog event for monitoring
         if watchdog_event is not None:
             self.watchdog_event: ThEvent = watchdog_event
@@ -385,7 +395,7 @@ class BaseThreadExec(ABC):
     @abstractmethod
     def setup_thread(self) -> None:
         """
-        This method is used to setup the required instances for the thread execution before 
+        This method is used to setup the required instances for the thread execution before
         entering the main loop of the thread.
 
         Returns:
@@ -420,14 +430,20 @@ class BaseThreadExec(ABC):
         Returns:
         - None
         """
-        # prepare the thread instances
-        self.setup_thread()
-        # setup the watchdog
-        self.reach_new_stage()
-        # main loop of the thread
-        while not self.done.is_set():
-            self.execute(*args)
-            # set the watchdog
+        try:
+            # prepare the thread instances
+            self.setup_thread()
+            # setup the watchdog
             self.reach_new_stage()
-        # final execution to close resources
-        self.final()
+            # main loop of the thread
+            while not self.done.is_set():
+                self.execute(*args)
+                # set the watchdog
+                self.reach_new_stage()
+        except KeyboardInterrupt:
+            print("KeyboardInterrupt detected!")
+        except Exception as e:
+            logging.error(f"Error: {e}")
+        finally:
+            # final execution to close resources
+            self.final()

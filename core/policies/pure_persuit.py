@@ -12,6 +12,7 @@ from core.policies.network import NetworkPolicy
 from core.utils.agg_utils import map_structure
 from core.templates.base_policy import PolicyAdapter
 
+
 class PurePursuitPolicy:
     def __init__(self, max_lookahead_distance: float = 0.5) -> None:
         self.max_lookahead_distance = max_lookahead_distance
@@ -24,6 +25,31 @@ class PurePursuitPolicy:
 
         state: np.ndarray = np.zeros((6,), dtype=np.float32) #obs["state"]
         waypoints: np.ndarray = obs["waypoints"]
+        metrics["waypoints"] = waypoints
+
+        lad: float = 0.0
+        i: int = 0
+        for i in range(waypoints.shape[0] - 1):
+            current_waypoint_x: float = waypoints[i, 0]
+            current_waypoint_y: float = waypoints[i, 1]
+            next_waypoint_x: float = waypoints[i + 1, 0]
+            next_waypoint_y: float = waypoints[i + 1, 1]
+
+            lad = lad + np.hypot(next_waypoint_x - current_waypoint_x, next_waypoint_y - current_waypoint_y)
+            if lad > self.max_lookahead_distance:
+                break
+
+        tx, ty = waypoints[i]
+
+        # compute steer action
+        x, y, yaw = state[:3]        
+        alpha: float = np.arctan2(ty - y, tx - x) - yaw
+        l: float = np.sqrt((x - tx)**2 + (y - ty)**2)
+        theta: float = np.arctan2(2 * 0.256 * np.sin(alpha), l)
+        action[1] = theta / 0.5
+
+        return action, metrics
+    
         # print("waypoints: ", waypoints[1:10])
         # print("waypoints_shape: ", waypoints.shape)
         # delta_waypoints = np.diff(waypoints, axis=0)
@@ -55,31 +81,6 @@ class PurePursuitPolicy:
         #     action[1] = theta / 0.5
 
         #     return action, metrics
-
-        metrics["waypoints"] = waypoints
-
-        lad: float = 0.0
-        i: int = 0
-        for i in range(waypoints.shape[0] - 1):
-            current_waypoint_x: float = waypoints[i, 0]
-            current_waypoint_y: float = waypoints[i, 1]
-            next_waypoint_x: float = waypoints[i + 1, 0]
-            next_waypoint_y: float = waypoints[i + 1, 1]
-
-            lad = lad + np.hypot(next_waypoint_x - current_waypoint_x, next_waypoint_y - current_waypoint_y)
-            if lad > self.max_lookahead_distance:
-                break
-
-        tx, ty = waypoints[i]
-
-        # compute steer action
-        x, y, yaw = state[:3]        
-        alpha: float = np.arctan2(ty - y, tx - x) - yaw
-        l: float = np.sqrt((x - tx)**2 + (y - ty)**2)
-        theta: float = np.arctan2(2 * 0.256 * np.sin(alpha), l)
-        action[1] = theta / 0.5
-
-        return action, metrics
     
 
 class PurePursuiteAdaptor(PolicyAdapter):

@@ -1,3 +1,4 @@
+from typing import Any
 from abc import ABC, abstractmethod
 
 
@@ -7,7 +8,7 @@ class LifeCycleWrapper(ABC):
     the life cycle of a thread or a process. 
     """
     @abstractmethod
-    def execute(self, *args, **kwargs) -> None:
+    def execute(self, *args: Any, **kwargs: Any) -> None:
         """
         This method is responsible for executing the main logic of the 
         thread or process.
