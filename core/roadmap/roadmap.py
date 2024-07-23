@@ -13,7 +13,8 @@ from .constants import EDGE_CONFIGS_RIGHT_LARGE_MAP
 
 class ACCRoadMap(RoadMap):
     """
-    The road map class for the ACC2024 competition
+    This class is responsible for generating waypoints of the roadmap used in 
+    the ACC2024 student self-driving competition
     """
     _instance = None
 

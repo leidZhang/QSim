@@ -10,7 +10,7 @@ class KeyboardPolicy(BasePolicy):
         self.controller: KeyboardController = KeyboardController()
 
     def execute(self) -> Tuple[np.ndarray, dict]:
-        self.controller.execute()
+        self.controller.read()
         x_signal = self.controller.state['x_signal']
         y_signal = self.controller.state['y_signal']
         return np.array([x_signal, y_signal]), {}

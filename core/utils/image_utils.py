@@ -10,11 +10,11 @@ def region_of_interest(img: np.ndarray, vertices: np.ndarray) -> np.ndarray:
     Only keeps the region of the image defined by the polygon
 
     Parameters:
-        img (np.ndarray): Input image for line following.
-        vertices (list): Vertices of the region of interest.
+    - img (np.ndarray): Input image for line following.
+    - vertices (list): Vertices of the region of interest.
 
     Returns:
-        np.ndarray: Image with the region of interest.
+    - np.ndarray: Image with the region of interest.
     """
     mask: np.ndarray = np.zeros_like(img)
     channel_count: int = img.shape[2]
@@ -26,7 +26,7 @@ def region_of_interest(img: np.ndarray, vertices: np.ndarray) -> np.ndarray:
 def find_slope_intercept_from_points(points: np.ndarray) -> Tuple[float, float]:
     """
     This function will return the linear polinomial coefficients to the lane found
-    in the binary image
+    in the point set
 
     Parameters:
     - points: np.ndarray: The points of the lane

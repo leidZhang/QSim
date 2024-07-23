@@ -1,6 +1,6 @@
 import pytest
 from typing import List
-from core.utils.filters import ThresholdFilter, VariableThresholdFilter
+from core.control.filters import ThresholdFilter, VariableThresholdFilter
 
 
 def test_thresh_filter_1() -> None:

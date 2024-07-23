@@ -11,7 +11,7 @@ from qvl.actor import QLabsActor
 from qvl.real_time import QLabsRealTime
 import pal.resources.rtmodels as rtmodels
 
-from core.roadmap import ACCDirector
+from core.roadmap.director import ACCDirector
 from core.roadmap.constants import ACC_X_OFFSET, ACC_Y_OFFSET
 from core.qcar.vehicle import VirtualCar
 
@@ -27,9 +27,21 @@ class Simulator:
 
 
 class QLabSimulator(Simulator):
+    """
+    This class is responsible for creating qlab actors and rendering the map for the simulation.
+    
+    Attributes:
+    - dt: float: The time step of the simulation
+    - qcar_id: int: The id of the car
+    - offsets: Tuple[float]: The offsets of the car
+    - qlabs: QuanserInteractiveLabs: The QuanserInteractiveLabs object
+    - vehicles: Dict[int, VirtualCar]: The dictionary of vehicles
+    - regions: Dict[str, np.ndarray]: The dictionary of regions
+    """
+
     def __init__(self, offsets: Tuple[float], qcar_id: int = 0) -> None:
         """
-        Initializes the QLabSimulator object
+        Initializes the QLabSimulator object.
 
         Parameters:
         - dt: float: The time step of the simulation

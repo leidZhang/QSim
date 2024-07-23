@@ -7,13 +7,7 @@ import numpy as np
 class BasePolicy(ABC):
     """
     The BasePolicy class is an abstract class that defines the interface for
-    those policies that uses the standard interface of the BasePolicy
-
-    Attributes:
-    - args: Any: The arguments of the policy
-
-    Methods:
-    - execute: Executes the policy
+    the control policies
     """
     
     def __init__(self, *args) -> None: 
@@ -49,9 +43,6 @@ class PolicyAdapter(ABC):
 
     Attributes:
     - policy: Any: The policy to be adapted
-    
-    Methods:
-    - execute: Executes the policy
     """
 
     def __init__(self, policy: Any) -> None:

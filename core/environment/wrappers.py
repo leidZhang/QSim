@@ -8,7 +8,8 @@ from .environment import QLabEnvironment
 
 class ActionRewardResetWrapper(Wrapper):
     """
-    ActionRewardResetWrapper class is a wrapper class for the QLabEnvironment class.
+    ActionRewardResetWrapper class is A wrapper class for the Env classes, responsible for 
+    adding more data in the observation dict. 
 
     Attributes:
     - action_size (int): The size of the action
@@ -70,7 +71,8 @@ class ActionRewardResetWrapper(Wrapper):
 
 class CollectionWrapper(Wrapper):
     """
-    CollectionWrapper class is a wrapper class for the QLabEnvironment class.
+    CollectionWrapper class is a wrapper class for the Env classes, responsible for 
+    reorginizing the observation dict.
 
     Attributes:
     - env (QLabEnvironment): The QLabEnvironment object
