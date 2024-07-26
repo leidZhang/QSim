@@ -1,7 +1,8 @@
 import os
 import json
+from datetime import datetime
 from abc import ABC, abstractmethod
-from typing import Any, Union, List
+from typing import Any, Union, List, Callable, Dict
 from multiprocessing import Queue
 
 import cv2
@@ -70,13 +71,18 @@ class DataWriter(ABC):
     def __init__(self, folder_path: str, image_queue: Queue = None) -> None:
         self.image_queue: Queue = image_queue
         self.history: list = []
-        self.process_data = skip
+        self.process_data: Callable = skip
+        self.get_episode_data: Callable = skip
         self.folder_path: str = os.path.join(
             os.getcwd(), folder_path
         )
 
     def add_data(self, data: Any) -> None:
         self.history.append(data)
+
+    def _get_timestamped_filename(self, extension: str) -> str:
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        return os.path.join(self.folder_path, f"episode_{timestamp}.{extension}")
 
     @abstractmethod
     def write_data(self) -> None:
@@ -91,73 +97,42 @@ class JSONDataWriter(DataWriter):
             os.makedirs(self.folder_path)
             os.makedirs(os.path.join(self.folder_path, "jsons"))
 
-    def _write_to_json(self, folder_path: str) -> None:
-        # initialize the episode data
-        timestamp: str = self.history[0]['timestamp']
-        task: str = self.history[0]['task']
-        task_length: int = self.history[0]['task_length']
-        filename: str = os.path.join(
-            self.folder_path,
-            folder_path,
-            f"episode_{timestamp}.json"
-        )
-        episode_data = {
-            "timestamp": timestamp,
-            "task": task,
-            "task_length": task_length,
-            "steps": [],
-        }
-        # process the data
-        history_len = len(self.history)
-        for i in range(history_len):
-            data: dict = self.history.pop(0)
-            self.process_data(data, i, folder_path)
-            episode_data["steps"].append(data)
-        # save the data to the json file
-        with open(filename, "w") as f:
-            json.dump(episode_data, f)
+    def _write_to_json(self, *args: Any) -> None:
+        filename = self._get_timestamped_filename("json")
+        episode_data: Dict[str, Any] = self.get_episode_data(*args)
+        try:
+            with open(filename, "w") as f:
+                json.dump(episode_data, f)
+            print(f"Data written to {filename}")
+        except IOError as e:
+            print(f"Failed to write JSON data: {e}")
 
     def write_data(self, folder_path: str) -> None:
         if len(self.history) > 0:
-            os.makedirs(os.path.join(self.folder_path, folder_path))
             self._write_to_json(folder_path)
             self.history = []
-            print("Data written to json file!")
 
 
 class NPZDataWriter(DataWriter):
     def __init__(self, folder_path: str) -> None:
-        super().__init__(folder_path)
+        super().__init__(folder_path)       
         # check if the output path exists
         if not os.path.exists(self.folder_path):
             os.makedirs(self.folder_path)
             os.makedirs(os.path.join(self.folder_path, "npzs"))
 
-    def _write_to_npz(self) -> None:
-        # initialize the episode data
-        timestamp: str = self.history[0]['timestamp']
-        task: str = self.history[0]['task']
-        task_length: int = self.history[0]['task_length']
-        filename: str = os.path.join(
-            self.folder_path, "npzs", f"episode_{timestamp}.npz"
-        )
-        episode_data = {
-            "timestamp": timestamp,
-            "task": task,
-            "task_length": task_length,
-            "steps": [],
-        }
-        # process the data
-        for i in range(len(self.history)):
-            data: dict = self.history[i]
-            self.process_data(data, i)
-            episode_data["steps"].append(data)
-        # save the data to the npz file
-        episode_data["sentinel"] = True # for data integrity checking
-        np.savez(filename, **episode_data)
+    def _write_to_npz(self, *args: Any) -> None:
+        filename = self._get_timestamped_filename("npz")
+        episode_data: Dict[str, Any] = self.get_episode_data(*args)
+        episode_data["sentinel"] = True  # for data integrity checking
+        try:
+            with open(filename, 'wb') as f:
+                np.savez(f, **episode_data)
+            print(f"Data written to {filename}")
+        except IOError as e:
+            print(f"Failed to write NPZ data: {e}")
 
     def write_data(self) -> None:
         if len(self.history) > 0:
             self._write_to_npz()
             self.history = []
-            print("Data written to npz file!")
