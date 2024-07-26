@@ -48,10 +48,18 @@ class DoubleBuffer:
         
     def get(self) -> Any:
         self._switch_queue_and_buffer()
-        if not self.queue.empty():
-            res = self.queue.get()
-            return res
-        return None
+        if self.queue.empty():
+            return None
+        
+        data: Any = None        
+        while not self.queue.empty():
+            data = self.queue.get()
+        return data
+    
+        # if not self.queue.empty():
+        #     res = self.queue.get()
+        #     return res
+        # return None
     
     def terminate(self) -> None:
         # clear the queues
