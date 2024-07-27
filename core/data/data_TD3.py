@@ -1,5 +1,6 @@
 import time
 import logging
+import cv2
 from queue import Queue
 import numpy as np
 from dataclasses import dataclass
@@ -12,6 +13,7 @@ from mlflow.store.artifact.artifact_repository_registry import get_artifact_repo
 #project imports
 from core.utils.tools import mlflow_log_npz, mlflow_load_npz
 from core.utils.agg_utils import cat_structure_np, stack_structure_np, map_structure
+import constants as C
 
 
 @dataclass(frozen=True)
@@ -357,26 +359,37 @@ class SequenceRolloutBuffer:
                  repository: MlflowEpisodeRepository,
                  batch_size: int,
                  update_rate: int,
-                 observation_shape: tuple,
+                 resolution: tuple,
+                 state_info_dim: int,
                  action_dim: int):
 
         self.repository = repository  # 仓库
         self.batch_size = batch_size  # 批次大小
         self.update_rate = update_rate  # 更新频率
-        self.obs_shape = observation_shape
+        self.resolution = resolution
+        self.state_info_dim = state_info_dim
         self.action_dim = action_dim
         self.last_load_time = time.time()  # 上次加载时间
         self.end = 0  # mark
-        self.buffer_size = 1000000
+        self.buffer_size = int(1e4)
         self.full = False
         self.buffer_set: set = set()
         self.current_file = None
         self.pos = 0
         self.stats_steps = 0
-        self.observations = np.zeros((self.buffer_size, *self.obs_shape), dtype=np.float32)
+
+        # self.observations = np.zeros((self.buffer_size, *self.obs_shape), dtype=np.uint8)
+        # self.actions = np.zeros((self.buffer_size, self.action_dim), dtype=np.float32)
+        # self.rewards = np.zeros(self.buffer_size, dtype=np.float32)
+        # self.next_states = np.zeros((self.buffer_size, *self.obs_shape), dtype=np.uint8)
+        # self.dones = np.zeros(self.buffer_size, dtype=bool)
+
+        self.images = np.zeros((self.buffer_size, *self.resolution, 3), dtype=np.float32)
+        self.states_info = np.zeros((self.buffer_size, self.state_info_dim), dtype=np.float32)
         self.actions = np.zeros((self.buffer_size, self.action_dim), dtype=np.float32)
         self.rewards = np.zeros(self.buffer_size, dtype=np.float32)
-        self.next_states = np.zeros((self.buffer_size, *self.obs_shape), dtype=np.float32)
+        self.next_images = np.zeros((self.buffer_size, *self.resolution, 3), dtype=np.float32)
+        self.next_states_info = np.zeros((self.buffer_size, self.state_info_dim), dtype=np.float32)
         self.dones = np.zeros(self.buffer_size, dtype=bool)
 
     def __len__(self):
@@ -432,29 +445,36 @@ class SequenceRolloutBuffer:
             # self.pos = 0 # reset pos???
             episode = file.load_data()
             self.buffer_set.add(file)
-            for t in range(episode['state'].shape[0] - 1):
-                state = episode["state"][t]
+            for t in range(episode['image'].shape[0] - 1):
+                image = episode["image"][t]
+                state_info = episode["state_info"][t]  # 新增，存储额外状态信息
                 action = episode["action"][t + 1]
-                next_state = episode["state"][t + 1]
+                next_image = episode["image"][t + 1]
+                next_state_info = episode["state_info"][t + 1]  # 新增，存储额外状态信息
                 reward = episode["reward"][t + 1]
                 done = episode["terminal"][t + 1]
-                self.add(state, action, reward, next_state, done)
+                self.add(image, state_info, action, reward, next_image, next_state_info, done)
 
         while not waste_queue.empty(): # for resume
             waste = waste_queue.get()
             if waste in self.buffer_set:
                 self.buffer_set.remove(waste)
 
-    def add(self, state, action, reward, next_state, done):
+    def add(self, image, state_info, action, reward, next_image, next_state_info, done):
         # add a new step data to buffer
         # update index and pos
         # after full, replace buffer data from begin
-        # print(f"state: {state}, next_state: {next_state}")
+
+        #TODO: sorting files cause time consuming
+        image = cv2.resize(image, C.resolution).astype(np.float32) / 255.0  # resize image, trans uint8 to float32, normalization
+        next_image = cv2.resize(next_image, C.resolution).astype(np.float32) / 255.0  # as above
         index = self.pos % self.buffer_size
-        self.observations[index] = state
+        self.images[index] = image  # image
+        self.states_info[index] = state_info  # state 6
         self.actions[index] = action
         self.rewards[index] = reward
-        self.next_states[index] = next_state
+        self.next_images[index] = next_image  # image
+        self.next_states_info[index] = next_state_info  # 6
         self.dones[index] = done
 
         self.pos += 1
@@ -467,17 +487,21 @@ class SequenceRolloutBuffer:
         if max_ind >= batch_size:
             indices = np.random.choice(max_ind, size=batch_size, replace=False)  # max里随机选size个不同的数字 组成一个数组
             return {
-                'states': self.observations[indices],  # 获取一组数据 存到对应张量里 再赋值给返回字典里对应的键
+                'images': self.images[indices],  # 获取一组数据 存到对应张量里 再赋值给返回字典里对应的键
+                'states_info': self.states_info[indices],  # 获取额外状态信息
                 'actions': self.actions[indices],
                 'rewards': self.rewards[indices],
-                'next_states': self.next_states[indices],
+                'next_images': self.next_images[indices],
+                'next_states_info': self.next_states_info[indices],  # 获取额外状态信息
                 'dones': self.dones[indices]
             }
         else:
             return {
-                'states': np.array([]),
+                'images': np.array([]),
+                'states_info': np.array([]),
                 'actions': np.array([]),
                 'rewards': np.array([]),
-                'next_states': np.array([]),
+                'next_images': np.array([]),
+                'next_states_info': np.array([]),
                 'dones': np.array([])
-            }
+            }  # save in samples as input of learn in policy.py

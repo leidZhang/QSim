@@ -42,93 +42,26 @@ class WaypointEnvironment(QLabEnvironment):
 
     #     return reward, done
 
-    def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state, dist_ix, global_close, global_far, compare_action) -> tuple:
+    def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state, dist_ix) -> tuple:
         # sys.stdout.write(f"\rAction: {action}, Position: {ego_state[:2]}, Start: {self.start_orig}")
         # sys.stdout.flush()
         self.detector(action=action, orig=ego_state[:2])
         done: bool = False
         reward: float = 0.0
 
-        # Forward reward
-        # if self.prev_dist != np.inf and self.prev_dist - norm_dist[dist_ix] >= -0.01:  # Check if distance to the next waypoint has decreased:
-
         # FORWARD_REWARD V1
         pos = self.vehicle.current_waypoint_index
-        # print(f'POS: {pos}')
-        '''
-        region_reward = [1, 4, 2]
-        waypoints_range = [(0, 332), (333, 446), (447, 625)]
-
-        for i, (start_point, end_point) in enumerate(waypoints_range):
-            # print(f'pos: {pos}, start_point: {start_point}, end_point: {end_point}')
-            if start_point < pos <= end_point:
-                forward_reward = region_reward[i] * (pos - self.pre_pos) * 0.125
-
-                # print(f"FORWARD_REWARD REWARD {forward_reward}")
-                reward += forward_reward
-
-                b05_reward = -max(0.0, 4.6 * region_reward[i] * (pos - self.pre_pos) * (norm_dist[dist_ix] + 0.3) ** 4)
-
-                # print(f"0.05 Boundary Reward: {b05_reward}")
-                reward += b05_reward
-
-                # print(f'B/F: {"{:.2%}".format(((-b05_reward  / forward_reward)- 0.31) / 0.67)}')
-        '''
 
         forward_reward = (pos - self.pre_pos) * 0.125
         # print(f"FORWARD_REWARD REWARD {forward_reward}")
         reward += forward_reward
 
-        # compare reward
-        # compare_reward = -abs( action[1] - compare_action[1])
-        compare_reward = -abs(action[1] - compare_action[1] / 2) * (pos - self.pre_pos) * 0.104
-        reward += compare_reward
-        # print(f'compare_reward: {compare_reward}')
-
-        # b05_reward = -max(0.0, 1.3 * (pos - self.pre_pos) * (norm_dist[dist_ix] - 0.031))
+        b05_reward = -max(0.0, 1.3 * (pos - self.pre_pos) * (norm_dist[dist_ix] - 0.031))
         # print(f"0.05 Boundary Reward: {b05_reward}")
-        # reward += b05_reward
-
-        # print(f'B/F: {"{:.2%}".format(-compare_reward / forward_reward)}')
+        reward += b05_reward
 
         self.pre_pos = pos
-
         self.prev_dist = norm_dist[dist_ix]  # Update the previous distance
-
-        # # cos_v1v2 reward
-        # orig, yaw, rot = self.vehicle.cal_vehicle_state(ego_state)
-        # # print(f'yaw:{yaw}')
-        # # orig: np.ndarray = ego_state[:2]
-        # # yaw: float = -ego_state[2]
-        # # rot: np.ndarray = np.array([
-        # #     [np.cos(yaw), np.sin(yaw)],
-        # #     [-np.sin(yaw), np.cos(yaw)]
-        # # ])
-        #
-        # steering_angle = action[1]
-        # offset: np.ndarray = np.array([0.0, 0.35])
-        # ego_point: np.ndarray = orig + np.matmul(offset, rot)
-        # # print(f'global_far {global_far}')
-        # # print(f'ego_point {ego_point}')
-        # v1: np.ndarray = global_far - ego_point
-        # # print(f'v1 {v1}')
-        # v2: np.ndarray = np.matmul(np.array([np.sin(steering_angle), np.cos(steering_angle)]), rot) - ego_point
-        # # print(f'v2 {v2}')
-        #
-        # norm_v1: float = np.linalg.norm(v1)
-        # # print(f'norm_v1 {norm_v1}')
-        # unit_v1: np.ndarray = v1 / norm_v1
-        # # print(f'unit_v1 {unit_v1}')
-        # norm_v2: float = np.linalg.norm(v2)
-        # unit_v2: np.ndarray = v2 / norm_v2
-        # cos_v1v2: float = np.dot(unit_v1, unit_v2)
-        # # print(f'cos_v1v2 {cos_v1v2}')
-        #
-        # angle_reward = cos_v1v2
-        # # print(f"angle_reward: {angle_reward}")
-        #
-        # reward += angle_reward
-
 
         # Max boundary
         if norm_dist[dist_ix] >= 0.20:
@@ -139,53 +72,41 @@ class WaypointEnvironment(QLabEnvironment):
             self.vehicle.halt()  # stop the car
 
         # (no reward) Reach goal
-        # end_point =
         if np.linalg.norm(self.goal - ego_state[:2]) < GOAL_THRESHOLD:
             done = True  # stop episode after this step
             self.vehicle.halt()  # stop the car
 
-        # reward = np.tanh(reward)
-        # print(f"reward: {reward}")
         return reward, done
 
-    def step(self, action: np.ndarray, metrics: dict, compare_action: np.ndarray) -> Tuple[dict, float, bool, dict]:
+    def step(self, action: np.ndarray, metrics: dict) -> Tuple[dict, float, bool, dict]:
         episode_done: bool = self.episode_steps >= self.max_episode_steps
         observation, reward, info = self.init_step_params()
         action: np.ndarray = self.vehicle.execute(action)
         # time.sleep(0.05)  # sleep for 0.05 seconds
 
         # extra obs info
-        close_index: int = self.vehicle.current_waypoint_index  # 0
-        far_index: int = (self.vehicle.current_waypoint_index + 49) % self.waypoint_sequence.shape[0]  # 49
-        global_close: np.ndarray = self.waypoint_sequence[close_index]
-        global_far: np.ndarray = self.waypoint_sequence[far_index]
-        # print(f'global_far: {global_far}')
+        # close_index: int = self.vehicle.current_waypoint_index  # 0
+        # far_index: int = (self.vehicle.current_waypoint_index + 49) % self.waypoint_sequence.shape[0]  # 49
+        # global_close: np.ndarray = self.waypoint_sequence[close_index]
+        # global_far: np.ndarray = self.waypoint_sequence[far_index]
 
         # privileged information
         if self.privileged:
             ego_state: np.ndarray = self.vehicle.ego_state
             norm_dist: np.ndarray = self.vehicle.norm_dist
             dist_ix: int = self.vehicle.dist_ix
-            # print(f'action[1]: {action[1]}')
-            # print(f'compare_action[1]: {compare_action[1]}')
             reward, reward_done = self.handle_reward(
-                action, norm_dist, ego_state, dist_ix, global_close, global_far, compare_action
+                action, norm_dist, ego_state, dist_ix
             )
             episode_done = episode_done or reward_done
 
         # handle observation
-        state_info: np.ndarray = np.concatenate((ego_state, global_close, global_far))
-        observation['state'] = self.recover_state_info(state_info, RECOVER_INDICES)
+        observation['image'] = self.vehicle.observation['image']
+        observation['state_info'] = self.vehicle.ego_state
         observation["waypoints"] = self.vehicle.observation["waypoints"]
-        # print(f'close:       {global_close}')
-        # print(f'waypoint 1:  {observation["waypoints"][0]}')
-        # print(f'far:         {global_far}')
-        # print(f'waypoint 50: {observation["waypoints"][49]}')
 
         self.episode_steps += 1
         self.pre_pos = self.vehicle.current_waypoint_index
-        # print(f'reward: {reward}')
-        # print(f'observation: {observation}')
         return observation, reward, episode_done, info
 
     def handle_spawn_pos(self, waypoint_index: int=0) -> Tuple[list, list]:
@@ -215,10 +136,10 @@ class WaypointEnvironment(QLabEnvironment):
         self.last_orig: np.ndarray = self.start_orig
         self.pre_pos: int = self.vehicle.current_waypoint_index
         # init observations
-        global_close: np.ndarray = self.waypoint_sequence[0]
-        global_far: np.ndarray = self.waypoint_sequence[49]
-        state_info: np.ndarray = np.concatenate((ego_state, global_close, global_far))
-        observation['state'] = self.recover_state_info(state_info, RECOVER_INDICES)
+        # global_close: np.ndarray = self.waypoint_sequence[0]
+        # global_far: np.ndarray = self.waypoint_sequence[49]
+        observation['state_info'] = ego_state
+        observation['image'] = self.vehicle.observation['image']
         observation['waypoints'] = self.vehicle.observation['waypoints'] if self.privileged else None
         # init fault tolerance
         self.detector: EpisodeMonitor = EpisodeMonitor(start_orig=self.start_orig)

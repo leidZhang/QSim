@@ -1,4 +1,5 @@
 import time
+import cv2
 
 import numpy as np
 
@@ -7,8 +8,9 @@ from pal.utilities.math import Calculus
 
 from core.qcar import VirtualCar
 from core.qcar.constants import WHEEL_RADIUS, ENCODER_COUNTS_PER_REV, PIN_TO_SPUR_RATIO
+from core.qcar.sensor import VirtualCSICamera
 from core.utils.performance import realtime_message_output, elapsed_time
-from constants import MAX_LOOKAHEAD_INDICES
+from constants import MAX_LOOKAHEAD_INDICES, resolution
 
 
 class WaypointCar(VirtualCar):
@@ -23,9 +25,10 @@ class WaypointCar(VirtualCar):
         self.diff = Calculus().differentiator_variable(dt)
         _ = next(self.diff)
         super().__init__(actor_id, dt, qlabs, throttle_coeff, steering_coeff)
+        self.front_csi: VirtualCSICamera = VirtualCSICamera(id=3)
         self.observation: dict = {}
 
-    def handle_observation(self, orig: np.ndarray, rot: np.ndarray) -> None:
+    def handle_observation(self, orig: np.ndarray, rot: np.ndarray, image) -> None:
         # in case of less than 200 waypoints
         if self.next_waypoints.shape[0] < MAX_LOOKAHEAD_INDICES:
             slop = MAX_LOOKAHEAD_INDICES - self.next_waypoints.shape[0]
@@ -33,16 +36,18 @@ class WaypointCar(VirtualCar):
         # add waypoints info to observation
         # print(f'before convert of close waypoint: {self.next_waypoints[0]}')
         self.observation['waypoints'] = np.matmul(self.next_waypoints[:MAX_LOOKAHEAD_INDICES] - orig, rot)
+        self.observation['image'] = cv2.resize(image, resolution).astype(np.float32) / 255.0
 
     def setup(self, waypoints: np.ndarray, init_waypoint_index: int = 0) -> None:
+        image: np.ndarray = self.front_csi.await_image()  # init image till image is not none
         self.waypoints: np.ndarray = waypoints
         self.ego_state: np.ndarray = self.get_ego_state()
         orig, _, rot = self.cal_vehicle_state(self.ego_state)
         self.current_waypoint_index: int = init_waypoint_index
         self.next_waypoints: np.ndarray = self.waypoints[self.current_waypoint_index:]
-        self.handle_observation(orig, rot)
+        self.handle_observation(orig, rot, image)
 
-    def update_state(self) -> None:
+    def update_state(self, image) -> None:
         # get the ego state from the qlabs
         self.ego_state = self.get_ego_state() 
         # get the original and rotation matrix
@@ -60,7 +65,7 @@ class WaypointCar(VirtualCar):
         # clear pasted waypoints
         self.next_waypoints = self.next_waypoints[self.dist_ix:] 
         # add waypoint to the observation
-        self.handle_observation(orig, rot)
+        self.handle_observation(orig, rot, image)
 
     def estimate_speed(self) -> float:
         encoder_counts: np.ndarray = self.running_gear.motorEncoder
@@ -69,10 +74,12 @@ class WaypointCar(VirtualCar):
 
     def execute(self, action: np.ndarray) -> np.ndarray:
         start_time: float = time.time()
+        # TODO: counter for the number of steps we skip
+        image: np.ndarray = self.front_csi.await_image()  # update image till image is not none
         # execute the control
         throttle, steering = super().execute(action)
         # print(f'steering: {steering}')
-        self.update_state()
+        self.update_state(image)
         # calculate the estimated speed
         linear_speed: float = self.estimate_speed()
         # calculate the sleep time

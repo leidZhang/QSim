@@ -1,13 +1,13 @@
 print_QCar_info: bool = False  # print "QCar configured successfully." in qcar.py or not
 max_action: float = 0.5
 discount: float = 0.99
-state_dim: int = 400
+state_info_dim: int = 6
 action_dim: int = 2
-lr: float = 1e-4  # 3e-4
+lr: float = 3e-4  # 3e-4
 tau: float = 0.005
-observation_shape: tuple = (10,)
+resolution: tuple = (84, 84)
 buffer_update_rate: int = 2
-policy_freq: int = 10  # 2
+policy_freq: int = 2  # 2
 # generator constants
 METRIC_PREFIX: str = 'agent'
 COOL_DOWN_TIME: float = 3.0
@@ -24,12 +24,11 @@ RECOVER_INDICES: list = [0, 6, 8]
 
 # settings
 DEFAULT_MAX_STEPS: int = 2000
-# batch_size = 2048
-# PREFILL = 10000
-batch_size: int = 2048
-PREFILL: int = 3_400_000
-RUN_ID = 'e4eef53e8c3a49a0b2967fa6be338fd2'
-# RUN_ID: str = ''
+PREFILL = 5000
+batch_size: int = 512
+# PREFILL: int = 3_400_000
+# RUN_ID = 'e4eef53e8c3a49a0b2967fa6be338fd2'
+RUN_ID: str = '9e2db53711c744888cdb3140ef44536c'
 action_v: float = 0.08
 cuda: str = "cuda:1"
 # start_point = 1700

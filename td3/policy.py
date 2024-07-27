@@ -20,7 +20,8 @@ class TD3Agent(torch.nn.Module):
             MlflowEpisodeRepository(input_dir),
             C.batch_size,
             C.buffer_update_rate,
-            C.observation_shape,
+            C.resolution,
+            C.state_info_dim,  # 新增，用于存储额外的状态信息维度
             C.action_dim)
 
         self.actor = Actor(C.max_action).to(device)
@@ -33,90 +34,68 @@ class TD3Agent(torch.nn.Module):
 
         self.total_it = 0
 
-    def select_action(self, state, data_size):
-        state = torch.FloatTensor(state.reshape(1, -1)).to(device)  # 1 row and auto column
-        action_yaw = self.actor(state).detach().cpu().data.numpy().flatten()
-        '''
-        action type #1: <class 'numpy.ndarray'>
-        action shape #1: (1,)
-        '''
-
+    def select_action(self, image, state_info, data_size):
+        image = torch.from_numpy(image).float().permute(2, 0, 1).unsqueeze(0).to(device)
+        state_info = torch.from_numpy(state_info).float().to(device)
+        action = self.actor(image, state_info).detach().cpu().data.numpy().flatten()
 
         # add noise
         with torch.no_grad():
-            action_yaw = torch.from_numpy(np.array(action_yaw))
-            epsilon = max(1 - data_size / 400_000, 0.04)
-            # epsilon = 0
-            rand_action_yaw = torch.rand(action_yaw.shape)
-            rand_action_yaw = rand_action_yaw * 2 - 1
+            action = torch.from_numpy(np.array(action))
+            epsilon = max(1 - data_size / 200_000, 0.04)
+
+            rand_action_v = torch.rand(action[0].shape).to(device)
+            rand_action_yaw = (torch.rand(action[1].shape) * 2 - 1).to(device)
+
             if random.uniform(0, 1) < epsilon:
-                action_yaw = rand_action_yaw
+                action[0] = rand_action_v
+                action[1] = rand_action_yaw
 
-            action_yaw = action_yaw.cpu().data.numpy().flatten()
+            action_v = action[0].cpu().data.numpy().flatten()
+            action_yaw = action[1].cpu().data.numpy().flatten()
 
-        action = np.concatenate((np.array([1.0]), action_yaw), axis=0)
-        '''
-        action type #2: <class 'numpy.ndarray'>
-        action shape #2: (2,)
-        '''
+        action = np.concatenate((action_v, action_yaw), axis=0)
+
         return action, {}  # action: np array
 
-    def store_transition(self, state, action, reward, next_state, done):
+    def store_transition(self, image, state_info, action, reward, next_image, next_state_info, done):
     # step --> buffer
-        self.buffer.add(state, action, reward, next_state, done)
+        self.buffer.add(image, state_info, action, reward, next_image, next_state_info, done)
 
     def learn(self, samples):
         gradients = {}
         if len(self.buffer) > C.batch_size:
             self.total_it += 1
             # Get samples from buffer and Convert to PyTorch tensors
-            states = torch.from_numpy(samples['states']).to(device)
+            images = torch.from_numpy(samples['images']).float().permute(0, 3, 1, 2).to(device)
+            states_info = torch.from_numpy(samples['states_info']).to(device)
             actions = torch.from_numpy(samples['actions']).to(device)
             rewards = torch.from_numpy(samples['rewards']).to(device)
-            next_states = torch.from_numpy(samples['next_states']).to(device)
+            next_images = torch.from_numpy(samples['next_images']).float().permute(0, 3, 1, 2).to(device)
+            next_states_info = torch.from_numpy(samples['next_states_info']).to(device)
             dones = torch.from_numpy(samples['dones']).to(device)
-            # print(f'dones: {dones}')
-            # print(f'shape of dones: {dones.shape}')
-            # print(f'type of action: {type(actions)}')
 
             not_dones = ~dones
-            # print(f'not_dones: {not_dones}')
-            # print(f'shape of not_dones: {not_dones.shape}')
-            # print(f'type of not_dones: {type(not_dones)}')
-
-            # print(f'actions: {actions}')
-            # print(f'shape of action: {actions.shape}')
-            # print(f'type of action: {type(actions)}')
-            '''
-            shape of actions: torch.Size([40, 2])
-            type of actions: <class 'torch.Tensor'>
-            actions: tensor([[ 7.6000e-02, -7.9606e-02],
-                             [ 7.6000e-02,  8.2937e-06],
-            '''
 
             with torch.no_grad():
                 noise_yaw = (
                         torch.randn_like(actions[:, 0].unsqueeze(1)) * 0.10
                 ).clamp(-0.25, 0.25).to(device)
-                # print(f'shape of noise_yaw: {noise_yaw.shape}')
+                # print(f'noise_yaw: {noise_yaw}')
 
                 next_actions_yaw = (
-                        self.actor_target(next_states) + noise_yaw
+                        self.actor_target(next_images, next_states_info)[:, 1].unsqueeze(1) + noise_yaw
                 ).clamp(-0.5, 0.5).to(device)
-                # print(f'shape of next_actions_yaw: {next_actions_yaw.shape}')
-                # print(f'shape of next_action_yaw: {next_actions_yaw.shape}')
-
+                # print(f'a_t: {self.actor_target(next_images, next_states_info)[:, 1].unsqueeze(1)}')
+                # print(f'next_actions_yaw: {next_actions_yaw}')
                 next_actions = torch.cat([actions[:, 0].unsqueeze(1), next_actions_yaw], 1).to(device)
-                # print(f'shape of next_action: {next_actions.shape}')
-
-
-                # action = np.concatenate((np.array([C.action_v]), action), axis=0)
+                # print(f'next_actions: {next_actions}')
                 # Compute the target Q value
-                target_Q1, target_Q2 = self.critic_target(next_states, next_actions)
+                target_Q1, target_Q2 = self.critic_target(next_images, next_states_info, next_actions)
                 target_Q = torch.min(target_Q1, target_Q2)
                 target_Q = rewards.unsqueeze(1) + not_dones.unsqueeze(1) * C.discount * target_Q.to(device)
             # Get current Q estimates
-            current_Q1, current_Q2 = self.critic(states, actions)
+            current_Q1, current_Q2 = self.critic(images, states_info, actions)
             # Compute critic loss
             critic_loss = F.mse_loss(current_Q1, target_Q) + F.mse_loss(current_Q2, target_Q)
             # Optimize the critic
@@ -131,12 +110,12 @@ class TD3Agent(torch.nn.Module):
             # Delayed policy updates
             if self.total_it % C.policy_freq == 0:
 
-                actions_v = torch.full((C.batch_size, 1), C.action_v).to(device)
-                actions_yaw = self.actor(states).to(device)
-                actions = torch.cat((actions_v.detach(), actions_yaw), dim=1).to(device)
+                # actions_v = torch.full((C.batch_size, 1), C.action_v).to(device)
+                actions = self.actor(images, states_info).to(device)
+                # actions = torch.cat((actions_v.detach(), actions_yaw), dim=1).to(device)
 
                 # Compute actor loss
-                actor_loss = -self.critic.Q1(states, actions).mean().to(device)
+                actor_loss = -self.critic.Q1(images, states_info, actions).mean().to(device)
                 # Optimize the actor
                 self.actor_optimizer.zero_grad()
                 actor_loss.backward()
@@ -159,278 +138,88 @@ class TD3Agent(torch.nn.Module):
         else:
             return (None, None, None)
 
-'''
-# 1 hidden layer
-class Actor(torch.nn.Module):
+
+
+# image and state as input
+class Actor(nn.Module):
     def __init__(self, max_action):
         super(Actor, self).__init__()
 
-        self.l1 = nn.Linear(C.state_dim, 256)
-        self.l2 = nn.Linear(256, 256)
-        self.l3 = nn.Linear(256, 1)
+        self.conv1 = nn.Conv2d(3, 32, kernel_size=8, stride=4)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
+        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
+
+        conv_output_size = 64 * 7 * 7  # 3136
+        self.fc1 = nn.Linear(conv_output_size + 6, 2048)
+        self.fc2 = nn.Linear(2048, 1024)
+        self.fc3 = nn.Linear(1024, 512)
+        self.fc4 = nn.Linear(512, C.action_dim)
 
         self.max_action = max_action
 
-    def forward(self, state):
-        state = state.to(device)
-        a = F.relu(self.l1(state))
-        a = F.relu(self.l2(a))
-        action = self.max_action * torch.tanh(self.l3(a))
+    def forward(self, image, state_info):
+        x = F.relu(self.conv1(image))
+        x = F.relu(self.conv2(x))
+        x = F.relu(self.conv3(x))
 
-        return action
+        x = x.reshape(x.size(0), -1)
+        if state_info.dim() == 1:
+            state_info = state_info.unsqueeze(0)
+        x = torch.cat([x, state_info], 1)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
+        return self.max_action * torch.tanh(self.fc4(x))
 
-class Critic(torch.nn.Module):
+class Critic(nn.Module):
     def __init__(self):
         super(Critic, self).__init__()
 
-        self.l1 = nn.Linear(C.state_dim + C.action_dim, 256)
-        self.l2 = nn.Linear(256, 256)
-        self.l3 = nn.Linear(256, 1)
+        self.conv1 = nn.Conv2d(3, 32, kernel_size=8, stride=4)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
+        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
+
+        conv_output_size = 64 * 7 * 7  # 3136
+        self.fc1 = nn.Linear(conv_output_size + 6 + C.action_dim, 2048)
+        self.fc2 = nn.Linear(2048, 1024)
+        self.fc3 = nn.Linear(1024, 512)
+        self.fc4 = nn.Linear(512, 1)
 
         # Q2 architecture
-        self.l4 = nn.Linear(C.state_dim + C.action_dim, 256)
-        self.l5 = nn.Linear(256, 256)
-        self.l6 = nn.Linear(256, 1)
+        self.fc5 = nn.Linear(conv_output_size + 6 + C.action_dim, 2048)
+        self.fc6 = nn.Linear(2048, 1024)
+        self.fc7 = nn.Linear(1024, 512)
+        self.fc8 = nn.Linear(512, 1)
 
-    def forward(self, state, action):
-        state = state.to(device)
-        action = action.to(device)
-        sa = torch.cat([state, action], 1)
+    def forward(self, image, state_info, action):
+        x = F.relu(self.conv1(image))
+        x = F.relu(self.conv2(x))
+        x = F.relu(self.conv3(x))
 
-        q1 = F.relu(self.l1(sa))
-        q1 = F.relu(self.l2(q1))
-        q1 = self.l3(q1)
+        x = x.reshape(x.size(0), -1)
+        x = torch.cat([x, state_info, action], 1)
+        q1 = F.relu(self.fc1(x))
+        q1 = F.relu(self.fc2(q1))
+        q1 = F.relu(self.fc3(q1))
+        q1 = self.fc4(q1)
 
-        q2 = F.relu(self.l4(sa))
-        q2 = F.relu(self.l5(q2))
-        q2 = self.l6(q2)
+        q2 = F.relu(self.fc5(x))
+        q2 = F.relu(self.fc6(q2))
+        q2 = F.relu(self.fc7(q2))
+        q2 = self.fc8(q2)
         return q1, q2
 
-    def Q1(self, state, action):
-        state = state.to(device)
-        action = action.to(device)
-        sa = torch.cat([state, action], 1)
+    def Q1(self, image, state_info, action):
+        x = F.relu(self.conv1(image))
+        x = F.relu(self.conv2(x))
+        x = F.relu(self.conv3(x))
 
-        q1 = F.relu(self.l1(sa))
-        q1 = F.relu(self.l2(q1))
-        q1 = self.l3(q1)
+        x = x.reshape(x.size(0), -1)
+        # print(f'shape of x: {x.shape}')
+        x = torch.cat([x, state_info, action], 1)
+        # print(f'action: {action}')
+        q1 = F.relu(self.fc1(x))
+        q1 = F.relu(self.fc2(q1))
+        q1 = F.relu(self.fc3(q1))
+        q1 = self.fc4(q1)
         return q1
-'''
-
-
-# 2
-class Actor(torch.nn.Module):
-    def __init__(self, max_action):
-        super(Actor, self).__init__()
-
-        self.l1 = nn.Linear(C.state_dim, 256)
-        self.l2 = nn.Linear(256, 256)
-        self.l3 = nn.Linear(256, 256)
-        self.l4 = nn.Linear(256, 1)
-
-        self.max_action = max_action
-
-    def forward(self, state):
-        state = state.to(device)
-        a = F.relu(self.l1(state))
-        a = F.relu(self.l2(a))
-        a = F.relu(self.l3(a))
-        action = self.max_action * torch.tanh(self.l4(a))
-
-        return action
-
-class Critic(torch.nn.Module):
-    def __init__(self):
-        super(Critic, self).__init__()
-
-        self.l1 = nn.Linear(C.state_dim + C.action_dim, 256)
-        self.l2 = nn.Linear(256, 256)
-        self.l3 = nn.Linear(256, 256)
-        self.l4 = nn.Linear(256, 1)
-
-        # Q2 architecture
-        self.l5 = nn.Linear(C.state_dim + C.action_dim, 256)
-        self.l6 = nn.Linear(256, 256)
-        self.l7 = nn.Linear(256, 256)
-        self.l8 = nn.Linear(256, 1)
-
-    def forward(self, state, action):
-        state = state.to(device)
-        action = action.to(device)
-        sa = torch.cat([state, action], 1)
-
-        q1 = F.relu(self.l1(sa))
-        q1 = F.relu(self.l2(q1))
-        q1 = F.relu(self.l3(q1))
-        q1 = self.l4(q1)
-
-        q2 = F.relu(self.l5(sa))
-        q2 = F.relu(self.l6(q2))
-        q2 = F.relu(self.l7(q2))
-        q2 = self.l8(q2)
-        return q1, q2
-
-    def Q1(self, state, action):
-        state = state.to(device)
-        action = action.to(device)
-        sa = torch.cat([state, action], 1)
-
-        q1 = F.relu(self.l1(sa))
-        q1 = F.relu(self.l2(q1))
-        q1 = F.relu(self.l3(q1))
-        q1 = self.l4(q1)
-        return q1
-
-
-'''
-# 3
-class Actor(torch.nn.Module):
-    def __init__(self, max_action):
-        super(Actor, self).__init__()
-
-        self.l1 = nn.Linear(C.state_dim, 256)
-        self.l2 = nn.Linear(256, 256)
-        self.l3 = nn.Linear(256, 256)
-        self.l4 = nn.Linear(256, 256)
-        self.l5 = nn.Linear(256, 1)
-
-        self.max_action = max_action
-
-    def forward(self, state):
-        state = state.to(device)
-        a = F.relu(self.l1(state))
-        a = F.relu(self.l2(a))
-        a = F.relu(self.l3(a))
-        a = F.relu(self.l4(a))
-        action = self.max_action * torch.tanh(self.l5(a))
-
-        return action
-
-class Critic(torch.nn.Module):
-    def __init__(self):
-        super(Critic, self).__init__()
-
-        self.l1 = nn.Linear(C.state_dim + C.action_dim, 256)
-        self.l2 = nn.Linear(256, 256)
-        self.l3 = nn.Linear(256, 256)
-        self.l4 = nn.Linear(256, 256)
-        self.l5 = nn.Linear(256, 1)
-
-        # Q2 architecture
-        self.l6 = nn.Linear(C.state_dim + C.action_dim, 256)
-        self.l7 = nn.Linear(256, 256)
-        self.l8 = nn.Linear(256, 256)
-        self.l9 = nn.Linear(256, 256)
-        self.l10 = nn.Linear(256, 1)
-
-    def forward(self, state, action):
-        state = state.to(device)
-        action = action.to(device)
-        sa = torch.cat([state, action], 1)
-
-        q1 = F.relu(self.l1(sa))
-        q1 = F.relu(self.l2(q1))
-        q1 = F.relu(self.l3(q1))
-        q1 = F.relu(self.l4(q1))
-        q1 = self.l5(q1)
-
-        q2 = F.relu(self.l6(sa))
-        q2 = F.relu(self.l7(q2))
-        q2 = F.relu(self.l8(q2))
-        q2 = F.relu(self.l9(q2))
-        q2 = self.l10(q2)
-        return q1, q2
-
-
-    def Q1(self, state, action):
-        state = state.to(device)
-        action = action.to(device)
-        sa = torch.cat([state, action], 1)
-
-        q1 = F.relu(self.l1(sa))
-        q1 = F.relu(self.l2(q1))
-        q1 = F.relu(self.l3(q1))
-        q1 = F.relu(self.l4(q1))
-        q1 = self.l5(q1)
-        return q1
-
-'''
-'''
-# 4
-class Actor(torch.nn.Module):
-    def __init__(self, max_action):
-        super(Actor, self).__init__()
-
-        self.l1 = nn.Linear(C.state_dim, 256)
-        self.l2 = nn.Linear(256, 256)
-        self.l3 = nn.Linear(256, 256)
-        self.l4 = nn.Linear(256, 256)
-        self.l5 = nn.Linear(256, 256)
-        self.l6 = nn.Linear(256, 1)
-
-        self.max_action = max_action
-
-    def forward(self, state):
-        state = state.to(device)
-        a = F.relu(self.l1(state))
-        a = F.relu(self.l2(a))
-        a = F.relu(self.l3(a))
-        a = F.relu(self.l4(a))
-        a = F.relu(self.l5(a))
-        action = self.max_action * torch.tanh(self.l6(a))
-
-        return action
-
-class Critic(torch.nn.Module):
-    def __init__(self):
-        super(Critic, self).__init__()
-
-        self.l1 = nn.Linear(C.state_dim + C.action_dim, 256)
-        self.l2 = nn.Linear(256, 256)
-        self.l3 = nn.Linear(256, 256)
-        self.l4 = nn.Linear(256, 256)
-        self.l5 = nn.Linear(256, 256)
-        self.l6 = nn.Linear(256, 1)
-
-        # Q2 architecture
-        self.l7 = nn.Linear(C.state_dim + C.action_dim, 256)
-        self.l8 = nn.Linear(256, 256)
-        self.l9 = nn.Linear(256, 256)
-        self.l10 = nn.Linear(256, 256)
-        self.l11 = nn.Linear(256, 256)
-        self.l12 = nn.Linear(256, 1)
-
-    def forward(self, state, action):
-        state = state.to(device)
-        action = action.to(device)
-        sa = torch.cat([state, action], 1)
-
-        q1 = F.relu(self.l1(sa))
-        q1 = F.relu(self.l2(q1))
-        q1 = F.relu(self.l3(q1))
-        q1 = F.relu(self.l4(q1))
-        q1 = F.relu(self.l5(q1))
-        q1 = self.l6(q1)
-
-        q2 = F.relu(self.l7(sa))
-        q2 = F.relu(self.l8(q2))
-        q2 = F.relu(self.l9(q2))
-        q2 = F.relu(self.l10(q2))
-        q2 = F.relu(self.l11(q2))
-        q2 = self.l12(q2)
-        return q1, q2
-
-
-    def Q1(self, state, action):
-        state = state.to(device)
-        action = action.to(device)
-        sa = torch.cat([state, action], 1)
-
-        q1 = F.relu(self.l1(sa))
-        q1 = F.relu(self.l2(q1))
-        q1 = F.relu(self.l3(q1))
-        q1 = F.relu(self.l4(q1))
-        q1 = F.relu(self.l5(q1))
-        q1 = self.l6(q1)
-        return q1
-'''

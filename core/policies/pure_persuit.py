@@ -46,19 +46,21 @@ class PurePursuitPolicy:
         theta: float = np.arctan2(2 * 0.256 * np.sin(alpha), l)
         action[1] = theta / 0.5
 
-        # add noise
-        with torch.no_grad():
-            action_yaw = torch.from_numpy(np.array(action[1]))
-            # epsilon = max(1 - data_size / 400_000, 0.04)
-            epsilon = 0.31
-            rand_action_yaw = torch.rand(action_yaw.shape)
-            rand_action_yaw = rand_action_yaw * 2 - 1
-            if random.uniform(0, 1) < epsilon:
-                action_yaw = rand_action_yaw
-
-            action_yaw = action_yaw.cpu().data.numpy().flatten()
-
-        action = np.concatenate((np.array([1.0]), action_yaw), axis=0)
+        # # add noise
+        # with torch.no_grad():
+        #
+        #     action_tensor = torch.from_numpy(action).float()
+        #     # epsilon = max(1 - data_size / 400_000, 0.04)
+        #     epsilon = 0.7
+        #
+        #     rand_action_v = torch.rand(1)
+        #     rand_action_yaw = torch.rand(1) * 2 - 1
+        #
+        #     if random.uniform(0, 1) < epsilon:
+        #         action_tensor[0] = rand_action_v
+        #         action_tensor[1] = rand_action_yaw
+        #
+        #     action = action_tensor.cpu().numpy()
 
         return action, metrics
     

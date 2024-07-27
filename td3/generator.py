@@ -43,7 +43,6 @@ class Generator:
 
     def prepare_session(self, run_id: str, resume: bool, saved_data: int) -> tuple:
         steps, episodes = 0, 0
-        self.compare_policy: PurePursuitPolicy = PurePursuitPolicy(max_lookahead_distance=0.5)
         if resume:
             _, steps, episodes = self.train_repository.count_steps()
             if saved_data >= PREFILL:
@@ -80,7 +79,6 @@ class Generator:
         metrics = defaultdict(list)
         observation, reward, done, info = self.env.reset()
         while not done:
-            compare_action, _ = self.compare_policy(observation)
             if type(self.policy) is TD3Agent:
                 '''
                 # event driven architecture for keyboard pvp?
@@ -90,14 +88,14 @@ class Generator:
                 else:
                     action, metric = self.policy.select_action(observation['state'])
                 '''
-                action, metric = self.policy.select_action(observation['waypoints'], steps)
+                action, metric = self.policy.select_action(observation['image'], observation['state_info'], steps)
                 # filtered action = human and agent
-                next_observation, reward, done, info = self.env.step(action, metric, compare_action)
-                self.policy.store_transition(observation['waypoints'], action, reward, next_observation['waypoints'], done)
+                next_observation, reward, done, info = self.env.step(action, metric)
+                self.policy.store_transition(observation['image'], observation['state_info'], action, reward, next_observation['image'], next_observation['state_info'], done)
                 observation = next_observation
             else:
                 action, metric = self.policy(observation)
-                observation, reward, done, info = self.env.step(action, metric, compare_action)
+                observation, reward, done, info = self.env.step(action, metric)
 
             for key, val in metric.items():
                 metrics[key].append(val)
@@ -145,7 +143,6 @@ class Generator:
         accumulator = 0
         data_episodes = len(data)
         datas_steps = len(data['reset']) - 1
-        # print(f"Current data step: {datas_steps}")
 
         # save data as npz
         if np.random.rand() < 0.0: # 0.2
