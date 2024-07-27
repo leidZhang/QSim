@@ -13,7 +13,7 @@ class EpisodeMonitor:
 
     def __call__(self, action: np.ndarray, orig: np.ndarray) -> None:
         result: int = 1
-        if action[0] >= 0.045 and np.array_equal(orig, self.start_orig):
+        if action[0] >= 0.030 and np.array_equal(orig, self.start_orig):
             result: int = 0
 
         if self.queue.full():

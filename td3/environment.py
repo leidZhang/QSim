@@ -82,6 +82,7 @@ class WaypointEnvironment(QLabEnvironment):
         episode_done: bool = self.episode_steps >= self.max_episode_steps
         observation, reward, info = self.init_step_params()
         action: np.ndarray = self.vehicle.execute(action)
+        # print(f"Action: {action}")
         # time.sleep(0.05)  # sleep for 0.05 seconds
 
         # extra obs info
