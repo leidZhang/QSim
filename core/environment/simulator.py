@@ -11,7 +11,7 @@ from qvl.actor import QLabsActor
 from qvl.real_time import QLabsRealTime
 import pal.resources.rtmodels as rtmodels
 
-from core.roadmap.director import ACCDirector
+from core.roadmap import ACCDirector
 from core.roadmap.constants import ACC_X_OFFSET, ACC_Y_OFFSET
 from core.qcar.vehicle import VirtualCar
 
@@ -27,21 +27,9 @@ class Simulator:
 
 
 class QLabSimulator(Simulator):
-    """
-    This class is responsible for creating qlab actors and rendering the map for the simulation.
-    
-    Attributes:
-    - dt: float: The time step of the simulation
-    - qcar_id: int: The id of the car
-    - offsets: Tuple[float]: The offsets of the car
-    - qlabs: QuanserInteractiveLabs: The QuanserInteractiveLabs object
-    - vehicles: Dict[int, VirtualCar]: The dictionary of vehicles
-    - regions: Dict[str, np.ndarray]: The dictionary of regions
-    """
-
     def __init__(self, offsets: Tuple[float], qcar_id: int = 0) -> None:
         """
-        Initializes the QLabSimulator object.
+        Initializes the QLabSimulator object
 
         Parameters:
         - dt: float: The time step of the simulation
@@ -70,6 +58,18 @@ class QLabSimulator(Simulator):
         director: ACCDirector = ACCDirector(self.qlabs, self.offsets)
         self.actors: Dict[str, QLabsActor] = director.build_map()
         self.set_regions()
+
+        # spawn a new car
+        car: QLabsQCar = self.actors['cars'][0]         
+        car.spawn_id(
+            actorNumber=self.qcar_id,
+            location=[0, 0, 0],
+            rotation=[0, 0, 0],
+            scale=[.1, .1, .1],
+            configuration=0,
+            waitForConfirmation=True
+        )        
+
         time.sleep(2) # cool down time for the car to spawn
         # self.init_actor_states()
 
@@ -80,26 +80,29 @@ class QLabSimulator(Simulator):
         Parameters:
         - qcar_view: int: The view of the car
         """
-        QLabsRealTime().terminate_all_real_time_models()
+        # QLabsRealTime().terminate_all_real_time_models()
         # delete the old car
         car: QLabsQCar = self.actors['cars'][0]
-        car.destroy()
+        car.set_transform_and_request_state(
+            location=location,
+            rotation=orientation,
+            enableDynamics=True,
+            headlights=False,
+            leftTurnSignal=False,
+            rightTurnSignal=False,
+            reverseSignal=False,
+            brakeSignal=False,
+            waitForConfirmation=True
+        )
+        # car.destroy()
         # reset traffic light states
         traffic_lights: List[QLabsTrafficLight] = self.actors['traffic_lights']
         traffic_lights[0].set_state(QLabsTrafficLight.STATE_RED)
         traffic_lights[1].set_state(QLabsTrafficLight.STATE_GREEN)
-        # spawn a new car
-        car.spawn_id(
-            actorNumber=self.qcar_id,
-            location=location,
-            rotation=orientation,
-            scale=[.1, .1, .1],
-            configuration=0,
-            waitForConfirmation=True
-        )
+
         # car.possess(qcar_view)
-        time.sleep(1)
-        QLabsRealTime().start_real_time_model(rtmodels.QCAR_STUDIO)
+        # time.sleep(1)
+        # QLabsRealTime().start_real_time_model(rtmodels.QCAR_STUDIO)
         time.sleep(2) # wait for the state to change
         # self.init_actor_states()
 
@@ -113,12 +116,6 @@ class QLabSimulator(Simulator):
         self.waypoints: np.ndarray = waypoints
 
     def set_regions(self) -> None:
-        """
-        Set the regions for the stop signs and traffic lights
-
-        Returns:
-        - None
-        """
         # set the regions for the stop signs and traffic lights
         self.regions['stop_signs'] = np.stack([
             np.array([
