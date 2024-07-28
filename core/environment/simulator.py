@@ -11,7 +11,7 @@ from qvl.actor import QLabsActor
 from qvl.real_time import QLabsRealTime
 import pal.resources.rtmodels as rtmodels
 
-from core.roadmap import ACCDirector
+from core.roadmap.director import ACCDirector
 from core.roadmap.constants import ACC_X_OFFSET, ACC_Y_OFFSET
 from core.qcar.vehicle import VirtualCar
 
@@ -73,7 +73,31 @@ class QLabSimulator(Simulator):
         time.sleep(2) # cool down time for the car to spawn
         # self.init_actor_states()
 
-    def reset_map(self, location: list, orientation: float, qcar_view: int = 6) -> None:
+    def add_car(self, location: list, orientation: list) -> None:
+        car: QLabsQCar = QLabsQCar(self.qlabs)
+        car.spawn_id(
+            actorNumber=len(self.actors['cars']),
+            location=location,
+            rotation=orientation,
+            scale=[.1, .1, .1],
+            configuration=0,
+            waitForConfirmation=True
+        )
+        car.set_transform_and_request_state(
+            location=location,
+            rotation=orientation,
+            enableDynamics=True,
+            headlights=False,
+            leftTurnSignal=False,
+            rightTurnSignal=False,
+            reverseSignal=False,
+            brakeSignal=False,
+            waitForConfirmation=True
+        )
+        time.sleep(2) # cool down time for the car to spawn
+        self.actors['cars'].append(car)        
+
+    def reset_map(self, location: list, orientation: list, qcar_view: int = 6) -> None:
         """
         Resets the actors in the map
 
