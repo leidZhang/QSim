@@ -58,6 +58,18 @@ class QLabSimulator(Simulator):
         director: ACCDirector = ACCDirector(self.qlabs, self.offsets)
         self.actors: Dict[str, QLabsActor] = director.build_map()
         self.set_regions()
+
+        # spawn a new car
+        car: QLabsQCar = self.actors['cars'][0]         
+        car.spawn_id(
+            actorNumber=self.qcar_id,
+            location=[0, 0, 0],
+            rotation=[0, 0, 0],
+            scale=[.1, .1, .1],
+            configuration=0,
+            waitForConfirmation=True
+        )        
+
         time.sleep(2) # cool down time for the car to spawn
         # self.init_actor_states()
 
@@ -68,26 +80,29 @@ class QLabSimulator(Simulator):
         Parameters:
         - qcar_view: int: The view of the car
         """
-        QLabsRealTime().terminate_all_real_time_models()
+        # QLabsRealTime().terminate_all_real_time_models()
         # delete the old car
         car: QLabsQCar = self.actors['cars'][0]
-        car.destroy()
+        car.set_transform_and_request_state(
+            location=location,
+            rotation=orientation,
+            enableDynamics=True,
+            headlights=False,
+            leftTurnSignal=False,
+            rightTurnSignal=False,
+            reverseSignal=False,
+            brakeSignal=False,
+            waitForConfirmation=True
+        )
+        # car.destroy()
         # reset traffic light states
         traffic_lights: List[QLabsTrafficLight] = self.actors['traffic_lights']
         traffic_lights[0].set_state(QLabsTrafficLight.STATE_RED)
         traffic_lights[1].set_state(QLabsTrafficLight.STATE_GREEN)
-        # spawn a new car
-        car.spawn_id(
-            actorNumber=self.qcar_id,
-            location=location,
-            rotation=orientation,
-            scale=[.1, .1, .1],
-            configuration=0,
-            waitForConfirmation=True
-        )
+
         # car.possess(qcar_view)
-        time.sleep(1)
-        QLabsRealTime().start_real_time_model(rtmodels.QCAR_STUDIO)
+        # time.sleep(1)
+        # QLabsRealTime().start_real_time_model(rtmodels.QCAR_STUDIO)
         time.sleep(2) # wait for the state to change
         # self.init_actor_states()
 
