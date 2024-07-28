@@ -1,1 +1,0 @@
-START_NODE: int = 20
