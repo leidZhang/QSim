@@ -52,13 +52,18 @@ class WaypointEnvironment(QLabEnvironment):
         # FORWARD_REWARD V1
         pos = self.vehicle.current_waypoint_index
 
-        forward_reward = (pos - self.pre_pos) * 0.125
-        # print(f"FORWARD_REWARD REWARD {forward_reward}")
+        forward_reward = (pos - self.pre_pos) * 0.22
+        # print(f"FORWARD reward {forward_reward}")
         reward += forward_reward
 
         b05_reward = -max(0.0, 1.3 * (pos - self.pre_pos) * (norm_dist[dist_ix] - 0.031))
-        # print(f"0.05 Boundary Reward: {b05_reward}")
+        # print(f"Deviation penalty: {b05_reward}")
         reward += b05_reward
+
+        # SPEED_REWARD
+        speed_reward = ( action[0] - 0.04 ) * 4
+        # print(f'Speed reward: {speed_reward}')
+        reward += speed_reward
 
         self.pre_pos = pos
         self.prev_dist = norm_dist[dist_ix]  # Update the previous distance

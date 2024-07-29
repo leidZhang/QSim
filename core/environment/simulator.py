@@ -100,7 +100,7 @@ class QLabSimulator(Simulator):
         traffic_lights[0].set_state(QLabsTrafficLight.STATE_RED)
         traffic_lights[1].set_state(QLabsTrafficLight.STATE_GREEN)
 
-        # car.possess(qcar_view)
+        car.possess(qcar_view)
         # time.sleep(1)
         # QLabsRealTime().start_real_time_model(rtmodels.QCAR_STUDIO)
         time.sleep(2) # wait for the state to change

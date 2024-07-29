@@ -24,12 +24,11 @@ RECOVER_INDICES: list = [0, 6, 8]
 
 # settings
 DEFAULT_MAX_STEPS: int = 2000
-PREFILL = 5000
+PREFILL = 10000
 batch_size: int = 512
 # PREFILL: int = 3_400_000
-RUN_ID = ''
-# RUN_ID = '9bc59b35e44844a6a4ba79993f615ea1'
-# RUN_ID: str = '9e2db53711c744888cdb3140ef44536c'
+# RUN_ID = ''
+RUN_ID: str = ''
 action_v: float = 0.08
 cuda: str = "cuda:1"
 # start_point = 1700

@@ -65,8 +65,8 @@ class CollectionWrapper(Wrapper):
                         counter[k] += 1
                     if t[k] is not None:
                         data.append(t[k])
-            print(f'counter of {k}: {counter[k]}')
-            print(f'len of {k}: {len(data)}')
+            # print(f'counter of {k}: {counter[k]}')
+            # print(f'len of {k}: {len(data)}')
             # print("Data type:", type(data))
             # print("Data: ", data)
             # print("Data shape:", np.array(data).shape)
