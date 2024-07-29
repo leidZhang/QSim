@@ -57,11 +57,12 @@ class VirtualRuningGear:
     FCN_QCAR_SET_VELOCITY_AND_REQUEST_STATE = 10
     FCN_QCAR_VELOCITY_STATE_RESPONSE = 11
 
-    def __init__(self, class_id: int, actor_number: int) -> None:
+    def __init__(self, class_id: int, actor_number: int, qlabs: QuanserInteractiveLabs) -> None:
+        self.qlabs: QuanserInteractiveLabs = qlabs
         self.class_id: int = class_id
         self.actor_number: int = actor_number
 
-    def read_write_std(self, qlabs: QuanserInteractiveLabs, throttle, steering, leds=None) -> None:
+    def read_write_std(self, throttle, steering, leds=None) -> None:
         c = CommModularContainer()
         c.classID = self.class_id
         c.actorNumber = self.actor_number       
@@ -74,10 +75,10 @@ class VirtualRuningGear:
         frontHit = False
         rearHit = False
 
-        qlabs.flush_receive()
+        self.qlabs.flush_receive()
 
-        if (qlabs.send_container(c)):
-            c = qlabs.wait_for_container(self.class_id, self.actor_number, self.FCN_QCAR_VELOCITY_STATE_RESPONSE)
+        if (self.qlabs.send_container(c)):
+            c = self.qlabs.wait_for_container(self.class_id, self.actor_number, self.FCN_QCAR_VELOCITY_STATE_RESPONSE)
 
             if (c == None):
                 print("No response from QCar")

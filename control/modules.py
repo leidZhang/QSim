@@ -1,12 +1,14 @@
-from typing import Tuple, Any
 import time
+from typing import Union
 
 import cv2
 import numpy as np
 
+from pal.products.qcar import QCar
 from qvl.qlabs import QuanserInteractiveLabs
 from pal.utilities.math import Calculus
 from core.qcar import VirtualCar, VirtualCSICamera
+from core.qcar.virtual import VirtualRuningGear
 from core.qcar.constants import WHEEL_RADIUS, ENCODER_COUNTS_PER_REV, PIN_TO_SPUR_RATIO
 from core.utils.performance import elapsed_time
 from system.settings import MAX_LOOKAHEAD_INDICES, RESOLUTION
@@ -25,8 +27,11 @@ class WaypointCar(VirtualCar):
         self.diff = Calculus().differentiator_variable(dt)
         _ = next(self.diff)
         super().__init__(actor_id, dt, qlabs, throttle_coeff, steering_coeff)
-        self.front_csi: VirtualCSICamera = VirtualCSICamera(id=3)
+        # self.front_csi: VirtualCSICamera = VirtualCSICamera(id=3)
         self.observation: dict = {}
+
+    def set_running_gear(self, running_gear: Union[QCar, VirtualRuningGear]) -> None:
+        self.running_gear = running_gear
 
     def handle_observation(self, orig: np.ndarray, rot: np.ndarray, image) -> None:
         # in case of less than 200 waypoints
@@ -35,11 +40,13 @@ class WaypointCar(VirtualCar):
             self.next_waypoints = np.concatenate([self.next_waypoints, self.waypoints[:slop]])
         # add waypoints info to observation
         # print(f'before convert of close waypoint: {self.next_waypoints[0]}')
+        self.observation['state'] = self.ego_state
         self.observation['waypoints'] = np.matmul(self.next_waypoints[:MAX_LOOKAHEAD_INDICES] - orig, rot)
-        self.observation['image'] = cv2.resize(image, RESOLUTION).astype(np.float32) / 255.0
+        # self.observation['image'] = cv2.resize(image, RESOLUTION).astype(np.float32) / 255.0
 
     def setup(self, waypoints: np.ndarray, init_waypoint_index: int = 0) -> None:
-        image: np.ndarray = self.front_csi.await_image()  # init image till image is not none
+        # image: np.ndarray = self.front_csi.await_image()  # init image till image is not none
+        image = np.zeros((480, 640, 3))
         self.waypoints: np.ndarray = waypoints
         self.ego_state: np.ndarray = self.get_ego_state()
         orig, _, rot = self.cal_vehicle_state(self.ego_state)
@@ -71,17 +78,29 @@ class WaypointCar(VirtualCar):
         encoder_counts: np.ndarray = self.running_gear.motorEncoder
         encoder_speed: float = self.diff.send((encoder_counts[0], self.monitor.dt))
         return encoder_speed * (1 / (ENCODER_COUNTS_PER_REV * 4) * PIN_TO_SPUR_RATIO * 2 * np.pi * WHEEL_RADIUS)
+    
+    def check_task_completion(self) -> None:
+        if self.current_waypoint_index >= len(self.waypoints) - 30:
+            self.running_gear.read_write_std(0, 0)
+            time.sleep(2)            
+            self.setup(self.waypoints, 0)    
+
+            # self.next_waypoints = np.concatenate([self.waypoints[self.current_waypoint_index:], self.waypoints])
+            # self.waypoints = self.next_waypoints # update the waypoints
+            # self.current_waypoint_index = 0 # reset the current waypoint index
 
     def execute(self, action: np.ndarray) -> np.ndarray:
         start_time: float = time.time()
         # TODO: counter for the number of steps we skip
-        image: np.ndarray = self.front_csi.await_image()  # update image till image is not none
+        # image: np.ndarray = self.front_csi.await_image()  # update image till image is not none
+        image = np.zeros((480, 640, 3))
         # execute the control
         throttle, steering = super().execute(action)
-        # print(f'steering: {steering}')
+        # print(f'steering: {steering}')   
+        self.check_task_completion()   
         self.update_state(image)
         # calculate the estimated speed
-        linear_speed: float = self.estimate_speed()
+        # linear_speed: float = self.estimate_speed()
         # calculate the sleep time
         execute_time: float = elapsed_time(start_time)
         sleep_time: float = self.monitor.dt - execute_time
