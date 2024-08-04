@@ -42,7 +42,7 @@ class WaypointEnvironment(QLabEnvironment):
 
     #     return reward, done
 
-    def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state, dist_ix) -> tuple:
+    def handle_reward(self, action: list, norm_dist: np.ndarray, ego_state, dist_ix, collision_bool) -> tuple:
         # sys.stdout.write(f"\rAction: {action}, Position: {ego_state[:2]}, Start: {self.start_orig}")
         # sys.stdout.flush()
         self.detector(action=action, orig=ego_state[:2])
@@ -68,8 +68,15 @@ class WaypointEnvironment(QLabEnvironment):
         self.pre_pos = pos
         self.prev_dist = norm_dist[dist_ix]  # Update the previous distance
 
+        # Collision Penalty
+        if collision_bool:
+            collision_penalty = -40
+            reward += collision_penalty
+            done = True
+            self.vehicle.halt()  # stop the car
+
         # Max boundary
-        if norm_dist[dist_ix] >= 0.20:
+        if norm_dist[dist_ix] >= 0.20 or collision_bool:
             # max_boundary_reward = -44
             # print(f'max_boundary_reward {max_boundary_reward}')
             # reward += max_boundary_reward
@@ -102,7 +109,7 @@ class WaypointEnvironment(QLabEnvironment):
             norm_dist: np.ndarray = self.vehicle.norm_dist
             dist_ix: int = self.vehicle.dist_ix
             reward, reward_done = self.handle_reward(
-                action, norm_dist, ego_state, dist_ix
+                action, norm_dist, ego_state, dist_ix, collision_bool
             )
             episode_done = episode_done or reward_done
 
