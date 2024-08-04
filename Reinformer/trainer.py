@@ -68,6 +68,7 @@ class ReinFormerTrainer:
         returns_to_go,
         rewards,
         traj_mask,
+        images,  # 增加：图像输入
     ):
         self.model.train()
         # data to gpu ------------------------------------------------
@@ -83,6 +84,7 @@ class ReinFormerTrainer:
             dim=-1
         )                                          # B x T x 1
         traj_mask = traj_mask.to(self.device)      # B x T
+        images = images.to(self.device)  # 增加：将图像数据移到GPU
 
         # model forward ----------------------------------------------
         (
@@ -94,6 +96,7 @@ class ReinFormerTrainer:
             states=states,
             actions=actions,
             returns_to_go=returns_to_go,
+            images=images,  # 增加：传递图像数据
         )
 
         returns_to_go_target = torch.clone(returns_to_go).view(

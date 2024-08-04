@@ -122,6 +122,10 @@ class D4RLTrajectoryDataset(Dataset):
             # all ones since no padding
             traj_mask: torch.Tensor = torch.ones(self.context_len, dtype=torch.long)
 
+            images: torch.Tensor = torch.from_numpy(
+                traj["images"][si : si + self.context_len]
+            )  # 增加：加载图像数据
+
         else:
             padding_len: int = self.context_len - traj_len
 
@@ -196,6 +200,18 @@ class D4RLTrajectoryDataset(Dataset):
                 dim=0,
             )
 
+        images: torch.Tensor = torch.from_numpy(traj["images"])  # 增加：加载图像数据
+        images = torch.cat(
+            [
+                images,
+                torch.zeros(
+                    ([padding_len] + list(images.shape[1:])),
+                    dtype=images.dtype,
+                ),
+            ],
+            dim=0,
+        )  # 增加：对图像数据进行零填充
+
         return (
             timesteps,
             states,
@@ -204,4 +220,5 @@ class D4RLTrajectoryDataset(Dataset):
             returns_to_go,
             rewards,
             traj_mask,
+            images,  # 增加：返回图像数据
         )

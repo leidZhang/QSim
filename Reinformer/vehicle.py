@@ -45,17 +45,26 @@ class ReinformerPolicy(PTPolicy):
             dtype=torch.float32,
             device=device,
         )
+        self.images: torch.Tensor = torch.zeros(  # 增加：初始化图像张量
+            (eval_batch_size, max_test_ep_len, 3, 84, 84),  # 假设图像大小为3x84x84
+            dtype=torch.float32,
+            device=device,
+        )
 
     def execute(self, observation: dict) -> Tuple[np.ndarray, dict]:
         observation_shape = self.states[0, self.step_counter].shape
         self.states[0, self.step_counter] = torch.from_numpy(observation['waypoints'].reshape(observation_shape)).to(self.device)
         self.states[0, self.step_counter] = (self.states[0, self.step_counter] - self.state_mean) / self.state_std
+
+        self.images[0, self.step_counter] = torch.from_numpy(observation['image']).to(self.device)  # 增加：处理图像数据
+
         if self.step_counter < self.context_len:
             _, action_predict, _ = self.model.forward(
                 self.timesteps[:, :self.context_len],
                 self.states[:, :self.context_len],
                 self.actions[:, :self.context_len],
                 self.returns_to_go[:, :self.context_len],
+                self.images[:, :self.context_len],  # 增加：传递图像数据
             )
         else:
             _, action_predict, _ = self.model.forward(
@@ -63,6 +72,7 @@ class ReinformerPolicy(PTPolicy):
                 self.states[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
                 self.actions[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
                 self.returns_to_go[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],
+                self.images[:, self.step_counter - self.context_len + 1 : self.step_counter + 1],  # 增加：传递图像数据
             )
         action: torch.Tensor = action_predict.mean.reshape(1, -1, self.act_dim)[0, -1].detach()
         self.step_counter += 1

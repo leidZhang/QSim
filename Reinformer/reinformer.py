@@ -29,6 +29,20 @@ class ReinFormer(nn.Module):
 
         ### transformer blocks
         self.num_inputs = 3
+
+        # 增加：定义卷积神经网络来处理图像
+        self.conv_net = nn.Sequential(
+            nn.Conv2d(in_channels=3, out_channels=32, kernel_size=8, stride=4),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=4, stride=2),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1),
+            nn.ReLU(),
+            nn.Flatten(),
+            nn.Linear(64 * 7 * 7, h_dim),
+            nn.ReLU(),
+        )
+
         input_seq_len = self.num_inputs * context_len
         blocks = [
             Block(
@@ -72,6 +86,7 @@ class ReinFormer(nn.Module):
         states, 
         actions, 
         returns_to_go,
+        images,  # 增加：图像输入
     ):
 
         B, T, _ = states.shape  # B: batch size T: time steps
@@ -82,12 +97,19 @@ class ReinFormer(nn.Module):
         action_embeddings = self.embed_action(actions.float()) + time_embeddings
         rtg_embeddings = self.embed_rtg(returns_to_go.float()) + time_embeddings
 
+        # 增加：处理图像观测
+        image_features = self.conv_net(images.view(-1, 3, 84, 84))
+        image_embeddings = image_features.view(B, T, -1) + time_embeddings
+
+        # 将图像嵌入与状态嵌入结合
+        combined_embeddings = state_embeddings + image_embeddings
+
         # stack states, RTGs, and actions and reshape sequence as
         # (s_0, R_0, a_0, s_1, R_1, a_1, s_2, R_2, a_2 ...)
         h = (
             torch.stack(
                 (
-                    state_embeddings,
+                    combined_embeddings,  # 修改：使用结合后的嵌入,
                     rtg_embeddings,
                     action_embeddings,
                 ),
