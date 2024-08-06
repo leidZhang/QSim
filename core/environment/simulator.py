@@ -64,7 +64,7 @@ class QLabSimulator(Simulator):
         car.spawn_id(
             actorNumber=self.qcar_id,
             location=[0, 0, 0],
-            rotation=[0, 0, 0],
+            rotation=[0, 0, np.pi],
             scale=[.1, .1, .1],
             configuration=0,
             waitForConfirmation=True
@@ -73,16 +73,8 @@ class QLabSimulator(Simulator):
         time.sleep(2) # cool down time for the car to spawn
         # self.init_actor_states()
 
-    def add_car(self, location: list, orientation: list) -> None:
-        car: QLabsQCar = QLabsQCar(self.qlabs)
-        car.spawn_id(
-            actorNumber=len(self.actors['cars']),
-            location=location,
-            rotation=orientation,
-            scale=[.1, .1, .1],
-            configuration=0,
-            waitForConfirmation=True
-        )
+    def move_car(self, id, location: list, orientation: list) -> None:
+        car: QLabsQCar = self.actors['cars'][id]
         car.set_transform_and_request_state(
             location=location,
             rotation=orientation,
@@ -94,8 +86,34 @@ class QLabSimulator(Simulator):
             brakeSignal=False,
             waitForConfirmation=True
         )
+
+    def add_car(self, location: list, orientation: list) -> None:
+        car: QLabsQCar = QLabsQCar(self.qlabs)
+        new_id: int = len(self.actors['cars'])
+        car.spawn_id(
+            actorNumber=new_id,
+            location=location,
+            rotation=orientation,
+            scale=[.1, .1, .1],
+            configuration=0,
+            waitForConfirmation=True
+        )
+        print(f"Add new car {new_id}")
+        self.actors['cars'].append(car)         
+        self.move_car(new_id, location, orientation) 
+        # car.set_transform_and_request_state(
+        #     location=location,
+        #     rotation=orientation,
+        #     enableDynamics=True,
+        #     headlights=False,
+        #     leftTurnSignal=False,
+        #     rightTurnSignal=False,
+        #     reverseSignal=False,
+        #     brakeSignal=False,
+        #     waitForConfirmation=True
+        # )
         time.sleep(2) # cool down time for the car to spawn
-        self.actors['cars'].append(car)        
+      
 
     def reset_map(self, location: list, orientation: list, qcar_view: int = 6) -> None:
         """
@@ -106,18 +124,19 @@ class QLabSimulator(Simulator):
         """
         # QLabsRealTime().terminate_all_real_time_models()
         # delete the old car
-        car: QLabsQCar = self.actors['cars'][0]
-        car.set_transform_and_request_state(
-            location=location,
-            rotation=orientation,
-            enableDynamics=True,
-            headlights=False,
-            leftTurnSignal=False,
-            rightTurnSignal=False,
-            reverseSignal=False,
-            brakeSignal=False,
-            waitForConfirmation=True
-        )
+        self.move_car(0, location, orientation)
+        # car: QLabsQCar = self.actors['cars'][0]
+        # car.set_transform_and_request_state(
+        #     location=location,
+        #     rotation=orientation,
+        #     enableDynamics=True,
+        #     headlights=False,
+        #     leftTurnSignal=False,
+        #     rightTurnSignal=False,
+        #     reverseSignal=False,
+        #     brakeSignal=False,
+        #     waitForConfirmation=True
+        # )
         # car.destroy()
         # reset traffic light states
         traffic_lights: List[QLabsTrafficLight] = self.actors['traffic_lights']

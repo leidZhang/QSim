@@ -1,31 +1,25 @@
 import os
-from typing import Tuple, List
+from typing import List
 
-import torch
+# training settings
+EGO_VEHICLE_TASK: List[int] = [10, 2, 4, 6, 8, 10]
+BOT_TASKS: List[List[int]] = [
+    [23, 21, 16, 18, 11, 12, 8],
+    [1, 13, 19, 17, 15, 5, 3, 1],
+]
+DT: float = 0.03
+COLLISION_PENALTY: float = -40
 
-MODEL_TYPE: str = "Reinformer"
-DATASET_DIR: str = "assets"
-CONTEXT_LEN: int = 40
-N_BLOCKS: int = 4
-EMBED_DIM: int = 512
-N_HEADS: int = 2
-DROPOUT_P: float = 0.1
-GRAD_NORM: float = 0.25
-TAU: float = 0.99
-BATCH_SIZE: int = 64
-LR: float = 1e-4
-WD: float = 1e-4
-WARMUP_STEPS: int = 5000
-MAX_TRAIN_ITERS: int = 10
-NUM_UPDATES_PER_ITER: int = 5000
-DEVICE: str = "cuda:1" if torch.cuda.is_available() else "cpu"
-SEED: int = 2024
-INIT_TEMPERATURE: float = 0.1
-USE_WANDB: bool = True
-STATE_DIM: int = 400
-ACT_DIM: int = 2
-MODEL_PATH: str = os.path.join(os.getcwd(), "Reinformer/models/latest_checkpoint.pt")
+# network settings
+IP: str = '127.0.0.1'
+PORTS: List[int] = [5000, 5001, 5002] # acotr ports
+ENV_PORT: int = 8080
+HITL_PORT: int = 8081
+SUCCESS_CODE: int = 200
+FAIL_CODE: int = 400
 
-MAX_LOOKAHEAD_INDICES: int = 200
-RESOLUTION: Tuple[int, int] = (84, 84)
-TASK: List[int] = [10, 2, 4, 6, 8, 10]
+# file settings
+PROJECT_DIR: str = os.getcwd()
+NPZ_DIR: str = os.path.join(PROJECT_DIR, 'assets/npz')
+WEIGHT_DIR: str = os.path.join(PROJECT_DIR, 'assets/model')
+WEIGHT_FILENAME: str = 'last_checkpoint.pt'
