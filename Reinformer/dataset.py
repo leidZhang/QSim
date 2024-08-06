@@ -200,17 +200,17 @@ class D4RLTrajectoryDataset(Dataset):
                 dim=0,
             )
 
-        images: torch.Tensor = torch.from_numpy(traj["images"])  # 增加：加载图像数据
-        images = torch.cat(
-            [
-                images,
-                torch.zeros(
-                    ([padding_len] + list(images.shape[1:])),
-                    dtype=images.dtype,
-                ),
-            ],
-            dim=0,
-        )  # 增加：对图像数据进行零填充
+            images: torch.Tensor = torch.from_numpy(traj["images"])  # 增加：加载图像数据
+            images = torch.cat(
+                [
+                    images,
+                    torch.zeros(
+                        ([padding_len] + list(images.shape[1:])),
+                        dtype=images.dtype,
+                    ),
+                ],
+                dim=0,
+            )  # 增加：对图像数据进行零填充
 
         return (
             timesteps,
