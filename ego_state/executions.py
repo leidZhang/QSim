@@ -30,6 +30,9 @@ class RelayExecutor:
     def get_ego_states(self) -> None:
         return self.wrapper.get_ego_states()
     
+    def set_early_stop(self, early_stop: bool) -> None:
+        self.wrapper.early_stop = early_stop
+    
     def terminate(self) -> None:
         self.done = True
         self.wrapper.terminate()

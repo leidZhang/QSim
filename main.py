@@ -5,16 +5,16 @@ from multiprocessing import Queue
 
 import numpy as np
 
-from hitl import run_hitl
-from env import env
-from ego_state import relay, relay_thread
+# from hitl import run_hitl
+# from env import env
+# from ego_state import relay, relay_thread
 from system import app
 from system.routes import setup_routes
 from system.settings import IP, ENV_PORT
 
 
 def main() -> None:
-    setup_routes()
+    setup_routes(app)
     app.run(debug=False, host=IP, port=ENV_PORT)
 
     # print("Starting relay...")

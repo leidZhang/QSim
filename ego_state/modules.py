@@ -16,6 +16,7 @@ from system.settings import DT, IP, PORTS, ENV_PORT
 
 class EgoStateRelay:
     def __init__(self) -> None:
+        self.early_stop: bool = False
         self.ego_states: List[np.ndarray] = [np.zeros(6) for _ in range(len(PORTS))]
         self.qlabs: QuanserInteractiveLabs = QuanserInteractiveLabs()
         self.qlabs.open("localhost") # connect to the server
@@ -32,11 +33,13 @@ class EgoStateRelay:
         server.server_socket.sendto(serialized_data, server.address)
 
     def handle_read_ego_state(self) -> None:
-        self.monitors[0].read_state(self.qlabs)
-        state: np.ndarray = self.monitors[0].state
+        state: np.ndarray = np.full(6, np.nan)
+        if not self.early_stop:
+            self.monitors[0].read_state(self.qlabs)
+            state = self.monitors[0].state
         self._handle_send_data(self.servers[0], state)
         self.ego_states[0] = state
-        print(f"Car 0: {state}")
+        # print(f"Car 0: {state}")
 
     def handle_read_bot_state(self) -> None:
         for i in range(1, len(PORTS)):
@@ -44,7 +47,7 @@ class EgoStateRelay:
             state: np.ndarray = self.monitors[i].state
             self._handle_send_data(self.servers[i], state)
             self.ego_states[i] = state   
-            print(f"Car {i}: {state}")
+            # print(f"Car {i}: {state}")
 
     def handle_reset_signal(self) -> None:
         self._handle_send_data(self.servers[0], None)
