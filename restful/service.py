@@ -1,6 +1,7 @@
 import time
 import pickle
 from typing import Dict
+from threading import Lock
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -26,6 +27,7 @@ class IDataService(ABC):
 
 class DataService(IDataService):
     def __init__(self) -> None:
+        self.lock: Lock = Lock()
         self.env: RealWorldEnv = env
         self.relay: RelayExecutor = relay
         self.repository: IDataRepository = DataRepository() 
@@ -43,18 +45,21 @@ class DataService(IDataService):
         self.repository.handle_step_complete(reward, action)
         if done:
             print("Collision detected!")
-            self.handle_episode_complete() 
+            self._handle_reset_env() 
+
+    def _handle_reset_env(self) -> None:
+        print("Resetting the environment...")
+        self.relay.set_early_stop(True, self.lock) 
+        time.sleep(1)         
+        self.relay.set_early_stop(False, self.lock)           
 
     def handle_upload_step_data(self, data: bytes) -> None:
         step_data: Dict[str, np.ndarray] = pickle.loads(data)
         self.repository.handle_upload_step_data(step_data)
 
     def handle_episode_complete(self) -> None:
-        self.relay.set_early_stop(True)
-        print("Resetting the environment...")
-        _, reward, action = env.reset(self.relay)         
-        # print("Episode data received!")
-        # self.repository.handle_episode_complete()
-        self.relay.set_early_stop(False)
+        _, reward, action = env.reset(self.relay)  
+        self.repository.handle_episode_complete()
         print("Add initial step data to the repository...")
-        self.repository.handle_step_complete(reward, action) 
+        self.repository.handle_step_complete(reward, action)     
+     

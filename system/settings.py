@@ -7,7 +7,7 @@ BOT_TASKS: List[List[int]] = [
     [23, 21, 16, 18, 11, 12, 8],
     [1, 13, 19, 17, 15, 5, 3, 1],
 ]
-DT: float = 0.03
+DT: float = 0.005
 COLLISION_PENALTY: float = -40
 
 # network settings
