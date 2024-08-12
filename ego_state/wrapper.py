@@ -1,5 +1,9 @@
 import time
-from threading import Lock
+from queue import Queue
+from typing import List
+from threading import Event
+
+import numpy as np
 
 from system.settings import DT
 from .modules import EgoStateRelay
@@ -16,28 +20,30 @@ from .modules import EgoStateRelay
 #         print("Ego state relay terminated")
 
 
-class RelayExecutor:
+class RelayWrapper:
     def __init__(self) -> None:
         self.wrapper: EgoStateRelay = EgoStateRelay()
-        self.done: bool = False
+        # self.done: bool = False
 
-    def run(self) -> None:
-        while not self.done:
-            start: float = time.time()
+    def execute(self, state_queue: Queue, event: Event) -> None:
+        # while not self.done:
+        start: float = time.time()
+        if not event.is_set():
             self.wrapper.handle_read_ego_state()
-            self.wrapper.handle_read_bot_state()
-            end: float = time.time() - start
-            time.sleep(max(0.0, DT - end))
+        else:
+            self.wrapper.handle_reset_signal()
+        self.wrapper.handle_read_bot_state()
+        ego_states: List[np.ndarray] = self.get_ego_states()  
+        if event.is_set():
+            print(f"Ego state: {ego_states[0]}")  
+        if state_queue.full():
+            state_queue.get()
+        state_queue.put(ego_states)
+        end: float = time.time() - start
+        event.wait(max(0.0, DT - end))
 
     def get_ego_states(self) -> None:
         return self.wrapper.get_ego_states()
-    
-    def set_early_stop(self, early_stop: bool, lock: Lock) -> None:
-        with lock:
-            self.wrapper.early_stop = early_stop
-
-    def get_early_stop(self) -> bool:
-        return self.wrapper.early_stop
     
     def terminate(self) -> None:
         self.done = True

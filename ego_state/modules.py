@@ -32,11 +32,13 @@ class EgoStateRelay:
         serialized_data: bytes = pickle.dumps(data)  
         server.server_socket.sendto(serialized_data, server.address)
 
-    def handle_read_ego_state(self) -> None:
+    def handle_send_early_stop(self) -> None:
         state: np.ndarray = np.full(6, np.nan)
-        if not self.early_stop:
-            self.monitors[0].read_state(self.qlabs)
-            state = self.monitors[0].state
+        self._handle_send_data(self.servers[0], state)
+
+    def handle_read_ego_state(self) -> None:
+        self.monitors[0].read_state(self.qlabs)
+        state = self.monitors[0].state
         self._handle_send_data(self.servers[0], state)
         self.ego_states[0] = state
         # print(f"Car 0: {state}")
@@ -51,6 +53,7 @@ class EgoStateRelay:
 
     def handle_reset_signal(self) -> None:
         self._handle_send_data(self.servers[0], None)
+        self.ego_states[0] = None
 
     def get_ego_states(self) -> List[np.ndarray]:
         return self.ego_states

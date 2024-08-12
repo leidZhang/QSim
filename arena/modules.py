@@ -1,6 +1,6 @@
-import time
+from queue import Queue
 from copy import deepcopy
-from threading import Lock
+from threading import Event
 from typing import List, Tuple
 
 import numpy as np
@@ -8,8 +8,6 @@ import numpy as np
 from core.roadmap import ACCRoadMap
 from core.environment.simulator import QLabSimulator
 from system.settings import EGO_VEHICLE_TASK
-from ego_state.modules import EgoStateRelay
-from ego_state.executions import RelayExecutor
 from system.settings import COLLISION_PENALTY
 from .detectors import is_collided
 
@@ -79,9 +77,15 @@ class WaypointProcessor:
 
 # TODO: Implement the real world environment later
 class RealWorldEnv: 
-    def __init__(self, roadmap: ACCRoadMap, sim: QLabSimulator, start_poses: List[Tuple[List[float], List[float]]]) -> None:
-        self.lock: Lock = Lock()
+    def __init__(
+        self, 
+        roadmap: ACCRoadMap, 
+        sim: QLabSimulator, 
+        start_poses: List[Tuple[List[float], List[float]]], 
+        event: Event
+    ) -> None:
         self.sim: QLabSimulator = sim
+        self.event: Event = event
         self.start_poses: List[List[int]] = start_poses        
         self.sim.render_map() # render the map
         self.__generate_cars() # generate the cars
@@ -89,24 +93,27 @@ class RealWorldEnv:
 
     def __generate_cars(self) -> None:
         for i in range(1, len(self.start_poses)): # reset the bot cars
-            self.sim.add_car(self.start_poses[i][0], self.start_poses[i][1])         
+            self.sim.add_car(self.start_poses[i][0], self.start_poses[i][1])    
+
+    def reset_ego_vehicle(self) -> None:
+        self.sim.reset_map(self.start_poses[0][0], self.start_poses[0][1])             
 
     # TODO: change this method to reset the real world environment
-    def reset(self, relay: RelayExecutor) -> Tuple[bool, float, np.ndarray]:
+    def reset(self, state_queue: Queue) -> Tuple[bool, float, np.ndarray]:
+        print("Resetting the environment...")
         # reset the ego vehicle position
-        self.sim.reset_map(self.start_poses[0][0], self.start_poses[0][1])        
+        self.reset_ego_vehicle()
         # reset the waypoint processor                
-        ego_states: List[np.ndarray] = self.get_ego_states(relay)
+        ego_states: List[np.ndarray] = state_queue.get()
         self.waypoint_processor.setup(0, ego_states[0])
         self.last_waypoint_index: int = 0
         return False, 0, np.zeros(2) # done, rewards, actions
     
-    def get_ego_states(self, relay: RelayExecutor) -> List[np.ndarray]:
-        with self.lock: # 0: ego vehicle, 1-2: bot car
-            poses: List[np.ndarray] = relay.get_ego_states()
-        return poses
-    
-    def handle_reward(self, action: np.ndarray, poses: List[np.ndarray]) -> Tuple[bool, float]:
+    def handle_reward(
+        self, 
+        action: np.ndarray, 
+        poses: List[np.ndarray], 
+    ) -> Tuple[bool, float]:
         # calculate the collision penalty        
         for bot_poses in poses[1:]:
             orig_1: np.ndarray = poses[0][:2]
@@ -114,6 +121,7 @@ class RealWorldEnv:
             orig_2: np.ndarray = bot_poses[:2]
             yaw_2: float = -bot_poses[2]
             if is_collided(orig_1, yaw_1, orig_2, yaw_2):
+                self.event.set() # set the early stop event
                 return True, COLLISION_PENALTY        
 
         # calculate the progress reward
@@ -130,8 +138,8 @@ class RealWorldEnv:
 
         return self.waypoint_processor.is_completed(), reward
     
-    def step(self, action: np.ndarray, relay: RelayExecutor) -> Tuple[bool, float, np.ndarray]:
-        poses: List[np.ndarray] = self.get_ego_states(relay) # 0: ego vehicle, 1-2: bot car
+    def step(self, action: np.ndarray, state_queue: Queue) -> Tuple[bool, float, np.ndarray]:
+        poses: List[np.ndarray] = state_queue.get() # 0: ego vehicle, 1-2: bot car
         self.waypoint_processor.execute(poses[0]) # update the ego vehicle state info
         done, reward = self.handle_reward(action, poses)
         return done, reward, action

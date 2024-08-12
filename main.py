@@ -15,6 +15,7 @@ from system.settings import IP, ENV_PORT
 
 def main() -> None:
     setup_routes(app)
+    print("Starting server...")
     app.run(debug=False, host=IP, port=ENV_PORT)
 
     # print("Starting relay...")

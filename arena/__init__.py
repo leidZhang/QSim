@@ -1,4 +1,5 @@
 from typing import Tuple, List
+from threading import Event
 
 from core.roadmap import ACCRoadMap
 from core.environment.simulator import QLabSimulator
@@ -13,9 +14,10 @@ def get_pose(roadmap: ACCRoadMap, start_node: int) -> Tuple[List[float], List[fl
     return location, orientation
 
 
-roadmap: ACCRoadMap = ACCRoadMap()    
-sim: QLabSimulator = QLabSimulator((0, 0))
-poses: List[Tuple[List[float], List[float]]] = [get_pose(roadmap, EGO_VEHICLE_TASK[0])]
-for task in BOT_TASKS:
-    poses.append(get_pose(roadmap, task[0]))
-env: RealWorldEnv = RealWorldEnv(roadmap, sim, poses)
+def setup_env(stop_event: Event) -> RealWorldEnv:
+    roadmap: ACCRoadMap = ACCRoadMap()    
+    sim: QLabSimulator = QLabSimulator((0, 0))
+    poses: List[Tuple[List[float], List[float]]] = [get_pose(roadmap, EGO_VEHICLE_TASK[0])]
+    for task in BOT_TASKS:
+        poses.append(get_pose(roadmap, task[0]))
+    return RealWorldEnv(roadmap, sim, poses, stop_event)

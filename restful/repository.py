@@ -28,7 +28,7 @@ class DataRepository(IDataRepository): # DataModel
     def __init__(self):
         self.rewards: List[float] = []
         self.actions: List[np.ndarray] = []
-        self.episode_data: Dict[str, List[np.ndarray]] = {'sentinel': False}
+        self.episode_data: Dict[str, List[np.ndarray]] = {}
 
     def handle_step_complete(self, reward: float, action: np.ndarray) -> None:
         self.rewards.append(reward)
@@ -46,11 +46,14 @@ class DataRepository(IDataRepository): # DataModel
         filename: str = os.path.join(NPZ_DIR, f"{episode_uid}.npz")
         self.episode_data["reward"] = self.rewards
         self.episode_data["action"] = self.actions
+        for key, val in self.episode_data.items():
+            if len(val) > len(self.rewards):
+                self.episode_data[key] = val[:len(self.rewards)]
         self.episode_data["sentinel"] = True  # for data integrity checking
 
         with open(filename, 'wb') as f:
             np.savez(f, **self.episode_data)
         logging.info(f"{len(self.episode_data['image'])} steps written to {filename}")
-        self.episode_data = {'sentinel': False}
+        self.episode_data = {}
         return filename
     
