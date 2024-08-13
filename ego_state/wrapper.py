@@ -34,8 +34,8 @@ class RelayWrapper:
             self.wrapper.handle_reset_signal()
         self.wrapper.handle_read_bot_state()
         ego_states: List[np.ndarray] = self.get_ego_states()  
-        if event.is_set():
-            print(f"Ego state: {ego_states[0]}")  
+        # if event.is_set():
+        #     print(f"Ego state: {ego_states[0]}")  
         if state_queue.full():
             state_queue.get()
         state_queue.put(ego_states)

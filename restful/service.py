@@ -43,20 +43,17 @@ class DataService(IDataService):
         )
         relay_process.start() # start the relay thread
         print("Initializing environment...")
-        _, reward, action = self.env.reset(self.state_queue) # reset the environment
-        print("Add initial step data to the repository...")
-        self.repository.handle_step_complete(reward, action) 
+        _, _, _ = self.env.reset(self.state_queue) # reset the environment
+        # print("Add initial step data to the repository...")
+        # self.repository.handle_step_complete(reward, action) 
 
     def handle_step_complete(self, data: bytes) -> None:
-        if self.collision_event.is_set():
-            return
-
         action: np.ndarray = pickle.loads(data)
         done, reward, action = self.env.step(action, self.state_queue)
-        # print(f"Action: {action}, Reward: {reward}, Collision: {done}")
         self.repository.handle_step_complete(reward, action)
         if done:
             print("Collision detected!")
+            time.sleep(1)
             self.env.reset_ego_vehicle([10, 10, 0], [0, 0, 0])          
 
     def handle_upload_step_data(self, data: bytes) -> None:
