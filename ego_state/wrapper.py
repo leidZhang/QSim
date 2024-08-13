@@ -23,7 +23,7 @@ from .modules import EgoStateRelay
 class RelayWrapper:
     def __init__(self) -> None:
         self.wrapper: EgoStateRelay = EgoStateRelay()
-        # self.done: bool = False
+        self.flush_flag: bool = False
 
     def execute(self, state_queue: Queue, event: Event) -> None:
         # while not self.done:

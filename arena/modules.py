@@ -9,7 +9,7 @@ from core.roadmap import ACCRoadMap
 from core.environment.simulator import QLabSimulator
 from system.settings import EGO_VEHICLE_TASK
 from system.settings import COLLISION_PENALTY
-from .detectors import is_collided
+from .detectors import is_collided, EnvQCarRef
 
 MAX_LOOKAHEAD_INDICES: int = 200
 
@@ -89,20 +89,21 @@ class RealWorldEnv:
         self.start_poses: List[List[int]] = start_poses        
         self.sim.render_map() # render the map
         self.__generate_cars() # generate the cars
+        self.car_ref: EnvQCarRef = EnvQCarRef()
         self.waypoint_processor: WaypointProcessor = WaypointProcessor(roadmap, EGO_VEHICLE_TASK)
 
     def __generate_cars(self) -> None:
         for i in range(1, len(self.start_poses)): # reset the bot cars
             self.sim.add_car(self.start_poses[i][0], self.start_poses[i][1])    
 
-    def reset_ego_vehicle(self) -> None:
-        self.sim.reset_map(self.start_poses[0][0], self.start_poses[0][1])             
+    def reset_ego_vehicle(self, location: List[float], orientation: List[float]) -> None:
+        self.sim.reset_map(location=location, orientation=orientation)             
 
     # TODO: change this method to reset the real world environment
     def reset(self, state_queue: Queue) -> Tuple[bool, float, np.ndarray]:
         print("Resetting the environment...")
         # reset the ego vehicle position
-        self.reset_ego_vehicle()
+        self.reset_ego_vehicle(self.start_poses[0][0], self.start_poses[0][1])
         # reset the waypoint processor                
         ego_states: List[np.ndarray] = state_queue.get()
         self.waypoint_processor.setup(0, ego_states[0])
@@ -120,7 +121,7 @@ class RealWorldEnv:
             yaw_1: float = -poses[0][2]
             orig_2: np.ndarray = bot_poses[:2]
             yaw_2: float = -bot_poses[2]
-            if is_collided(orig_1, yaw_1, orig_2, yaw_2):
+            if is_collided(orig_1, yaw_1, orig_2, yaw_2, self.car_ref):
                 self.event.set() # set the early stop event
                 return True, COLLISION_PENALTY        
 

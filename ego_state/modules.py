@@ -52,6 +52,7 @@ class EgoStateRelay:
             # print(f"Car {i}: {state}")
 
     def handle_reset_signal(self) -> None:
+        print("Sending reset signal...")
         self._handle_send_data(self.servers[0], None)
         self.ego_states[0] = None
 

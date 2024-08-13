@@ -1,12 +1,15 @@
+from typing import List
+
 import numpy as np
 
+
 class EnvQCarRef:
-    def __init__(self, threshold: float = 0.01) -> None:
-        self.width: float = 0.21 + threshold / 2
-        self.length: float = 0.39 + threshold
+    def __init__(self, threshold: float = 0.07) -> None:
+        self.width: float = 0.40# 0.22
+        self.length: float = 0.22# 0.40
         self.corners = np.array([
-            [self.width/2, self.length/2],
-            [-self.width/2, self.length/2],
+            [self.width/2 + threshold, self.length/2],
+            [-self.width/2 + threshold, self.length/2],
             [-self.width/2, -self.length/2],
             [self.width/2, -self.length/2]
         ])
@@ -19,32 +22,41 @@ class EnvQCarRef:
         return orig + np.dot(self.corners, rot.T)
     
 
-def separating_axis_theorem(corners1, corners2) -> bool:
-    def get_axes(corners):
-        axes = []
-        for i in range(len(corners)):
-            p1 = corners[i]
-            p2 = corners[(i + 1) % len(corners)]
-            edge = p1 - p2
-            normal = np.array([-edge[1], edge[0]])
-            axes.append(normal)
-        return np.array(axes)
+def project_polygon(corner: np.ndarray, axis: List[float]) -> List[float]:
+    return [np.dot(corner, axis) for corner in corner]
 
-    axes = np.vstack([get_axes(corners1), get_axes(corners2)])
 
-    for axis in axes:
-        projection1 = np.dot(corners1, axis)
-        projection2 = np.dot(corners2, axis)
-        if max(projection1) < min(projection2) or max(projection2) < min(projection1):
+def overlap(proj_1: List[float], proj_2: List[float]) -> bool:
+    return max(proj_1) >= min(proj_2) and max(proj_2) > min(proj_1)
+
+
+def get_axes(corners: np.ndarray) -> List[float]:
+    axes: List[float] = []
+    for i in range(len(corners)):
+        p1: float = corners[i]
+        p2: float = corners[(i + 1) % len(corners)]
+        edge: float = p2 - p1
+        normal = np.array([-edge[1], edge[0]])  # Perpendicular vector
+        axes.append(normal / np.linalg.norm(normal))  # Normalize the axis
+    return axes
+
+
+def separating_axis_therem(corners_1: np.ndarray, corners_2: np.ndarray) -> bool:
+    axes_1: List[float] = get_axes(corners_1)
+    axes_2: List[float] = get_axes(corners_2)
+    for axis in axes_1 + axes_2:
+        proj_1: List[float] = project_polygon(corners_1, axis)
+        proj_2: List[float] = project_polygon(corners_2, axis)
+        if not overlap(proj_1, proj_2):
             return False
     return True
 
 
-def is_collided(orig_1, yaw_1, orig_2, yaw_2):
-    corners_1 = EnvQCarRef().get_corners(orig_1, yaw_1)
-    corners_2 = EnvQCarRef().get_corners(orig_2, yaw_2)
-    return separating_axis_theorem(corners_1, corners_2)
-
+def is_collided(orig_1, yaw_1, orig_2, yaw_2, actor_type: EnvQCarRef):
+    corners_1 = actor_type.get_corners(orig_1, yaw_1)
+    corners_2 = actor_type.get_corners(orig_2, yaw_2)
+    return separating_axis_therem(corners_1, corners_2)
+    
 
 if __name__ == "__main__":
     orig_1 = np.array([0, 0])

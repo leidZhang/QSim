@@ -57,7 +57,7 @@ class DataService(IDataService):
         self.repository.handle_step_complete(reward, action)
         if done:
             print("Collision detected!")
-            self.env.reset_ego_vehicle()          
+            self.env.reset_ego_vehicle([10, 10, 0], [0, 0, 0])          
 
     def handle_upload_step_data(self, data: bytes) -> None:
         step_data: Dict[str, np.ndarray] = pickle.loads(data)
