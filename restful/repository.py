@@ -47,6 +47,9 @@ class DataRepository(IDataRepository): # DataModel
         self.episode_data["reward"] = self.rewards
         self.episode_data["action"] = self.actions
         for key, val in self.episode_data.items():
+            if type(val) is not list:
+                return 
+            
             if len(val) > len(self.rewards):
                 self.episode_data[key] = val[:len(self.rewards)]
         self.episode_data["sentinel"] = True  # for data integrity checking
