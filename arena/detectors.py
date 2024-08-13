@@ -4,7 +4,7 @@ import numpy as np
 
 
 class EnvQCarRef:
-    def __init__(self, threshold: float = 0.07) -> None:
+    def __init__(self, threshold: float = 0.2) -> None:
         self.width: float = 0.40# 0.22
         self.length: float = 0.22# 0.40
         self.corners = np.array([
