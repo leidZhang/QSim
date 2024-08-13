@@ -127,12 +127,12 @@ class RealWorldEnv:
 
         # calculate the progress reward
         current_waypoint_index: int = self.waypoint_processor.current_waypoint_index
-        reward = current_waypoint_index - self.last_waypoint_index
+        reward = (current_waypoint_index - self.last_waypoint_index) * 0.22
         # calculate the deviation penalty
         deviation: float = self.waypoint_processor.get_deviation()
         reward -= -max(0.0, 1.3 * (current_waypoint_index - self.last_waypoint_index) * (deviation - 0.031))
-        # calculate the speed reward
-        reward += 4 * (action[0] - 0.04)
+        # calculate the intervention reward
+        # reward += 1 if intervention == 1 else 0
 
         # update the last waypoint index
         self.last_waypoint_index = current_waypoint_index

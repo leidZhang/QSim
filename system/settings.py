@@ -9,6 +9,7 @@ BOT_TASKS: List[List[int]] = [
 ]
 DT: float = 0.005
 COLLISION_PENALTY: float = -40
+HITL_REWARD: float = 1.0
 
 # network settings
 IP: str = '127.0.0.1'

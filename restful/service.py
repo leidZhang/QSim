@@ -34,6 +34,7 @@ class DataService(IDataService):
         # self.relay: RelayExecutor = relay
         self.state_queue: Queue = Queue(1)
         self.repository: IDataRepository = DataRepository() 
+        print(f"Task length: {self.env.waypoint_processor.waypoints.shape[0]}")
         self.__init_env()
 
     def __init_env(self) -> None:
