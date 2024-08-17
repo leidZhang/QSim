@@ -32,7 +32,7 @@ class DataService(IDataService):
         self.collision_event = Event()
         self.env: RealWorldEnv = setup_env(self.collision_event)
         # self.relay: RelayExecutor = relay
-        self.state_queue: Queue = Queue(1)
+        self.state_queue: Queue = Queue(2)
         self.repository: IDataRepository = DataRepository() 
         print(f"Task length: {self.env.waypoint_processor.waypoints.shape[0]}")
         self.__init_env()
@@ -44,9 +44,9 @@ class DataService(IDataService):
         )
         relay_process.start() # start the relay thread
         print("Initializing environment...")
-        _, _, _ = self.env.reset(self.state_queue) # reset the environment
+        _, reward, action = self.env.reset(self.state_queue) # reset the environment
         # print("Add initial step data to the repository...")
-        # self.repository.handle_step_complete(reward, action) 
+        self.repository.handle_step_complete(reward, action) 
 
     def handle_step_complete(self, data: bytes) -> None:
         action: np.ndarray = pickle.loads(data)

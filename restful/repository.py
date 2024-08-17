@@ -32,7 +32,7 @@ class DataRepository(IDataRepository): # DataModel
         self.episode_data: Dict[str, List[np.ndarray]] = {}
 
     def handle_step_complete(self, reward: float, action: np.ndarray) -> None:
-        print(f"Action: {action}, Reward: {reward}")
+        # print(f"Action: {action}, Reward: {reward}")
         self.rewards.append(reward)
         self.actions.append(action)
 
@@ -49,14 +49,18 @@ class DataRepository(IDataRepository): # DataModel
         filename: str = os.path.join(NPZ_DIR, f"{episode_uid}")
         self.episode_data["reward"] = deepcopy(self.rewards)
         self.episode_data["action"] = self.actions
-        interventions: np.ndarray = self.episode_data["intervention"]
         for key, val in self.episode_data.items():
             if type(val) is not list:
                 continue
 
-            if len(val) > len(self.rewards):
-                self.episode_data[key] = val[:len(self.rewards)+1]
+            if len(val) < len(self.rewards):
+                self.episode_data[key] = [self.episode_data[key][0]] + self.episode_data[key]
+                
+        interventions: np.ndarray = self.episode_data["intervention"]        
         # calculate the agent reward    
+        print(len(self.episode_data["reward"]))
+        print(len(self.episode_data["image"]))
+        print(len(interventions))
         for i in range(len(self.episode_data["reward"])):
             self.episode_data["reward"][i] = self.episode_data["reward"][i] - HITL_REWARD * interventions[i]
                 

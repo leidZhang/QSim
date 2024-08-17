@@ -116,12 +116,12 @@ class RealWorldEnv:
         poses: List[np.ndarray], 
     ) -> Tuple[bool, float]:
         # calculate the collision penalty        
-        for bot_poses in poses[1:]:
-            orig_1: np.ndarray = poses[0][:2]
-            yaw_1: float = -poses[0][2]
-            orig_2: np.ndarray = bot_poses[:2]
-            yaw_2: float = -bot_poses[2]
-            if is_collided(orig_1, yaw_1, orig_2, yaw_2, self.car_ref):
+        for bot_pose in poses[1:]:
+            # orig_1: np.ndarray = poses[0][:2]
+            # yaw_1: float = -poses[0][2]
+            # orig_2: np.ndarray = bot_poses[:2]
+            # yaw_2: float = -bot_poses[2]
+            if is_collided(poses[0], bot_pose, self.car_ref):
                 self.event.set() # set the early stop event
                 return True, COLLISION_PENALTY        
 
