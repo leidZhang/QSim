@@ -8,6 +8,8 @@ import numpy as np
 # from hitl import run_hitl
 # from env import env
 # from ego_state import relay, relay_thread
+from reinformer.utils import run_reinformer_util
+from reinformer.main import run_reinformer_main
 from system import app
 from system.routes import setup_routes
 from system.settings import IP, ENV_PORT
@@ -28,4 +30,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    # recover_data()
+    run_reinformer_main()

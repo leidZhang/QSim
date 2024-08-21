@@ -1,6 +1,6 @@
 import pickle
 import random
-from typing import Tuple, Dict
+from typing import Tuple, Dict, List
 
 import torch
 import numpy as np
@@ -38,20 +38,12 @@ class D4RLTrajectoryDataset(Dataset):
         with open(dataset_path, "rb") as f:
             self.trajectories: list = pickle.load(f)
 
-        # reward scale
-        # scale: int = SCALES[env_name]
-        # if env_name in ["hopper", "walker2d"]:
-        #     scale: int = 1000
-        # elif env_name in ["halfcheetah"]:
-        #     scale: int = 5000
-        # elif env_name in ["maze2d", "kitchen"]:
-        #     scale: int = 100
-        # elif env_name in ["pen", "door", "hammer", "relocate"]:
-        #     scale: int = 10000
-        # elif env_name in ["antmaze"]:
-        #     scale: int = 1
-
         # calculate state mean and variance and returns_to_go for all traj
+        self._cal_state_mean_and_variance()
+        # normalize states
+        self._normalize_states()        
+
+    def _cal_state_mean_and_variance(self) -> None:
         states, returns, returns_to_go = [], [], []
         for traj in self.trajectories:
             states.append(traj["observations"])
@@ -63,8 +55,16 @@ class D4RLTrajectoryDataset(Dataset):
             np.mean(states, axis=0),
             np.std(states, axis=0) + 1e-6,
         )
+                # calculate returns max, mean, std
+        returns: np.ndarray = np.array(returns)
+        self.return_stats: list = [
+            returns.max(),
+            returns.mean(),
+            returns.std()
+        ]
+        print(f"dataset size: {len(self.trajectories)}\nreturns max : {returns.max()}\nreturns mean: {returns.mean()}\nreturns std : {returns.std()}")  
 
-        # normalize states
+    def _normalize_states(self) -> None:
         for traj in self.trajectories:
             traj["observations"] = (
                 traj["observations"] - self.state_mean
@@ -73,15 +73,6 @@ class D4RLTrajectoryDataset(Dataset):
             traj["next_observations"] = (
                 traj["next_observations"] - self.state_mean
             ) / self.state_std
-
-        # calculate returns max, mean, std
-        returns: np.ndarray = np.array(returns)
-        self.return_stats: list = [
-            returns.max(),
-            returns.mean(),
-            returns.std()
-        ]
-        print(f"dataset size: {len(self.trajectories)}\nreturns max : {returns.max()}\nreturns mean: {returns.mean()}\nreturns std : {returns.std()}")
 
     def get_state_stats(self) -> Tuple[np.ndarray, np.ndarray]:
         return self.state_mean, self.state_std
@@ -95,7 +86,9 @@ class D4RLTrajectoryDataset(Dataset):
     def __getitem__(self, idx) -> tuple: # tuple with 7 tensors
         traj: Dict[int, np.ndarray] = self.trajectories[idx]
         traj_len: int = traj["observations"].shape[0]
+        return self._get_data(traj_len, traj)
 
+    def _get_data(self, traj_len: int, traj: dict) -> tuple:
         if traj_len >= self.context_len:
             # sample random index to slice trajectory
             si: int = random.randint(0, traj_len - self.context_len)
@@ -205,3 +198,123 @@ class D4RLTrajectoryDataset(Dataset):
             rewards,
             traj_mask,
         )
+
+import gc
+import os
+import glob
+
+import cv2
+
+
+class CustomDataSet(D4RLTrajectoryDataset):
+    def __init__(
+        self, 
+        dataset_path: str, 
+        context_len: int, 
+        device: str
+    ) -> None:
+        self.context_len: int = context_len
+        self.device: str = device
+        search_path: str = dataset_path + '/*.npz'
+        self.file_list = glob.glob(search_path)
+        self.file_list.sort(key=os.path.getmtime)
+        self._cal_state_mean_and_variance()
+
+    def _read_file_by_index(self, index: int) -> None:
+        npz_file: str = self.file_list[index]
+        episode_data: dict = None
+        
+        try: 
+            data = np.load(npz_file, allow_pickle=True)
+            episode_data = {file: data[file] for file in data.files}
+        except Exception as e:
+            print(f"{npz_file} Corrupted, skipping...")
+
+        return episode_data
+    
+    def _online_mean_and_std(self, observations: np.ndarray, m2: np.ndarray, count: int) -> Tuple[np.ndarray, np.ndarray]:
+        count += 1
+        for i, observation in enumerate(observations):
+            delta: np.ndarray = observation - self.state_mean
+            self.state_mean += delta / count
+            m2 += delta * (observation - self.state_mean)
+        return self.state_mean, m2, count
+    
+    def _cal_state_mean_and_variance(self) -> None:
+        count: int = 0
+        self.state_mean, m2, self.state_std = np.zeros(21174), np.zeros(21174), np.zeros(21174)
+        states, returns, returns_to_go = [], [], []
+
+        for i in range(len(self.file_list)):
+            episode_data: dict = self._read_file_by_index(i)
+            episode_data = self._preprocess_data(episode_data)
+            
+            return_to_go = discount_cumsum(episode_data["rewards"], 1)
+            self.state_mean, m2, count = self._online_mean_and_std(episode_data["observations"], m2, count)
+            # states.append(episode_data["observations"])
+            returns.append(episode_data["rewards"].sum()) 
+            returns_to_go.append(return_to_go)
+            
+        variance: np.ndarray = m2 / count
+        self.state_std = np.sqrt(variance) + 1e-6
+
+        returns: np.ndarray = np.array(returns)
+        self.return_stats: list = [
+            returns.max(),
+            returns.mean(),
+            returns.std()
+        ]
+        print(f"dataset size: {count}\nreturns max : {returns.max()}\nreturns mean: {returns.mean()}\nreturns std : {returns.std()}")
+    
+    def _preprocess_data(self, data: dict) -> dict:
+        traj: Dict[str, List[np.ndarray]] = {
+            'next_observations': [],
+            'observations': [],
+        }
+
+        # reward and action
+        traj['rewards'] = data['reward']
+        traj['actions'] = data['action'] 
+        # observations (image and state_info)
+        for i, image in enumerate(data['image']):
+            image = cv2.resize(image, (84, 84))  
+            state: np.ndarray = image.reshape(-1)
+            state = np.concatenate((state, data['state_info'][i]))
+            # state = state.astype(np.float16)
+            traj['observations'].append(state)
+        traj['observations'] = np.array(traj['observations'])  
+
+        # next_observations
+        traj['next_observations'] = np.zeros_like(traj['observations'])
+        for i in range(len(traj['observations']) - 1):
+            traj['next_observations'][i] = traj['observations'][i + 1]
+
+        # calculate the return_to_go
+        accumulated_reward: float = 0        
+        return_to_go: np.ndarray = np.zeros_like(traj['rewards'])
+        for i in range(len(traj['rewards']) - 1, -1, -1):
+            return_to_go[i] = accumulated_reward            
+            accumulated_reward += traj['rewards'][i]
+        traj['returns_to_go'] = return_to_go
+
+        return traj    
+    
+    def _normalize_traj_states(self, traj: List[np.ndarray]) -> None:
+        traj["observations"] = (
+            traj["observations"] - self.state_mean
+        ) / self.state_std
+
+        traj["next_observations"] = (
+            traj["next_observations"] - self.state_mean
+        ) / self.state_std
+        
+    def __len__(self) -> int:
+        return len(self.file_list)
+    
+    def __getitem__(self, idx) -> tuple:
+        traj: Dict[int, np.ndarray] = self._read_file_by_index(idx)
+        traj = self._preprocess_data(traj)
+        self._normalize_traj_states(traj)
+        traj_len: int = traj["observations"].shape[0]
+        return self._get_data(traj_len, traj)
+    

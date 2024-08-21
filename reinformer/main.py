@@ -13,11 +13,11 @@ import torch
 import wandb
 from torch.utils.data import DataLoader
 
-from settings import STATE_DIM, ACT_DIM, CONTEXT_LEN, BATCH_SIZE
-from dataset import D4RLTrajectoryDataset
-from trainer import ReinFormerTrainer
-from eval import Reinformer_eval
-from td3.environment import WaypointEnvironment
+from .settings import STATE_DIM, ACT_DIM, CONTEXT_LEN, BATCH_SIZE
+from .dataset import D4RLTrajectoryDataset, CustomDataSet
+from .trainer import ReinFormerTrainer
+from .eval import Reinformer_eval
+# from td3.environment import WaypointEnvironment
 
 
 
@@ -46,7 +46,8 @@ def experiment(variant):
     #         variant["batch_size"] = 256
     
     # dataset_path = os.path.join(variant["dataset_dir"], f"trajectories.pkl")
-    dataset_path = r'C:\Users\SDCNLab_P720\PycharmProjects\qsim\assets\trajectories.pkl'
+    # dataset_path = r'C:\Users\SDCNLab_P720\PycharmProjects\qsim\assets\trajectories.pkl'
+    dataset_path = r"assets/npz"
     device = torch.device(variant["device"])
 
     start_time = datetime.now().replace(microsecond=0)
@@ -56,7 +57,7 @@ def experiment(variant):
     print("start time: " + start_time_str)
     print("=" * 60)
 
-    traj_dataset = D4RLTrajectoryDataset(
+    traj_dataset = CustomDataSet(
         dataset_path, variant["context_len"], device
     )
 
@@ -177,7 +178,7 @@ def experiment(variant):
     print("=" * 60)
 
 
-if __name__ == "__main__":
+def run_reinformer_main():
     os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
 
     logging.basicConfig(level=logging.INFO)
