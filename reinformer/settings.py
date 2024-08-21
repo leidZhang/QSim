@@ -4,14 +4,14 @@ import torch
 
 MODEL_TYPE: str = "Reinformer"
 DATASET_DIR: str = "assets"
-CONTEXT_LEN: int = 40
-N_BLOCKS: int = 4
+CONTEXT_LEN: int = 10
+N_BLOCKS: int = 6
 EMBED_DIM: int = 21174  # 512
 N_HEADS: int = 2
 DROPOUT_P: float = 0.1
 GRAD_NORM: float = 0.25
 TAU: float = 0.99
-BATCH_SIZE: int = 6
+BATCH_SIZE: int = 4
 LR: float = 1e-4
 WD: float = 1e-4
 WARMUP_STEPS: int = 5000

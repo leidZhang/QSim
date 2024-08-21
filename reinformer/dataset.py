@@ -280,7 +280,7 @@ class CustomDataSet(D4RLTrajectoryDataset):
             image = cv2.resize(image, (84, 84))  
             state: np.ndarray = image.reshape(-1)
             state = np.concatenate((state, data['state_info'][i]))
-            # state = state.astype(np.float16)
+            # state = state.astype(np.float32)
             traj['observations'].append(state)
         traj['observations'] = np.array(traj['observations'])  
 

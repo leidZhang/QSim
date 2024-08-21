@@ -13,7 +13,7 @@ import torch
 import wandb
 from torch.utils.data import DataLoader
 
-from .settings import STATE_DIM, ACT_DIM, CONTEXT_LEN, BATCH_SIZE
+from .settings import *
 from .dataset import D4RLTrajectoryDataset, CustomDataSet
 from .trainer import ReinFormerTrainer
 from .eval import Reinformer_eval
@@ -82,6 +82,7 @@ def experiment(variant):
 
     model_type = variant["model_type"]
 
+    print("Initializing trainer...")
     if model_type == "Reinformer":
         Trainer = ReinFormerTrainer(
             state_dim=STATE_DIM,
@@ -107,6 +108,7 @@ def experiment(variant):
     max_train_iters = variant["max_train_iters"]
     num_updates_per_iter = variant["num_updates_per_iter"]
     # normalized_d4rl_score_list = []
+    print("Start training...")
     for _ in range(1, max_train_iters+1):
         t1 = time.time()
         for epoch in range(num_updates_per_iter):
@@ -192,7 +194,7 @@ def run_reinformer_main():
     parser.add_argument("--dataset_dir", type=str, default="assets")
     parser.add_argument("--context_len", type=int, default=CONTEXT_LEN)
     parser.add_argument("--n_blocks", type=int, default=4)
-    parser.add_argument("--embed_dim", type=int, default=512)
+    parser.add_argument("--embed_dim", type=int, default=EMBED_DIM)
     parser.add_argument("--n_heads", type=int, default=2)
     parser.add_argument("--dropout_p", type=float, default=0.1)
     parser.add_argument("--grad_norm", type=float, default=0.25)

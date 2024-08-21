@@ -69,6 +69,7 @@ class ReinFormerTrainer:
         rewards,
         traj_mask,
     ):
+        print("Executing train step...")
         self.model.train()
         # data to gpu ------------------------------------------------
         timesteps = timesteps.to(self.device)      # B x T
