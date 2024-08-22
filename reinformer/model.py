@@ -73,7 +73,6 @@ class ReinFormer(nn.Module):
         actions, 
         returns_to_go,
     ):
-
         B, T, _ = states.shape  # B: batch size T: time steps
 
         time_embeddings = self.embed_timestep(timesteps)

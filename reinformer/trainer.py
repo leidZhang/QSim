@@ -23,7 +23,7 @@ class ReinFormerTrainer:
         self.act_dim = act_dim
         self.device = device
         self.grad_norm = variant["grad_norm"]
-
+        print("Initializing Reinformer model...")
         self.model = ReinFormer(
             state_dim=state_dim,
             act_dim=act_dim,
@@ -35,7 +35,7 @@ class ReinFormerTrainer:
             init_temperature=variant["init_temperature"],
             target_entropy=-self.act_dim
         ).to(self.device)
-
+        print("Initializing optimizer...")
         self.optimizer = Lamb(
             self.model.parameters(),
             lr=variant["lr"],
@@ -69,7 +69,6 @@ class ReinFormerTrainer:
         rewards,
         traj_mask,
     ):
-        print("Executing train step...")
         self.model.train()
         # data to gpu ------------------------------------------------
         timesteps = timesteps.to(self.device)      # B x T
@@ -94,7 +93,7 @@ class ReinFormerTrainer:
             timesteps=timesteps,
             states=states,
             actions=actions,
-            returns_to_go=returns_to_go,
+            returns_to_go=returns_to_go.half(),
         )
 
         returns_to_go_target = torch.clone(returns_to_go).view(
@@ -149,7 +148,7 @@ class ReinFormerTrainer:
         return loss.detach().cpu().item()
 
     def save_model(self) -> None:
-        folder_dir: str = os.path.join(os.getcwd(), "models/")
+        folder_dir: str = os.path.join(os.getcwd(), "assets/models/")
         checkpoint_path: str = os.path.join(folder_dir, "latest_checkpoint.pt")
         backup_path: str = os.path.join(folder_dir, f"backup_{datetime.now().strftime('%Y%m%d%H%M%S')}.pt")
 

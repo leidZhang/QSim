@@ -233,9 +233,9 @@ class CustomDataSet(D4RLTrajectoryDataset):
         return episode_data
     
     def _online_mean_and_std(self, observations: np.ndarray, m2: np.ndarray, count: int) -> Tuple[np.ndarray, np.ndarray]:
-        count += 1
         for i, observation in enumerate(observations):
             delta: np.ndarray = observation - self.state_mean
+            count += 1 # update the counter
             self.state_mean += delta / count
             m2 += delta * (observation - self.state_mean)
         return self.state_mean, m2, count
@@ -260,11 +260,11 @@ class CustomDataSet(D4RLTrajectoryDataset):
 
         returns: np.ndarray = np.array(returns)
         self.return_stats: list = [
-            returns.max(),
-            returns.mean(),
-            returns.std()
+            returns.max() if len(returns) > 0 else 0,
+            returns.mean() if len(returns) > 0 else 0,
+            returns.std() if len(returns) > 0 else 0
         ]
-        print(f"dataset size: {count}\nreturns max : {returns.max()}\nreturns mean: {returns.mean()}\nreturns std : {returns.std()}")
+        print(f"dataset size: {count}\nreturns max : {self.return_stats[0]}\nreturns mean: {self.return_stats[1]}\nreturns std : {self.return_stats[2]}")
     
     def _preprocess_data(self, data: dict) -> dict:
         traj: Dict[str, List[np.ndarray]] = {
@@ -280,7 +280,7 @@ class CustomDataSet(D4RLTrajectoryDataset):
             image = cv2.resize(image, (84, 84))  
             state: np.ndarray = image.reshape(-1)
             state = np.concatenate((state, data['state_info'][i]))
-            # state = state.astype(np.float32)
+            # state = state.astype(np.float16)
             traj['observations'].append(state)
         traj['observations'] = np.array(traj['observations'])  
 

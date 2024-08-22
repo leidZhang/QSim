@@ -7,7 +7,7 @@ import torch
 from core.utils.performance import elapsed_time
 from core.policies.pt_policy import PTPolicy
 from qvl.qlabs import QuanserInteractiveLabs
-from td3.vehicle import WaypointCar
+# from td3.vehicle import WaypointCar
 
 
 class ReinformerPolicy(PTPolicy):

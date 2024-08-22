@@ -1,7 +1,8 @@
 import argparse
 import logging
 import os
-import random
+import json
+from typing import List 
 from datetime import datetime
 import time
 import os
@@ -22,6 +23,7 @@ from .eval import Reinformer_eval
 
 
 def experiment(variant):
+    use_wandb = True
     # seeding
     # seed = variant["seed"]
     # random.seed(seed)
@@ -71,12 +73,24 @@ def experiment(variant):
 
     data_iter = iter(traj_data_loader)
     state_mean, state_std = traj_dataset.get_state_stats()
-    formatted_state_mean = ", ".join(f"{num:.8e}" for num in state_mean)
-    formatted_state_std = ", ".join(f"{num:.8e}" for num in state_std)
-    print(f"{type(state_mean)} {type(state_std)}")
-    print("state mean: ", state_mean, "state std: ", state_std)
-    print(f'{type(formatted_state_mean)} {type(formatted_state_std)}')
-    print(f'formatted_state_mean: {formatted_state_mean}, formatted_state_std: {formatted_state_std}')
+    # formatted_state_mean = ", ".join(f"{num:.8e}" for num in state_mean)
+    # formatted_state_std = ", ".join(f"{num:.8e}" for num in state_std)
+    # print(f"{type(state_mean)} {type(state_std)}")
+    # print("state mean: ", state_mean, "state std: ", state_std)
+    # print(f'{type(formatted_state_mean)} {type(formatted_state_std)}')
+    # print(f'formatted_state_mean: {formatted_state_mean}, formatted_state_std: {formatted_state_std}')
+
+    print("Saving state statistics...")
+    state_mean_list: List[float] = [num for num in state_mean]
+    state_std_list: List[float] = [num for num in state_std]
+    stat: dict = {
+        "state_mean": state_mean_list,
+        "state_std": state_std_list
+    }
+    with open('state_stat.json', 'w') as f:
+        json.dump(stat, f)
+    print("State statistics saved.")
+
     # env = gym.make(d4rl_env)
     # env.seed(seed)
 
@@ -143,7 +157,7 @@ def experiment(variant):
                 rewards=rewards,
                 traj_mask=traj_mask
             )
-            if args.use_wandb:
+            if use_wandb:
                 wandb.log(
                     data={
                         "training/loss" : loss,
@@ -155,7 +169,7 @@ def experiment(variant):
         # )
         t3 = time.time()
         # normalized_d4rl_score_list.append(normalized_d4rl_score)
-        if args.use_wandb:
+        if use_wandb:
             wandb.log(
                 data={
                         "training/time" : t2 - t1,
