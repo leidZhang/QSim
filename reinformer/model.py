@@ -28,7 +28,7 @@ class ReinFormer(nn.Module):
 
 
         ### transformer blocks
-        self.num_inputs = 3
+        self.num_inputs = 4 #3
         input_seq_len = self.num_inputs * context_len
         blocks = [
             Block(
@@ -43,6 +43,18 @@ class ReinFormer(nn.Module):
             for _ in range(n_blocks)
         ]
         self.transformer = nn.Sequential(*blocks)
+
+        ### convolutional encoder
+        self.embed_image = nn.Sequential(
+            nn.Conv2d(3, 32, kernel_size=4, stride=2),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=3, stride=2),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=2, stride=2),
+            nn.ReLU(),
+            nn.Flatten(),
+            nn.Linear(64*10*10, h_dim),
+        )
 
         ### projection heads (project to embedding)
         self.embed_ln = nn.LayerNorm(h_dim)
@@ -70,6 +82,7 @@ class ReinFormer(nn.Module):
         self, 
         timesteps, 
         states, 
+        images,
         actions, 
         returns_to_go,
     ):
@@ -78,6 +91,7 @@ class ReinFormer(nn.Module):
         time_embeddings = self.embed_timestep(timesteps)
         # time embeddings are treated similar to positional embeddings
         state_embeddings = self.embed_state(states.float()) + time_embeddings
+        image_embeddings = self.embed_image(images.reshape((B*T,) + images.shape[2:]).float()).reshape(B, T, -1) + time_embeddings
         action_embeddings = self.embed_action(actions.float()) + time_embeddings
         rtg_embeddings = self.embed_rtg(returns_to_go.float()) + time_embeddings
 
@@ -87,6 +101,7 @@ class ReinFormer(nn.Module):
             torch.stack(
                 (
                     state_embeddings,
+                    image_embeddings,
                     rtg_embeddings,
                     action_embeddings,
                 ),

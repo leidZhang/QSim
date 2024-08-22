@@ -8,6 +8,8 @@ import logging
 from .model import ReinFormer
 from .lamb import Lamb
 
+from .settings import *
+
 
 class ReinFormerTrainer:
     def __init__(
@@ -35,7 +37,19 @@ class ReinFormerTrainer:
             init_temperature=variant["init_temperature"],
             target_entropy=-self.act_dim
         ).to(self.device)
-        print("Initializing optimizer...")
+
+        try:
+            if RESUME:
+                checkpoint = torch.load("assets/models/latest_checkpoint.pt")
+                self.model.load_state_dict(checkpoint["model_state_dict"])
+                self.step = checkpoint["epoch"]
+            else:
+                self.step = 0
+        except FileNotFoundError:
+            print("No checkpoint found, starting from scratch...")
+            self.step = 0
+
+        print("Start from step: ", self.step)
         self.optimizer = Lamb(
             self.model.parameters(),
             lr=variant["lr"],
@@ -49,7 +63,6 @@ class ReinFormerTrainer:
 
         self.tau = variant["tau"]
         self.context_len=variant["context_len"]
-        self.step: int = 0
 
         self.log_temperature_optimizer = torch.optim.Adam(
             [self.model.log_temperature],
@@ -63,6 +76,7 @@ class ReinFormerTrainer:
         self,
         timesteps,
         states,
+        images,
         next_states,
         actions,
         returns_to_go,
@@ -73,6 +87,7 @@ class ReinFormerTrainer:
         # data to gpu ------------------------------------------------
         timesteps = timesteps.to(self.device)      # B x T
         states = states.to(self.device)            # B x T x state_dim
+        images = images.to(self.device)            # B x T x 3 x H x W
         next_states = next_states.to(self.device)  # B x T x state_dim
         actions = actions.to(self.device)          # B x T x act_dim
         returns_to_go = returns_to_go.to(self.device).unsqueeze(
@@ -92,6 +107,7 @@ class ReinFormerTrainer:
         ) = self.model.forward(
             timesteps=timesteps,
             states=states,
+            images=images,
             actions=actions,
             returns_to_go=returns_to_go.half(),
         )

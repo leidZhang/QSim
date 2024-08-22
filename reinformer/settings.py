@@ -21,9 +21,10 @@ DEVICE: str = "cuda:0" if torch.cuda.is_available() else "cpu"
 SEED: int = 2024
 INIT_TEMPERATURE: float = 0.1
 USE_WANDB: bool = True
-STATE_DIM: int = 21174  # 400
+STATE_DIM: int = 6  # 400
 ACT_DIM: int = 2
 MODEL_PATH: str = os.path.join(os.getcwd(), "Reinformer/models/latest_checkpoint.pt")
+RESUME: bool = True
 
 # Set environment variable
 os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'

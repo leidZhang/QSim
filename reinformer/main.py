@@ -60,7 +60,7 @@ def experiment(variant):
     print("=" * 60)
 
     traj_dataset = CustomDataSet(
-        dataset_path, variant["context_len"], device
+        dataset_path, variant["context_len"], device, RESUME
     )
 
     traj_data_loader = DataLoader(
@@ -69,6 +69,7 @@ def experiment(variant):
         shuffle=True,
         pin_memory=True,
         drop_last=True,
+        num_workers=8
     )
 
     data_iter = iter(traj_data_loader)
@@ -85,7 +86,8 @@ def experiment(variant):
     state_std_list: List[float] = [num for num in state_std]
     stat: dict = {
         "state_mean": state_mean_list,
-        "state_std": state_std_list
+        "state_std": state_std_list,
+        "return_stats": traj_dataset.return_stats
     }
     with open('state_stat.json', 'w') as f:
         json.dump(stat, f)
@@ -130,6 +132,7 @@ def experiment(variant):
                 (
                     timesteps,
                     states,
+                    images,
                     next_states,
                     actions,
                     returns_to_go,
@@ -141,6 +144,7 @@ def experiment(variant):
                 (
                     timesteps,
                     states,
+                    images,
                     next_states,
                     actions,
                     returns_to_go,
@@ -151,6 +155,7 @@ def experiment(variant):
             loss = Trainer.train_step(
                 timesteps=timesteps,
                 states=states,
+                images=images,
                 next_states=next_states,
                 actions=actions,
                 returns_to_go=returns_to_go,
@@ -226,11 +231,14 @@ def run_reinformer_main():
     parser.add_argument("--use_wandb", action='store_true', default=True)
     args = parser.parse_args()
 
+    resume: bool = os.path.exists("assets/models/latest_checkpoint.pt")
+
     if args.use_wandb:
         wandb.init(
             name="QLab", # + "-" + args.dataset,
             project="Reinformer",
-            config=vars(args)
+            config=vars(args),
+            resume=RESUME
         )
 
     experiment(vars(args))

@@ -69,7 +69,7 @@ class ReinformerPolicy(PTPolicy):
         return action.cpu().numpy(), {}
 
 
-class ReinformerCar(WaypointCar):
+class ReinformerCar:
     def setup(
         self, 
         waypoints: np.ndarray, 
@@ -81,14 +81,14 @@ class ReinformerCar(WaypointCar):
         super().setup(waypoints, init_waypoint_index)
         self.policy: ReinformerPolicy = policy
 
-    def handle_observation(self, orig: np.ndarray, rot: np.ndarray) -> None:
-        super().handle_observation(orig, rot)
-        far_index: int = (self.current_waypoint_index + 49) % self.waypoints.shape[0]
-        self.observation['state'] = np.concatenate((
-            self.ego_state, # ego state
-            self.waypoints[self.current_waypoint_index], # closest waypoint
-            self.waypoints[far_index] # far waypoint
-        )) # state info
+    # def handle_observation(self, orig: np.ndarray, rot: np.ndarray) -> None:
+    #     super().handle_observation(orig, rot)
+    #     far_index: int = (self.current_waypoint_index + 49) % self.waypoints.shape[0]
+    #     self.observation['state'] = np.concatenate((
+    #         self.ego_state, # ego state
+    #         self.waypoints[self.current_waypoint_index], # closest waypoint
+    #         self.waypoints[far_index] # far waypoint
+    #     )) # state info
 
     def execute(self) -> None:
         # get the start time of the loop

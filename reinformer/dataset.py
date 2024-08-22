@@ -1,3 +1,5 @@
+import cv2
+import json
 import pickle
 import random
 from typing import Tuple, Dict, List
@@ -6,6 +8,8 @@ import torch
 import numpy as np
 
 from torch.utils.data import Dataset
+
+from .settings import *
 
 # SCALES: Dict[str, int] = {  
 #     "hopper": 1000, "walker2d": 1000,
@@ -30,7 +34,7 @@ class D4RLTrajectoryDataset(Dataset):
         # env_name: str,
         dataset_path: str, 
         context_len: int, 
-        device: str
+        device: str,
     ) -> None:
         self.context_len: int = context_len
         self.device: str = device
@@ -96,6 +100,9 @@ class D4RLTrajectoryDataset(Dataset):
             states: torch.Tensor = torch.from_numpy(
                 traj["observations"][si : si + self.context_len]
             )
+            images: torch.Tensor = torch.from_numpy(
+                traj["images"][si : si + self.context_len]
+            )
             next_states: torch.Tensor = torch.from_numpy(
                 traj["next_observations"][si : si + self.context_len]
             )
@@ -125,6 +132,18 @@ class D4RLTrajectoryDataset(Dataset):
                     states,
                     torch.zeros(
                         ([padding_len] + list(states.shape[1:])),
+                        dtype=states.dtype,
+                    ),
+                ],
+                dim=0,
+            )
+
+            images: torch.Tensor = torch.from_numpy(traj["images"])
+            images = torch.cat(
+                [
+                    images,
+                    torch.zeros(
+                        ([padding_len] + images.shape[1:]),
                         dtype=states.dtype,
                     ),
                 ],
@@ -192,6 +211,7 @@ class D4RLTrajectoryDataset(Dataset):
         return (
             timesteps,
             states,
+            images,
             next_states,
             actions,
             returns_to_go,
@@ -211,8 +231,10 @@ class CustomDataSet(D4RLTrajectoryDataset):
         self, 
         dataset_path: str, 
         context_len: int, 
-        device: str
+        device: str,
+        resume: bool = False
     ) -> None:
+        self.resume: bool = resume
         self.context_len: int = context_len
         self.device: str = device
         search_path: str = dataset_path + '/*.npz'
@@ -241,30 +263,37 @@ class CustomDataSet(D4RLTrajectoryDataset):
         return self.state_mean, m2, count
     
     def _cal_state_mean_and_variance(self) -> None:
-        count: int = 0
-        self.state_mean, m2, self.state_std = np.zeros(21174), np.zeros(21174), np.zeros(21174)
+        self.state_mean, m2, self.state_std = np.zeros(STATE_DIM), np.zeros(STATE_DIM), np.zeros(STATE_DIM)
         states, returns, returns_to_go = [], [], []
 
-        for i in range(len(self.file_list)):
-            episode_data: dict = self._read_file_by_index(i)
-            episode_data = self._preprocess_data(episode_data)
+        if not self.resume:
+            count: int = 0            
+            for i in range(len(self.file_list)):
+                episode_data: dict = self._read_file_by_index(i)
+                episode_data = self._preprocess_data(episode_data)
             
-            return_to_go = discount_cumsum(episode_data["rewards"], 1)
-            self.state_mean, m2, count = self._online_mean_and_std(episode_data["observations"], m2, count)
-            # states.append(episode_data["observations"])
-            returns.append(episode_data["rewards"].sum()) 
-            returns_to_go.append(return_to_go)
-            
-        variance: np.ndarray = m2 / count
-        self.state_std = np.sqrt(variance) + 1e-6
+                self.state_mean, m2, count = self._online_mean_and_std(episode_data["observations"], m2, count)
+                # states.append(episode_data["observations"])
+                return_to_go = discount_cumsum(episode_data["rewards"], 1)
+                returns.append(episode_data["rewards"].sum()) 
+                returns_to_go.append(return_to_go)            
 
-        returns: np.ndarray = np.array(returns)
-        self.return_stats: list = [
-            returns.max() if len(returns) > 0 else 0,
-            returns.mean() if len(returns) > 0 else 0,
-            returns.std() if len(returns) > 0 else 0
-        ]
-        print(f"dataset size: {count}\nreturns max : {self.return_stats[0]}\nreturns mean: {self.return_stats[1]}\nreturns std : {self.return_stats[2]}")
+            variance: np.ndarray = m2 / count
+            self.state_std = np.sqrt(variance) + 1e-6
+            returns: np.ndarray = np.array(returns)
+            self.return_stats: list = [
+                returns.max() if len(returns) > 0 else 0,
+                returns.mean() if len(returns) > 0 else 0,
+                returns.std() if len(returns) > 0 else 0
+            ]            
+        else:
+            with open("state_stat.json", "r") as f:
+                state_stat: dict = json.load(f)
+                self.state_mean = np.array(state_stat["state_mean"])
+                self.state_std = np.array(state_stat["state_std"])
+                self.return_stats = state_stat["return_stats"]
+
+        print(f"dataset size: {len(self.file_list)}\nreturns max : {self.return_stats[0]}\nreturns mean: {self.return_stats[1]}\nreturns std : {self.return_stats[2]}")
     
     def _preprocess_data(self, data: dict) -> dict:
         traj: Dict[str, List[np.ndarray]] = {
@@ -275,19 +304,11 @@ class CustomDataSet(D4RLTrajectoryDataset):
         # reward and action
         traj['rewards'] = data['reward']
         traj['actions'] = data['action'] 
-        # observations (image and state_info)
-        for i, image in enumerate(data['image']):
-            image = cv2.resize(image, (84, 84))  
-            state: np.ndarray = image.reshape(-1)
-            state = np.concatenate((state, data['state_info'][i]))
-            # state = state.astype(np.float16)
-            traj['observations'].append(state)
-        traj['observations'] = np.array(traj['observations'])  
-
-        # next_observations
+        traj["images"] = [(cv2.resize(im, (84, 84)).transpose(2, 0, 1) / 255) - 0.5 for im in data["image"]]
+        traj["images"] = np.array(traj["images"])
+        traj['observations'] = data["state_info"]
         traj['next_observations'] = np.zeros_like(traj['observations'])
-        for i in range(len(traj['observations']) - 1):
-            traj['next_observations'][i] = traj['observations'][i + 1]
+        traj['next_observations'][:-1] = traj['observations'][1:]
 
         # calculate the return_to_go
         accumulated_reward: float = 0        
