@@ -295,6 +295,7 @@ class CustomDataSet(D4RLTrajectoryDataset):
 
         print(f"dataset size: {len(self.file_list)}\nreturns max : {self.return_stats[0]}\nreturns mean: {self.return_stats[1]}\nreturns std : {self.return_stats[2]}")
     
+    # TODO: May have to change this to callback function and move it outside the class
     def _preprocess_data(self, data: dict) -> dict:
         traj: Dict[str, List[np.ndarray]] = {
             'next_observations': [],
