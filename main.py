@@ -30,6 +30,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    # main()
+    main()
     # recover_data()
-    run_reinformer_main()
+    # run_reinformer_main()
