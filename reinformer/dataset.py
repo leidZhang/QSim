@@ -305,8 +305,16 @@ class CustomDataSet(D4RLTrajectoryDataset):
         # reward and action
         traj['rewards'] = data['reward']
         traj['actions'] = data['action'] 
-        traj["images"] = [(cv2.resize(im, (84, 84)).transpose(2, 0, 1) / 255) - 0.5 for im in data["image"]]
-        traj["images"] = np.array(traj["images"])
+        # Process images
+        processed_images = []
+        for image in data["image"]:
+            # Split the image into four 84 * 84 * 3 blocks
+            blocks = [image[:, i*84:(i+1)*84, :] for i in range(4)]
+            # Concatenate the blocks along the last dimension
+            processed_image = np.concatenate(blocks, axis=-1)
+            processed_images.append(processed_image.transpose(2, 0, 1) / 255 - 0.5)
+        traj["images"] = np.array(processed_images)
+        # traj["images"] = np.array(traj["images"])
         traj['observations'] = data["state_info"]
         traj['next_observations'] = np.zeros_like(traj['observations'])
         traj['next_observations'][:-1] = traj['observations'][1:]

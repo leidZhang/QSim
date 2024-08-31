@@ -11,7 +11,7 @@ N_HEADS: int = 2
 DROPOUT_P: float = 0.1
 GRAD_NORM: float = 0.25
 TAU: float = 0.99
-BATCH_SIZE: int = 64
+BATCH_SIZE: int = 32 # 64
 LR: float = 1e-4
 WD: float = 1e-4
 WARMUP_STEPS: int = 5000
@@ -25,6 +25,7 @@ STATE_DIM: int = 6  # 400
 ACT_DIM: int = 2
 MODEL_PATH: str = os.path.join(os.getcwd(), "Reinformer/models/latest_checkpoint.pt")
 RESUME: bool = True
+WORKERS: int = 4
 
 # Set environment variable
 os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'

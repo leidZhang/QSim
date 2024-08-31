@@ -69,7 +69,7 @@ def experiment(variant):
         shuffle=True,
         pin_memory=True,
         drop_last=True,
-        num_workers=8
+        num_workers=WORKERS
     )
 
     data_iter = iter(traj_data_loader)
