@@ -24,7 +24,7 @@ USE_WANDB: bool = True
 STATE_DIM: int = 6  # 400
 ACT_DIM: int = 2
 MODEL_PATH: str = os.path.join(os.getcwd(), "Reinformer/models/latest_checkpoint.pt")
-RESUME: bool = True
+RESUME: bool = False
 WORKERS: int = 4
 
 # Set environment variable
