@@ -152,6 +152,8 @@ def experiment(variant):
                     traj_mask,
                 ) = next(data_iter)
 
+            print("Image size: ", images.shape)
+
             loss = Trainer.train_step(
                 timesteps=timesteps,
                 states=states,

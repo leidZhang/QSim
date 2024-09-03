@@ -86,6 +86,7 @@ class ReinFormer(nn.Module):
         actions, 
         returns_to_go,
     ):
+        print("Images shape: ", images.shape)
         B, T, _ = states.shape  # B: batch size T: time steps
 
         time_embeddings = self.embed_timestep(timesteps)

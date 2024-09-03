@@ -36,7 +36,7 @@ class ACCDirector:
         self.qlabs.destroy_all_spawned_actors()
         QLabsRealTime().terminate_all_real_time_models()
         self.builder.build_floor()
-        # self.builder.build_walls()
+        self.builder.build_walls()
         stop_signs: list = self.builder.build_stop_sign()
         self.builder.build_crosswalk()
         traffic_lights: list = self.builder.build_traffic_light()
