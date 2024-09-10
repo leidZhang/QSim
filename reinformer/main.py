@@ -14,7 +14,7 @@ import torch
 import wandb
 from torch.utils.data import DataLoader
 
-from .settings import *
+from ..settings import *
 from .dataset import D4RLTrajectoryDataset, CustomDataSet
 from .trainer import ReinFormerTrainer
 from .eval import Reinformer_eval
@@ -24,32 +24,7 @@ from .eval import Reinformer_eval
 
 def experiment(variant):
     use_wandb = True
-    # seeding
-    # seed = variant["seed"]
-    # random.seed(seed)
-    # np.random.seed(seed)
-    # torch.manual_seed(seed)
-
-    # env = variant["env"]
-    # dataset = variant["dataset"]
-    
-    # if dataset == "complete":
-    #     variant["batch_size"] = 16
-    # if env == "kitchen":
-    #     d4rl_env = f"{env}-{dataset}-v0"
-    # elif env in ["pen", "door", "hammer", "relocate", "maze2d"]:
-    #     d4rl_env = f"{env}-{dataset}-v1"
-    # elif env in ["halfcheetah", "hopper", "walker2d", "antmaze"]:
-    #     d4rl_env = f"{env}-{dataset}-v2"
-    # if env in ["kitchen", "maze2d", "antmaze"]:
-    #     variant["num_eval_ep"] = 100
-    # if env == "hopper":
-    #     if dataset == "medium" or dataset == "meidum-replay":
-    #         variant["batch_size"] = 256
-    
-    # dataset_path = os.path.join(variant["dataset_dir"], f"trajectories.pkl")
-    # dataset_path = r'C:\Users\SDCNLab_P720\PycharmProjects\qsim\assets\trajectories.pkl'
-    dataset_path = r"assets/npz"
+    dataset_path = r"assets/train"
     device = torch.device(variant["device"])
 
     start_time = datetime.now().replace(microsecond=0)
@@ -210,23 +185,23 @@ def run_reinformer_main():
     # parser.add_argument("--dataset", type=str, default="medium")
     # parser.add_argument("--num_eval_ep", type=int, default=10)
     # parser.add_argument("--max_eval_ep_len", type=int, default=1000)
-    parser.add_argument("--dataset_dir", type=str, default="assets")
+    parser.add_argument("--dataset_dir", type=str, default=DATASET_DIR)
     parser.add_argument("--context_len", type=int, default=CONTEXT_LEN)
-    parser.add_argument("--n_blocks", type=int, default=4)
+    parser.add_argument("--n_blocks", type=int, default=N_BLOCKS)
     parser.add_argument("--embed_dim", type=int, default=EMBED_DIM)
-    parser.add_argument("--n_heads", type=int, default=2)
-    parser.add_argument("--dropout_p", type=float, default=0.1)
-    parser.add_argument("--grad_norm", type=float, default=0.25)
-    parser.add_argument("--tau", type=float, default=0.99)
+    parser.add_argument("--n_heads", type=int, default=N_HEADS)
+    parser.add_argument("--dropout_p", type=float, default=DROPOUT_P)
+    parser.add_argument("--grad_norm", type=float, default=GRAD_NORM)
+    parser.add_argument("--tau", type=float, default=TAU)
     parser.add_argument("--batch_size", type=int, default=BATCH_SIZE)
-    parser.add_argument("--lr", type=float, default=1e-4)
-    parser.add_argument("--wd", type=float, default=1e-4)
-    parser.add_argument("--warmup_steps", type=int, default=5000)
-    parser.add_argument("--max_train_iters", type=int, default=10)
-    parser.add_argument("--num_updates_per_iter", type=int, default=5000) # 5000
-    parser.add_argument("--device", type=str, default="cuda:1")
-    parser.add_argument("--seed", type=int, default=2024)
-    parser.add_argument("--init_temperature", type=float, default=0.1)
+    parser.add_argument("--lr", type=float, default=LR)
+    parser.add_argument("--wd", type=float, default=WD)
+    parser.add_argument("--warmup_steps", type=int, default=WARMUP_STEPS)
+    parser.add_argument("--max_train_iters", type=int, default=MAX_TRAIN_ITERS)
+    parser.add_argument("--num_updates_per_iter", type=int, default=NUM_UPDATES_PER_ITER) # 5000
+    parser.add_argument("--device", type=str, default=DEVICE)
+    parser.add_argument("--seed", type=int, default=SEED)
+    parser.add_argument("--init_temperature", type=float, default=INIT_TEMPERATURE)
     # use_wandb = False
     parser.add_argument("--use_wandb", action='store_true', default=True)
     args = parser.parse_args()

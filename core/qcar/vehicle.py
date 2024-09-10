@@ -9,7 +9,7 @@ from qvl.qlabs import QuanserInteractiveLabs
 
 # from core.sensor.sensor import VirtualCSICamera, VirtualRGBDCamera
 from core.templates.base_policy import PolicyAdapter, BasePolicy
-from .virtual import Monitor
+from .virtual import VirtualOptitrack
 from .constants import QCAR_ACTOR_ID, ENCODER_COUNTS_PER_REV
 from .constants import PIN_TO_SPUR_RATIO, WHEEL_RADIUS
 
@@ -82,8 +82,8 @@ class VirtualCar(BaseCar):
         super().__init__(throttle_coeff, steering_coeff)
         self.qlabs: QuanserInteractiveLabs = qlabs
         self.actor_id: int = actor_id
-        self.running_gear: QCar = QCar(id=actor_id)
-        self.monitor: Monitor = Monitor(QCAR_ACTOR_ID, actor_id, dt=dt)
+        self.running_gear: QCar = QCar()
+        self.monitor: VirtualOptitrack = VirtualOptitrack(QCAR_ACTOR_ID, actor_id, dt=dt)
 
     def halt(self) -> None:
         self.running_gear.read_write_std(0, 0)

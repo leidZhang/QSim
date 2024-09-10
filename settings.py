@@ -2,10 +2,11 @@ import os
 
 import torch
 
+DATASET_DIR: str = "assets"
 MODEL_TYPE: str = "Reinformer"
 DATASET_DIR: str = "assets"
 CONTEXT_LEN: int = 4
-N_BLOCKS: int = 6
+N_BLOCKS: int = 4
 EMBED_DIM: int = 512  # 21174
 N_HEADS: int = 2
 DROPOUT_P: float = 0.1
@@ -26,6 +27,9 @@ ACT_DIM: int = 2
 MODEL_PATH: str = os.path.join(os.getcwd(), "Reinformer/models/latest_checkpoint.pt")
 RESUME: bool = False
 WORKERS: int = 4
+DEVICE: str = "cuda:1"
+SEED: int = 2024
+INIT_TEMPERATURE: float = 0.1
 
 # Set environment variable
 os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'

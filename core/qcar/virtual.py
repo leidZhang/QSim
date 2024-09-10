@@ -7,15 +7,44 @@ from qvl.qlabs import QuanserInteractiveLabs
 from qvl.qlabs import CommModularContainer
 
 
-class Monitor:
+class VirtualOptitrack:
+    """
+    VirtualOptitrack is a class that mocks the Optitrack system. It is used to get the position of 
+    an actor in the Quanser Interactive Labs environment.
+
+    Attributes:
+    - dt: float: The time gap between each step
+    - class_id: int: The class id of the actor
+    - actor_number: int: The actor number
+    - state: np.array: The state of the actor
+    - last_state: np.array: The last state of the actor
+    """
+
     def __init__(self, class_id: int, actor_number: int, dt: float = 0.05) -> None:
+        """
+        The constructor of the VirtualOptitrack class. Initialize the VirtualOptitrack object with the given parameters.
+
+        Parameters:
+        - class_id: int: The class id of the actor
+        - actor_number: int: The actor number
+        - dt: float: The time gap between each step
+        """
         self.dt = dt
         self.class_id: int = class_id
         self.actor_number: int = actor_number
         self.state: np.array = np.zeros(6)
         self.last_state: np.array = np.zeros(6)
 
-    def get_position(self, qlabs: QuanserInteractiveLabs) -> np.array:
+    def get_position(self, qlabs: QuanserInteractiveLabs) -> np.ndarray:
+        """
+        Get the position of the actor in the Quanser Interactive Labs environment.
+
+        Parameters:
+        - qlabs: QuanserInteractiveLabs: The Quanser Interactive Labs object
+
+        Returns:
+        - np.ndarray: The state of the actor
+        """
         c: CommModularContainer = CommModularContainer()
         c.classID = self.class_id
         c.actorNumber = self.actor_number
@@ -30,6 +59,12 @@ class Monitor:
         self.state = np.array([x, y, yaw, 0, 0, 0])
 
     def cal_motion(self) -> None:
+        """
+        Calculate the motion of the actor based on the current and last state.
+
+        Returns:
+        - None
+        """
         x: float = self.state[0]
         y: float = self.state[1]
         yaw: float = self.state[2]
@@ -46,6 +81,12 @@ class Monitor:
         self.state = np.array([x, y, yaw, v, w, a])
 
     def read_state(self, qlabs: QuanserInteractiveLabs) -> None:
+        """
+        Read the state of the actor in the Quanser Interactive Labs environment.
+
+        Parameters:
+        - qlabs: QuanserInteractiveLabs: The Quanser Interactive Labs object
+        """
         self.get_position(qlabs)
         self.cal_motion()
         self.last_state = self.state
@@ -54,20 +95,60 @@ class Monitor:
 
 
 class VirtualRuningGear:
+    """
+    VirtualRuningGear is a class that represents the running gear of the QCar.
+
+    Attributes:
+    - class_id: int: The class id of the actor
+    - actor_number: int: The actor number
+    - throttle_coeff: float: The throttle coefficient
+    - steering_coeff: float: The steering coefficient
+    - FCN_QCAR_SET_VELOCITY_AND_REQUEST_STATE: int: The function code for setting velocity and 
+        requesting state
+    - FCN_QCAR_VELOCITY_STATE_RESPONSE: int: The function code for velocity state response
+    """
+    
     FCN_QCAR_SET_VELOCITY_AND_REQUEST_STATE = 10
     FCN_QCAR_VELOCITY_STATE_RESPONSE = 11
 
-    def __init__(self, class_id: int, actor_number: int) -> None:
+    def __init__(self, class_id: int, actor_number: int, throttle_coeff: float = 7.5) -> None:
+        """
+        Initializes the VirtualRuningGear object, which represents the running gear of the QCar, 
+        usually use this to control the surrounding QCar.
+
+        Parameters:
+        - class_id: int: The class id of the QCar
+        - actor_number: int: The actor number
+        """
         self.class_id: int = class_id
+        self.throttle_coeff: float = throttle_coeff
         self.actor_number: int = actor_number
 
-    def read_write_std(self, qlabs: QuanserInteractiveLabs, throttle, steering, leds=None) -> None:
+    def read_write_std(
+        self,
+        qlabs: QuanserInteractiveLabs,
+        throttle: float,
+        steering: float,
+        leds: list = [0, 0, 0, 0, 0]
+    ) -> tuple:
+        """
+        Execute the action on the QCar based on the given throttle, steering, and LEDs.
+
+        Parameters:
+        - qlabs: QuanserInteractiveLabs: The Quanser Interactive Labs object
+        - throttle: float: The throttle value
+        - steering: float: The steering value
+        - leds: list: The LEDs values
+
+        Returns:
+        - tuple: The location, rotation, frontHit, and rearHit
+        """
         c = CommModularContainer()
         c.classID = self.class_id
-        c.actorNumber = self.actor_number       
+        c.actorNumber = self.actor_number
         c.actorFunction = self.FCN_QCAR_SET_VELOCITY_AND_REQUEST_STATE
-        c.payload = bytearray(struct.pack(">ffBBBBB", throttle * 7.5, -steering, False, False, False, False, False))
-        c.containerSize = c.BASE_CONTAINER_SIZE + len(c.payload) 
+        c.payload = bytearray(struct.pack(">ffBBBBB", throttle * self.throttle_coeff, -steering, leds[0], leds[1], leds[2], leds[3], leds[4]))
+        c.containerSize = c.BASE_CONTAINER_SIZE + len(c.payload)
 
         location = [0,0,0]
         rotation = [0,0,0]

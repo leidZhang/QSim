@@ -9,8 +9,8 @@ class BasePolicy(ABC):
     The BasePolicy class is an abstract class that defines the interface for
     the control policies
     """
-    
-    def __init__(self, *args) -> None: 
+
+    def __init__(self, *args) -> None:
         """
         Initializes the BasePolicy object
 
@@ -23,7 +23,7 @@ class BasePolicy(ABC):
         ...
 
     @abstractmethod
-    def execute(self, *args) -> Tuple[np.ndarray, dict]: 
+    def execute(self, *args) -> Tuple[np.ndarray, dict]:
         """
         The execute method is an abstract method that executes the policy
 

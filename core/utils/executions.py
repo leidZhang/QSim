@@ -36,7 +36,7 @@ class WatchDogTimer:
     The WatchDogTimer class is used to monitor the execution of a process or thread.
     """
 
-    def __init__(self, event: Event, timeout: float = 0.1) -> None:
+    def __init__(self, event, timeout: float = 0.1) -> None:
         """
         Initialize the WatchDogTimer with the event and timeout.
 
@@ -44,7 +44,7 @@ class WatchDogTimer:
         - event: Event: The thread event or process to monitor.
         - timeout: float: The timeout for the watchdog timer.
         """
-        self.event: Event = event
+        self.event = event
         self.timer: float = None
         self.timeout: float = timeout
 
@@ -233,7 +233,7 @@ class BaseCoordinator(ABC):
         finally:
             self.terminate()
             logging.info("System stopped")
-            os._exit(0)
+            # os._exit(0)
 
 
 class BaseProcessExec(ABC):
@@ -357,7 +357,7 @@ class BaseThreadExec(ABC):
         - watchdog_event: ThEvent: The watchdog event for monitoring the thread.
         """
         # thread event for thread loop
-        self.done = done 
+        self.done = done
         # watchdog event for monitoring
         if watchdog_event is not None:
             self.watchdog_event: ThEvent = watchdog_event

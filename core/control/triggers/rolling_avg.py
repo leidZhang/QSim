@@ -1,9 +1,5 @@
 from queue import Queue
 from typing import Union
-from threading import Event as MpEvent
-from multiprocessing import Event as MpEvent
-
-Event = Union[MpEvent, MpEvent]
 
 
 class RollingAverageTrigger:
@@ -20,7 +16,7 @@ class RollingAverageTrigger:
     - queue: Queue: the queue to store the history of the data
     """
     
-    def __init__(self, event: Event, threshold: float, size: int = 5) -> None:
+    def __init__(self, event, threshold: float, size: int = 5) -> None:
         """
         Initializes the RollingAverageTrigger object.
 
@@ -30,7 +26,7 @@ class RollingAverageTrigger:
         - size (int): The maximum size of the queue
         """
         self.max_size: int = size
-        self.event: Event = event
+        self.event = event
         self.threshold: float = threshold
         self.accumulator: float = 0.0
         self.queue: Queue = Queue(size)

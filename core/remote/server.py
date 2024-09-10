@@ -35,7 +35,7 @@ class UDPServer(LifeCycleWrapper):
         self.server_socket: socket = socket(AF_INET, SOCK_DGRAM)
         self.address: Tuple[str, int] = (ip, port)
 
-    def _send_data(self, data_queue: Union[Queue, MPQueue]) -> None:
+    def _send_data(self, data: Any) -> None:
         """
         Sends data to the client.
 
@@ -45,11 +45,6 @@ class UDPServer(LifeCycleWrapper):
         Returns:
         - None
         """
-        if data_queue.empty():
-            time.sleep(0.001)
-            return
-
-        data: Any = data_queue.get()
         serialized_data: bytes = pickle.dumps(data)
         self.server_socket.sendto(serialized_data, self.address)
 
@@ -62,7 +57,7 @@ class UDPServer(LifeCycleWrapper):
         """
         serialized_data, _ = self.server_socket.recvfrom(1024)
         return pickle.loads(serialized_data)
-    
+
     def execute(self, data_queue: Union[Queue, MPQueue]) -> None:
         """
         Executes the server module, sending data to the client.
@@ -74,7 +69,8 @@ class UDPServer(LifeCycleWrapper):
         - None
         """
         try:
-            self._send_data(data_queue)
+            data: Any = data_queue.get()
+            self._send_data(data)
             # self._receive_data()
         except Exception as e:
             logging.warning(str(e))
@@ -83,7 +79,7 @@ class UDPServer(LifeCycleWrapper):
 # TODO: Change to UDP for faster transmission
 class TCPVideoServer(LifeCycleWrapper):
     """
-    The VideoServer class is a primitive server that sends images to the client using 
+    The VideoServer class is a primitive server that sends images to the client using
     TCP protocol.
 
     Attributes:

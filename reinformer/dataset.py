@@ -9,7 +9,7 @@ import numpy as np
 
 from torch.utils.data import Dataset
 
-from .settings import *
+from ..settings import *
 
 # SCALES: Dict[str, int] = {  
 #     "hopper": 1000, "walker2d": 1000,

@@ -8,7 +8,7 @@ import logging
 from .model import ReinFormer
 from .lamb import Lamb
 
-from .settings import *
+from ..settings import *
 
 
 class ReinFormerTrainer:

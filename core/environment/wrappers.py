@@ -8,30 +8,14 @@ from .environment import QLabEnvironment
 
 class ActionRewardResetWrapper(Wrapper):
     """
-    ActionRewardResetWrapper class is A wrapper class for the Env classes, responsible for 
-    adding more data in the observation dict. 
-
-    Attributes:
-    - action_size (int): The size of the action
-    - env (QLabEnvironment): The QLabEnvironment object
+    ActionRewardResetWrapper class is A wrapper class for the Env classes, responsible for
+    adding more data in the observation dict.
     """
-    
-    def __init__(self, env: QLabEnvironment, nodes: list, waypoints: np.ndarray) -> None:
-        """
-        Initializes the ActionRewardResetWrapper object.
-
-        Parameters:
-        - env (QLabEnvironment): The QLabEnvironment object
-        - nodes (list): The list of nodes
-        """
-        super().__init__(env)
-        self.action_size: int = env.action_size
-        self.env.setup(nodes, waypoints)
 
     def step(
-        self, 
-        action: np.ndarray, 
-        metrics: np.ndarray, 
+        self,
+        action: np.ndarray,
+        metrics: np.ndarray,
         compare_action: np.ndarray
     ) -> Tuple[dict, float, bool, dict]:
         """
@@ -71,7 +55,7 @@ class ActionRewardResetWrapper(Wrapper):
 
 class CollectionWrapper(Wrapper):
     """
-    CollectionWrapper class is a wrapper class for the Env classes, responsible for 
+    CollectionWrapper class is a wrapper class for the Env classes, responsible for
     reorginizing the observation dict.
 
     Attributes:
@@ -93,9 +77,9 @@ class CollectionWrapper(Wrapper):
         self.episode: list = []
 
     def step(
-        self, 
-        action: np.ndarray, 
-        metrics: np.ndarray, 
+        self,
+        action: np.ndarray,
+        metrics: np.ndarray,
         compare_action: np.ndarray
     ) -> Tuple[dict, float, bool, dict]:
         """
@@ -113,7 +97,7 @@ class CollectionWrapper(Wrapper):
             action=action, metrics=metrics, compare_action=compare_action
         )
         # copy obs dict as a item and add it to self.episode list
-        self.episode.append(observation.copy())  
+        self.episode.append(observation.copy())
         if not done:
             return observation, reward, done, info
 

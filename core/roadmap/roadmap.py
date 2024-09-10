@@ -13,16 +13,9 @@ from .constants import EDGE_CONFIGS_RIGHT_LARGE_MAP
 
 class ACCRoadMap(RoadMap):
     """
-    This class is responsible for generating waypoints of the roadmap used in 
+    This class is responsible for generating waypoints of the roadmap used in
     the ACC2024 student self-driving competition
     """
-    _instance = None
-
-    def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super(ACCRoadMap, cls).__new__(cls)
-        return cls._instance
-
     def __init__(self) -> None:
         """
         Initializes the ACCRoadMap object
@@ -41,12 +34,6 @@ class ACCRoadMap(RoadMap):
         for edge in edges:
             edge[2] = edge[2] * ACC_SCALE
             self.add_edge(*edge)
-
-    @classmethod
-    def get_instance(cls):
-        if cls._instance is None:
-            cls._instance = cls()
-        return cls._instance
 
     def generate_random_cycle(self, start: int, min_length:int = 3) -> list:
         """
@@ -93,7 +80,7 @@ class ACCRoadMap(RoadMap):
             node_sequence = node_sequence.tolist()
 
         return np.array(super().generate_path(node_sequence)).transpose(1, 0) #[N, (x, y)]
-    
+
     def generate_path_and_segments(self, node_sequence: Union[np.ndarray, list]) -> Tuple[np.ndarray, np.ndarray]:
         """
         Wraps the generated path and segments as a numpy array object
@@ -145,4 +132,3 @@ class ACCRoadMap(RoadMap):
 
         waypoint_sequence = self.generate_path(node_sequence)
         return node_dict, waypoint_sequence
-    

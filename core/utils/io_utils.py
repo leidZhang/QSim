@@ -68,8 +68,7 @@ class ImageReader:
 
 
 class DataWriter(ABC):
-    def __init__(self, folder_path: str, image_queue: Queue = None) -> None:
-        self.image_queue: Queue = image_queue
+    def __init__(self, folder_path: str) -> None:
         self.history: list = []
         self.process_data: Callable = skip
         self.get_episode_data: Callable = skip
@@ -115,7 +114,7 @@ class JSONDataWriter(DataWriter):
 
 class NPZDataWriter(DataWriter):
     def __init__(self, folder_path: str) -> None:
-        super().__init__(folder_path)       
+        super().__init__(folder_path)
         # check if the output path exists
         if not os.path.exists(self.folder_path):
             os.makedirs(self.folder_path)

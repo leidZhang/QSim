@@ -42,21 +42,21 @@ class PurePursuitPolicy:
         tx, ty = waypoints[i]
 
         # compute steer action
-        x, y, yaw = state[:3]        
+        x, y, yaw = state[:3]
         alpha: float = np.arctan2(ty - y, tx - x) - yaw
         l: float = np.sqrt((x - tx)**2 + (y - ty)**2)
         theta: float = np.arctan2(2 * 0.256 * np.sin(alpha), l)
         action[1] = theta / 0.5
 
         return action, metrics
-    
+
         # print("waypoints: ", waypoints[1:10])
         # print("waypoints_shape: ", waypoints.shape)
         # delta_waypoints = np.diff(waypoints, axis=0)
         # theta = np.arctan2(delta_waypoints[:, 1], delta_waypoints[:, 0]) + np.pi / 2
         # new_waypoints = waypoints[1:] + 0.3 * np.stack([np.cos(theta), np.sin(theta)], axis=-1)
         # print("new_waypoints: ", new_waypoints[1:10])
-        
+
         # while 1 < time.time() - self.start_time < 5:
         #     metrics["waypoints"] = new_waypoints
 
@@ -74,20 +74,22 @@ class PurePursuitPolicy:
 
         #     tx, ty = new_waypoints[i]
 
-        #     x, y, yaw = state[:3]        
+        #     x, y, yaw = state[:3]
         #     alpha: float = np.arctan2(ty - y, tx - x) - yaw
         #     l: float = np.sqrt((x - tx)**2 + (y - ty)**2)
         #     theta: float = np.arctan2(2 * 0.256 * np.sin(alpha), l)
         #     action[1] = theta / 0.5
 
         #     return action, metrics
-    
+
 
 class PurePursuiteAdaptor(PolicyAdapter):
     def __init__(self, max_lookahead_distance=0.5) -> None:
         self.policy = PurePursuitPolicy(max_lookahead_distance)
 
     def execute(self, obs) -> Tuple[dict, dict]:
+        if "done" in obs.keys() and obs["done"]:
+            return np.zeros(2), {}
         return self.policy(obs)
 
 

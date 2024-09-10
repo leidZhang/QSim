@@ -45,28 +45,29 @@ class DoubleBuffer:
             self.buffer.put(data)
         except Exception as e:
             print(f"Error in DoubleBuffer.put: {e}")
-        
+
     def get(self) -> Any:
         self._switch_queue_and_buffer()
-        if self.queue.empty():
+        if self.queue.qsize() == 0:
             return None
-        
-        data: Any = None        
+
+        data: Any = None
         while not self.queue.empty():
             data = self.queue.get()
+
         return data
-    
+
         # if not self.queue.empty():
         #     res = self.queue.get()
         #     return res
         # return None
-    
+
     def terminate(self) -> None:
         # clear the queues
         while self.buffer.qsize() > 0:
-            self.buffer.get()        
+            self.buffer.get()
         while self.queue.qsize() > 0:
-            self.queue.get()        
+            self.queue.get()
         # print(f"{self.buffer.qsize()}, {self.queue.qsize()}")
         # close the queues
         self.buffer.close()

@@ -19,7 +19,7 @@ class UDPClient(LifeCycleWrapper):
 
     def __init__(self, ip: str, port: int = 8080) -> None:
         """
-        Initializes the UDPClient object. The client socket is created and binded to 
+        Initializes the UDPClient object. The client socket is created and binded to
         the given address. The default port is 8080.
 
         Parameters:
@@ -59,11 +59,11 @@ class UDPClient(LifeCycleWrapper):
         self.client_socket.sendto(serialized_data, self.address)
 
     def execute(
-        self, 
+        self,
         data_queue: Union[Queue, MPQueue]
     ) -> None:
         """
-        Executes the client by receiving data from the server and putting it 
+        Executes the client by receiving data from the server and putting it
         into the data queue.
         """
         try:
