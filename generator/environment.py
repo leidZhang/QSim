@@ -46,8 +46,8 @@ class CrossRoadEnvironment(OnlineQLabEnv):
     def __reset_agent(self, actor_id: int, agent_states: np.ndarray) -> None:
         # get the waypoints and start node for the agent
         random_route_index: int = random.randint(0, 2)
-        
-        
+
+
         task: List[int] = ROUTES[actor_id][random_route_index]
         if actor_id != 0:
             random_throttle_index: int = random.choice(list(self.used))
@@ -83,17 +83,17 @@ class CrossRoadEnvironment(OnlineQLabEnv):
     def step(self) -> Tuple[dict, float, bool, dict]:
         _, reward, done, info = super().step()
         agent_states: List[np.ndarray] = self.databus.step()
-        for agent in self.agents:
+        for agent in reversed(self.agents):
             agent.step(agent_states)
         self.episode_steps += 1
 
-        ego_agent_state: np.ndarray = self.agents[0].observation["state"]
-        for agent in self.agents[1:]:
-            agent_state: np.ndarray = agent.observation["state"]
-            if is_collided(ego_agent_state, agent_state, self.car_box):
-                print(f"Collision detected between ego agent and agent {agent.actor_id}")
-                done = True
-                break
+        # ego_agent_state: np.ndarray = self.agents[0].observation["state"]
+        # for agent in self.agents[1:]:
+        #     agent_state: np.ndarray = agent.observation["state"]
+        #     if is_collided(ego_agent_state, agent_state, self.car_box):
+        #         print(f"Collision detected between ego agent and agent {agent.actor_id}")
+        #         done = True
+        #         break
 
         done = self.agents[0].observation["done"] or done
         return self.agents[0].observation, reward, done, info

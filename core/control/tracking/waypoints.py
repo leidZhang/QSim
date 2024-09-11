@@ -59,9 +59,11 @@ class WaypointProcessor:
         - observation(Dict[str, np.ndarray]): the observation of the ego car with the waypoints info
         """
         self.waypoints = waypoints
-        self.cal_vehicle_state(ego_state)
         self.current_waypoint_index: int = init_waypoint_index
         self.next_waypoints: np.ndarray = self.waypoints[self.current_waypoint_index:]
+        self.global_waypoints: np.ndarray = np.roll(
+            self.waypoints, -self.current_waypoint_index, axis=0
+        )[:MAX_LOOKAHEAD_INDICES]
         self.handle_observation(ego_state, observation)
         return observation
 
@@ -99,11 +101,11 @@ class WaypointProcessor:
         - None
         """
         # get the global waypoints
-        global_waypoints: np.ndarray = np.roll(
+        self.global_waypoints: np.ndarray = np.roll(
             self.waypoints, -self.current_waypoint_index, axis=0
         )[:MAX_LOOKAHEAD_INDICES]
         # get the distance to the waypoints
-        self.norm_dist: np.ndarray = np.linalg.norm(global_waypoints - orig, axis=1)
+        self.norm_dist: np.ndarray = np.linalg.norm(self.global_waypoints - orig, axis=1)
         # get the index of the closest waypoint
         self.dist_ix: int = np.argmin(self.norm_dist)
         # update the current waypoint index
