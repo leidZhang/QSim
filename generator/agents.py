@@ -12,7 +12,7 @@ from core.qcar import VirtualOptitrack, QCAR_ACTOR_ID
 from core.qcar.virtual import VirtualRuningGear
 from core.templates import PolicyAdapter, BasePolicy
 from core.control import WaypointProcessor
-from .hazard_decision import HazardDetector
+from .hazard_decision import *
 
 
 class StateDataBus: # get all the state information of the car agents
@@ -47,29 +47,48 @@ class CarAgent(PhysicalCar): # ego vehicle, can be controlled by the user
         self.actor_id: int = actor_id
         self.policy: Union[BasePolicy, PolicyAdapter] = None
         self.preporcessor: WaypointProcessor = WaypointProcessor(auto_stop=True)
-        self.observation: Dict[str, np.ndarray] = {"action": np.zeros(2)}
+        self.observation: Dict[str, np.ndarray] = {"action": np.zeros(2), "rank": actor_id}
 
-    def _get_ego_state(self, agent_states: List[np.ndarray]) -> None:
+    def _get_ego_state(self, agent_states: List[np.ndarray], agent_ranks: List[int] = [0, 1, 2, 3]) -> None:
         ego_state: np.ndarray = agent_states[self.actor_id]
         hazard_states: List[np.ndarray] = [
-            state for i, state in enumerate(agent_states) if i != self.actor_id and i != 0
+            state if i != self.actor_id and i != 0 else None for i, state in enumerate(agent_states) 
+        ]
+        self.hazard_ranks: List[int] = [
+            rank if rank != self.actor_id and rank != 0 else None for rank in agent_ranks
         ]
 
         self.state = ego_state
         self.observation["hazards"] = hazard_states
 
-    def reset(self, wayponts: np.ndarray, agent_states: List[np.ndarray]) -> None:
+    def reset(self, waypionts: np.ndarray, agent_states: List[np.ndarray]) -> None:
         self._get_ego_state(agent_states)
         self.observation = self.preporcessor.setup(
             ego_state=self.state,
             observation=self.observation,
-            waypoints=wayponts,
+            waypoints=waypionts,
         )
-        self.observation["global_waypoints"] = self.preporcessor.global_waypoints
+        current_wayppint_index: int = self.preporcessor.current_waypoint_index
+        start_waypoint_index: int = max(0, current_wayppint_index - 150)
+        end_waypoint_index: int = min(len(waypionts) - 1, current_wayppint_index + 150)
+        self.observation["global_waypoints"] = waypionts[
+            start_waypoint_index:end_waypoint_index
+        ]
+        self.observation["progress"] = current_wayppint_index / len(waypionts)
+        # self.observation["progress"] = np.linalg.norm(self.state[:2] - waypionts[-1])
 
     def _handle_preprocess(self) -> None:
         self.observation = self.preporcessor.execute(self.state, self.observation)
-        self.observation["global_waypoints"] = self.preporcessor.global_waypoints
+        current_wayppint_index: int = self.preporcessor.current_waypoint_index
+        start_waypoint_index: int = max(0, current_wayppint_index - 150)
+        end_waypoint_index: int = min(len(self.preporcessor.waypoints) - 1, current_wayppint_index + 150)
+        self.observation["global_waypoints"] = self.preporcessor.waypoints[
+            start_waypoint_index:end_waypoint_index
+        ]
+
+        self.observation["progress"] = current_wayppint_index / len(self.preporcessor.waypoints)
+        # self.observation["progress"] = np.linalg.norm(self.state[:2] - self.preporcessor.waypoints[-1])
+
 
     @abstractmethod
     def handle_action(self, action: np.ndarray) -> None:
@@ -110,7 +129,7 @@ class EgoAgent(CarAgent):
         self.__get_image_data()
         super().reset(waypoints, agent_states)
 
-    def step(self, agent_states: List[np.ndarray]) -> None:
+    def step(self, agent_states: List[np.ndarray], *args) -> None:
         self.__get_image_data()
         self._get_ego_state(agent_states)
         self._handle_preprocess()
@@ -122,16 +141,40 @@ class HazardAgent(CarAgent):
     def __init__(self, actor_id: int, qlabs: QuanserInteractiveLabs) -> None:
         super().__init__(actor_id)
         self.qlabs: QuanserInteractiveLabs = qlabs
-        self.detector: HazardDetector = HazardDetector()
         self.running_gear: VirtualRuningGear = VirtualRuningGear(QCAR_ACTOR_ID, actor_id)
 
-    def _detect_hazard(self) -> None:
+    def _detect_hazard(
+        self, 
+        hazard_waypoints_list: List[np.ndarray], 
+        hazard_progresses: List[float],
+        hazard_ids: List[int]
+    ) -> None:
+        halt_decision = 1
+        ego_progress: float = self.observation["progress"]
         ego_state: np.ndarray = self.observation["state"]
-        hazard_decision: int = self.detector.get_hazard_decision(
-            ego_state, self.observation["hazards"]
-        )
-        self.observation["hazard_decision"] = hazard_decision
-        print(f"Agent {self.actor_id} has Hazard decision: {hazard_decision}")
+        ego_waypoints: np.ndarray = self.observation["global_waypoints"]
+        for i, hazard_state in enumerate(self.observation["hazards"]):
+            if hazard_state is None:
+                continue
+
+            hazard_waypoints: np.ndarray = hazard_waypoints_list[i]
+            hazard_progress: float = hazard_progresses[i]
+            hazard_id: int = hazard_ids[i]
+            if make_halt_decision(
+                ego_state=ego_state, 
+                ego_waypoints=ego_waypoints, 
+                ego_rank=ego_progress,
+                hazard_state=hazard_state, 
+                hazard_waypoints=hazard_waypoints,
+                hazard_rank=hazard_progress,
+                ego_id=self.actor_id,
+                hazard_id=hazard_id
+            ):
+                halt_decision *= 0
+                break
+        
+        self.observation["hazard_decision"] = halt_decision
+        # print(f">>Agent {self.actor_id} has Hazard decision: {halt_decision}")
 
     def halt_car(self, steering: float = 0, halt_time: float = 0.1) -> None:
         self.running_gear.read_write_std(self.qlabs, throttle=0.0, steering=steering)
@@ -144,10 +187,16 @@ class HazardAgent(CarAgent):
         self.running_gear.read_write_std(self.qlabs, throttle, steering, self.leds)
         self.observation["action"] = action
 
-    def step(self, agent_states: List[np.ndarray]) -> None:
-        print(f"Agent {self.actor_id} is running...")
+    def step(
+        self, 
+        agent_states: List[np.ndarray], 
+        agent_waypoints: List[np.ndarray], 
+        hazard_progress: List[float],
+        agent_ids: List[int]
+    ) -> None:
+        # print(f">>Agent {self.actor_id} is running...")
         self._get_ego_state(agent_states)
-        self._detect_hazard()
+        self._detect_hazard(agent_waypoints, hazard_progress, agent_ids)
         self._handle_preprocess()
         action, _ = self.policy.execute(self.observation)
         self.handle_action(action)

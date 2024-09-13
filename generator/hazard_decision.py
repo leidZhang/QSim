@@ -3,62 +3,79 @@ from typing import List
 import numpy as np
 
 
-def get_relative_polar_coordinates(
-    ego_orig: np.ndarray,
-    ego_yaw: float,
-    agent_orig: np.ndarray
-) -> np.ndarray:
-    relative_orig: np.ndarray = agent_orig - ego_orig
-    relative_angle: float = np.arctan2(relative_orig[1], relative_orig[0])
+# TODO: Change a way to detect the intersection
+def is_traj_intersected(ego_traj: np.ndarray, hazard_traj: np.ndarray) -> bool:
+    ego_traj_len, hazard_traj_len = len(ego_traj), len(hazard_traj)
+    compare_len: int = min(ego_traj_len, hazard_traj_len)
+    # print(f"compare_len: {compare_len}")
+    # print(ego_traj, hazard_traj)
 
-    relative_angle = relative_angle # - ego_yaw # + np.pi / 2
-    relative_angle = (relative_angle + np.pi) % (2 * np.pi) - np.pi
-    relative_distance: float = np.linalg.norm(relative_orig)
-    print(f"relative_distance: {relative_distance}, relative_angle: {relative_angle / np.pi * 180}")
-    return np.array([relative_distance, relative_angle])
+    waypoint_dists_1: np.ndarray = np.linalg.norm(ego_traj[:compare_len] - hazard_traj[:compare_len][::-1], axis=1)
+    waypoint_dists_2: np.ndarray = np.linalg.norm(ego_traj[-compare_len:] - hazard_traj[-compare_len:], axis=1)
+    # print(f"min_dist_1", min(waypoint_dists_1), "min_dist_2", min(waypoint_dists_2))
+    mask_1: np.ndarray = waypoint_dists_1 <= 0.25
+    mask_2: np.ndarray = waypoint_dists_2 <= 0.25
+    return np.any(mask_1) or np.any(mask_2)
 
 
-class HazardDetector:
-    def __init__(
-        self,
-        dist_thresh: float = 0.90,
-        angle_thresh: float = np.pi / 2.5
-    ) -> None:
-        self.dist_thresh: float = dist_thresh
-        self.angle_thresh: float = angle_thresh
+def is_in_hazard_range(ego_orig: np.ndarray, agent_orig: np.ndarray, thresh: float) -> bool:
+    return np.linalg.norm(ego_orig - agent_orig) < thresh
 
-    def is_hazard(self, ego_yaw: np.ndarray, agent_orig: np.ndarray) -> bool:
-        polar_coord: np.ndarray = get_relative_polar_coordinates(np.zeros(2), ego_yaw, agent_orig)
-        dist_flag: bool = polar_coord[0] < self.dist_thresh
-        angle_flag: bool = abs(polar_coord[1]) < self.angle_thresh
-        return dist_flag and angle_flag
 
-    def get_hazard_decision(
-        self,
-        ego_state: np.ndarray,
-        agent_states: List[np.ndarray]
-    ) -> int:
-        ego_orig: np.ndarray = ego_state[:2]
-        ego_yaw: float = -ego_state[2]
-        rot: np.ndarray = np.array([
-            [np.cos(ego_yaw), np.sin(ego_yaw)],
-            [-np.sin(ego_yaw), np.cos(ego_yaw)]
-        ])
+def has_higher_priority(ego_rank: float, agent_rank: float, ego_id: int, agent_id: int) -> bool:
+    if ego_rank > agent_rank:
+        return True
+    elif ego_id > agent_id:
+        return True
+    return False    
 
-        for i in range(len(agent_states)):
-            agent_orig: np.ndarray = agent_states[i][:2]
-            local_frame_orig = np.matmul(agent_orig - ego_orig, rot)
-            print(ego_state[:3], agent_states[i][:3])
-            if self.is_hazard(ego_yaw, local_frame_orig):
 
-                return 0
-        print(ego_orig, agent_orig)
-        return 1 # no hazard detected
+def make_halt_decision(
+    ego_state: np.ndarray, 
+    ego_waypoints: np.ndarray,
+    ego_rank: int,
+    hazard_state: List[np.ndarray],
+    hazard_waypoints: np.ndarray,
+    hazard_rank: List[int],
+    ego_id: int,
+    hazard_id: int
+) -> bool:
+    if not is_in_hazard_range(
+        ego_orig=ego_state[:2], 
+        agent_orig=hazard_state[:2], 
+        thresh=1.50
+    ):
+        return False
+    
+    # print("Starting detect the priority")
+    if has_higher_priority(ego_rank, hazard_rank, ego_id, hazard_id):
+        # print("Ego agent has higher priority")
+        return False    
+    
+    # print("Starting detect the intersection")
+    if not is_traj_intersected(ego_waypoints, hazard_waypoints):
+        # print("No intersection detected")
+        return False
+    
+    return True
+
+# def get_relative_polar_coordinates(
+#     ego_orig: np.ndarray,
+#     agent_orig: np.ndarray
+# ) -> np.ndarray:
+#     relative_orig: np.ndarray = agent_orig - ego_orig
+#     relative_angle: float = np.arctan2(relative_orig[1], relative_orig[0])
+
+#     relative_angle = relative_angle # - ego_yaw # + np.pi / 2
+#     relative_angle = (relative_angle + np.pi) % (2 * np.pi) - np.pi
+#     relative_distance: float = np.linalg.norm(relative_orig)
+#     print(f"relative_distance: {relative_distance}, relative_angle: {relative_angle / np.pi * 180}")
+#     return np.array([relative_distance, relative_angle])
 
 
 # class MapQCar:
 #     WIDTH: float = 0.27# 0.2
-#     LENGTH: float = 0.4# 0.54
+#     LENGTH: float = 0.5# 0.54
 
 #     def __init__(self, use_optitrack: bool = False) -> None:
 #         self.correction: float = np.pi if use_optitrack else 0.0
@@ -86,6 +103,49 @@ class HazardDetector:
 #             [np.sin(yaw), np.cos(yaw)],
 #         ])
 #         return np.matmul(agent_box - orig, rot)
+
+
+# class HazardDetector:
+#     def __init__(
+#         self,
+#         dist_thresh: float = 1.20,
+#         angle_thresh: float = np.pi / 6
+#     ) -> None:
+#         self.dist_thresh: float = dist_thresh
+#         self.angle_thresh: float = angle_thresh
+
+#     def is_hazard(self, ego_yaw: float, steering: float, agent_orig: np.ndarray) -> bool:
+#         polar_coord: np.ndarray = get_relative_polar_coordinates(np.zeros(2), agent_orig)
+
+#         print(f"polar_coord: {polar_coord[1] / np.pi * 180}")    
+
+#         dist_flag: bool = polar_coord[0] <= self.dist_thresh
+#         angle_flag: bool = -self.angle_thresh + steering <= polar_coord[1] <= self.angle_thresh + steering
+#         return dist_flag and angle_flag
+
+#     def get_hazard_decision(
+#         self,
+#         ego_action: np.ndarray,
+#         ego_state: np.ndarray,
+#         agent_states: List[np.ndarray]
+#     ) -> int:
+#         ego_steering: float = ego_action[1]
+#         ego_orig: np.ndarray = ego_state[:2]
+#         ego_yaw: float = -ego_state[2]
+#         rot: np.ndarray = np.array([
+#             [np.cos(ego_yaw), np.sin(ego_yaw)],
+#             [-np.sin(ego_yaw), np.cos(ego_yaw)]
+#         ])
+
+#         for i in range(len(agent_states)):
+#             agent_orig: np.ndarray = agent_states[i][:2]
+#             local_frame_orig = np.matmul(agent_orig - ego_orig, rot)
+#             print(ego_state[:3], agent_states[i][:3])
+#             if self.is_hazard(ego_yaw, ego_steering, local_frame_orig):
+
+#                 return 0
+#         print(ego_orig, agent_orig)
+#         return 1 # no hazard detected
 
 
 # class HazardDetector: # Rule is fixed, so no decision making is needed
