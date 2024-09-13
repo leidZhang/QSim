@@ -10,6 +10,7 @@ from core.environment.simulator import QLabSimulator
 from core.environment.detector import EnvQCarRef, is_collided
 from core.roadmap.roadmap import ACCRoadMap
 from core.templates import BasePolicy, PolicyAdapter
+from .hazard_decision import *
 from .agents import CarAgent, EgoAgent, HazardAgent, StateDataBus
 
 THROTTLE_COEEFS: List[float] = [0.09, 0.064, 0.05]
@@ -38,9 +39,7 @@ class CrossRoadEnvironment(OnlineQLabEnv):
     ) -> None:
         super().__init__(simulator, roadmap, dt, privileged)
         self.car_box: EnvQCarRef = EnvQCarRef()
-        self.agent_trajs: List[np.ndarray] = {}
-        self.agent_progresses: List[float] = {}
-        self.agent_ids: List[int] = [0, 1, 2, 3]
+        self.detector: HazardDetector = HazardDetector()
         self.__setup_agents()
 
     def __setup_agents(self) -> None:
@@ -74,11 +73,8 @@ class CrossRoadEnvironment(OnlineQLabEnv):
         # reset the agent's waypoints
         self.agents[actor_id].reset(waypoints, agent_states)
         self.agents[actor_id].set_throttle_coeff(throttle_coeff)
-        self.agent_trajs[actor_id] = self.agents[actor_id].observation["global_waypoints"]
-        self.agent_progresses[actor_id] = 0.0
 
     def reset(self) -> Tuple[dict, float, bool, dict]:
-        print("==========")
         # reset the car position in the environment
         self.used: Set[float] = {0, 1, 2}
         _, reward, done, info = super().reset()
@@ -92,17 +88,19 @@ class CrossRoadEnvironment(OnlineQLabEnv):
         return self.agents[0].observation, reward, done, info
 
     def step(self) -> Tuple[dict, float, bool, dict]:
-        # print("====================================")
         _, reward, done, info = super().step()
         agent_states: List[np.ndarray] = self.databus.step()
+
+        # update the agent's state
         for agent in reversed(self.agents):
-            agent.step(agent_states, self.agent_trajs, self.agent_progresses, self.agent_ids)
+            agent.step(agent_states)
         self.episode_steps += 1
 
-        for agent in self.agents:
-            agent_global_waypoints: np.ndarray = agent.observation["global_waypoints"]
-            self.agent_trajs[agent.actor_id] = agent_global_waypoints
-            self.agent_progresses[agent.actor_id] = agent.observation["progress"]
+        # check for hazard
+        for i in range(1, len(self.agents) - 1):
+            subject_agent, object_agent = self.agents[i], self.agents[i+1]
+            subject_agent.observation["hazard_coeff"] = self.detector.evalueate(subject_agent, object_agent)
+            object_agent.observation["hazard_coeff"] = self.detector.evalueate(object_agent, subject_agent)
 
         # ego_agent_state: np.ndarray = self.agents[0].observation["state"]
         # for agent in self.agents[1:]:

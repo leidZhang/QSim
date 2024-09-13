@@ -2,62 +2,152 @@ from typing import List
 
 import numpy as np
 
+from .agents import CarAgent
+
+
+class MapQCar:
+    WIDTH: float = 0.27# 0.2
+    LENGTH: float = 0.5# 0.54
+
+    def __init__(self, use_optitrack: bool = False) -> None:
+        self.correction: float = np.pi if use_optitrack else 0.0
+        self.bounding_box: np.ndarray = np.array([
+            np.array([-self.WIDTH/2, self.LENGTH/2]),
+            np.array([self.WIDTH/2, self.LENGTH/2]),
+            np.array([self.WIDTH/2, -self.LENGTH/2]),
+            np.array([-self.WIDTH/2, -self.LENGTH/2])
+        ])
+
+    def get_object_bounding_box(self, state: np.ndarray) -> np.ndarray:
+        orig, yaw = state[:2], state[2]
+        yaw: float = -state[2] + self.correction
+        rot: np.ndarray = np.array([
+            [np.cos(yaw), -np.sin(yaw)],
+            [np.sin(yaw), np.cos(yaw)]
+        ])
+        return np.matmul(rot, self.bounding_box.T).T + orig
+
+    def get_object_bounding_box_local(self, agent_state: np.ndarray, ego_state: np.ndarray) -> np.ndarray:
+        agent_box: np.ndarray = self.get_object_bounding_box(agent_state)
+        orig, yaw = ego_state[:2], ego_state[2]
+        rot: np.ndarray = np.array([
+            [np.cos(yaw), -np.sin(yaw)],
+            [np.sin(yaw), np.cos(yaw)],
+        ])
+        return np.matmul(agent_box - orig, rot)
+
+
+class HazardDetector: # Rule is fixed, so no decision making is needed
+    def __init__(self, use_optitrack: bool = False) -> None:
+        self.map_qcar: MapQCar = MapQCar(use_optitrack)
+        self.hazard_distance: int = 50 # waypoint numbers
+        self.intersection_distance: int = 200 # waypoint numbers
+
+    def _cal_waypoint_mask(
+        self,
+        x1: float,
+        x2: float,
+        y1: float,
+        y2: float,
+        waypoints: np.ndarray
+    ) -> np.ndarray:
+        return 0 < (x1 - x2) * (waypoints[:self.hazard_distance, 1] - y1) -\
+            (y1 - y2) * (waypoints[:self.hazard_distance, 0] - x1)
+
+    def get_waypoint_mask(self, waypoints: np.ndarray, hazard_state: np.ndarray) -> np.ndarray:
+        # OBB detection, is the waypoint pass the object bounding box of the hazard car?
+        masks: List[np.ndarray] = []
+        bounding_box: np.ndarray = self.map_qcar.get_object_bounding_box(hazard_state)
+        for i in range(4):
+            x1, y1 = bounding_box[i]
+            x2, y2 = bounding_box[(i + 1) % 4]
+            mask = self._cal_waypoint_mask(x1, x2, y1, y2, waypoints)
+            masks.append(mask)
+        return np.logical_and.reduce(masks)
+
+    def _is_waypoint_intersected(self, ego_waypoints: np.ndarray, hazard_waypoint: np.ndarray) -> bool:
+        compare_len: int = min(len(ego_waypoints), self.intersection_distance)
+        ego_compare: np.ndarray = ego_waypoints[-compare_len:]
+        hazard_compare: np.ndarray = hazard_waypoint[-compare_len:][::-1]
+        waypoint_dists: np.ndarray = np.linalg.norm(ego_compare - hazard_compare, axis=1)
+        return np.any(waypoint_dists <= 0.10)
+
+    def evalueate(self, ego_agent: CarAgent, hazard_agent: CarAgent) -> int:
+        # get the state and waypoints of ego and hazard agent
+        ego_id, hazard_id = ego_agent.actor_id, hazard_agent.actor_id
+        ego_state: np.ndarray = ego_agent.observation["state"]
+        hazard_state: np.ndarray = hazard_agent.observation["state"]
+        ego_waypoints: np.ndarray = ego_agent.observation["global_waypoints"]
+        hazard_waypoints: np.ndarray = hazard_agent.observation["global_waypoints"]
+
+        # If the hazard car is far away, ignore it
+        if np.linalg.norm(ego_state[:2] - hazard_state[:2]) > 1.60:
+            return 1
+        # Check if the hazard car is in the waypoint mask
+        waypoint_mask: np.ndarray = self.get_waypoint_mask(ego_waypoints, hazard_state)
+        if np.any(waypoint_mask):
+            return 0
+        # Check if hazard waypoint is intersected with ego waypoints
+        if not self._is_waypoint_intersected(ego_waypoints, hazard_waypoints):
+            return 1
+        return 1 if ego_id > hazard_id else 0
+
 
 # TODO: Change a way to detect the intersection
-def is_traj_intersected(ego_traj: np.ndarray, hazard_traj: np.ndarray) -> bool:
-    ego_traj_len, hazard_traj_len = len(ego_traj), len(hazard_traj)
-    compare_len: int = min(ego_traj_len, hazard_traj_len)
-    # print(f"compare_len: {compare_len}")
-    # print(ego_traj, hazard_traj)
+# def is_traj_intersected(ego_traj: np.ndarray, hazard_traj: np.ndarray) -> bool:
+#     ego_traj_len, hazard_traj_len = len(ego_traj), len(hazard_traj)
+#     compare_len: int = min(ego_traj_len, hazard_traj_len)
+#     # print(f"compare_len: {compare_len}")
+#     # print(ego_traj, hazard_traj)
 
-    waypoint_dists_1: np.ndarray = np.linalg.norm(ego_traj[:compare_len] - hazard_traj[:compare_len][::-1], axis=1)
-    waypoint_dists_2: np.ndarray = np.linalg.norm(ego_traj[-compare_len:] - hazard_traj[-compare_len:], axis=1)
-    # print(f"min_dist_1", min(waypoint_dists_1), "min_dist_2", min(waypoint_dists_2))
-    mask_1: np.ndarray = waypoint_dists_1 <= 0.25
-    mask_2: np.ndarray = waypoint_dists_2 <= 0.25
-    return np.any(mask_1) or np.any(mask_2)
-
-
-def is_in_hazard_range(ego_orig: np.ndarray, agent_orig: np.ndarray, thresh: float) -> bool:
-    return np.linalg.norm(ego_orig - agent_orig) < thresh
+#     waypoint_dists_1: np.ndarray = np.linalg.norm(ego_traj[:compare_len] - hazard_traj[:compare_len][::-1], axis=1)
+#     waypoint_dists_2: np.ndarray = np.linalg.norm(ego_traj[-compare_len:] - hazard_traj[-compare_len:], axis=1)
+#     # print(f"min_dist_1", min(waypoint_dists_1), "min_dist_2", min(waypoint_dists_2))
+#     mask_1: np.ndarray = waypoint_dists_1 <= 0.25
+#     mask_2: np.ndarray = waypoint_dists_2 <= 0.25
+#     return np.any(mask_1) or np.any(mask_2)
 
 
-def has_higher_priority(ego_rank: float, agent_rank: float, ego_id: int, agent_id: int) -> bool:
-    if ego_rank > agent_rank:
-        return True
-    elif ego_id > agent_id:
-        return True
-    return False    
+# def is_in_hazard_range(ego_orig: np.ndarray, agent_orig: np.ndarray, thresh: float) -> bool:
+#     return np.linalg.norm(ego_orig - agent_orig) < thresh
 
 
-def make_halt_decision(
-    ego_state: np.ndarray, 
-    ego_waypoints: np.ndarray,
-    ego_rank: int,
-    hazard_state: List[np.ndarray],
-    hazard_waypoints: np.ndarray,
-    hazard_rank: List[int],
-    ego_id: int,
-    hazard_id: int
-) -> bool:
-    if not is_in_hazard_range(
-        ego_orig=ego_state[:2], 
-        agent_orig=hazard_state[:2], 
-        thresh=1.50
-    ):
-        return False
-    
-    # print("Starting detect the priority")
-    if has_higher_priority(ego_rank, hazard_rank, ego_id, hazard_id):
-        # print("Ego agent has higher priority")
-        return False    
-    
-    # print("Starting detect the intersection")
-    if not is_traj_intersected(ego_waypoints, hazard_waypoints):
-        # print("No intersection detected")
-        return False
-    
-    return True
+# def has_higher_priority(ego_rank: float, agent_rank: float, ego_id: int, agent_id: int) -> bool:
+#     if ego_rank > agent_rank:
+#         return True
+#     elif ego_id > agent_id:
+#         return True
+#     return False
+
+
+# def make_halt_decision(
+#     ego_state: np.ndarray,
+#     ego_waypoints: np.ndarray,
+#     ego_rank: int,
+#     hazard_state: List[np.ndarray],
+#     hazard_waypoints: np.ndarray,
+#     hazard_rank: List[int],
+#     ego_id: int,
+#     hazard_id: int
+# ) -> bool:
+#     if not is_in_hazard_range(
+#         ego_orig=ego_state[:2],
+#         agent_orig=hazard_state[:2],
+#         thresh=1.50
+#     ):
+#         return False
+
+#     # print("Starting detect the priority")
+#     if has_higher_priority(ego_rank, hazard_rank, ego_id, hazard_id):
+#         # print("Ego agent has higher priority")
+#         return False
+
+#     # print("Starting detect the intersection")
+#     if not is_traj_intersected(ego_waypoints, hazard_waypoints):
+#         # print("No intersection detected")
+#         return False
+
+#     return True
 
 # def get_relative_polar_coordinates(
 #     ego_orig: np.ndarray,
@@ -73,38 +163,6 @@ def make_halt_decision(
 #     return np.array([relative_distance, relative_angle])
 
 
-# class MapQCar:
-#     WIDTH: float = 0.27# 0.2
-#     LENGTH: float = 0.5# 0.54
-
-#     def __init__(self, use_optitrack: bool = False) -> None:
-#         self.correction: float = np.pi if use_optitrack else 0.0
-#         self.bounding_box: np.ndarray = np.array([
-#             np.array([-self.WIDTH/2, self.LENGTH/2]),
-#             np.array([self.WIDTH/2, self.LENGTH/2]),
-#             np.array([self.WIDTH/2, -self.LENGTH/2]),
-#             np.array([-self.WIDTH/2, -self.LENGTH/2])
-#         ])
-
-#     def get_object_bounding_box(self, state: np.ndarray) -> np.ndarray:
-#         orig, yaw = state[:2], state[2]
-#         yaw: float = -state[2] + self.correction
-#         rot: np.ndarray = np.array([
-#             [np.cos(yaw), -np.sin(yaw)],
-#             [np.sin(yaw), np.cos(yaw)]
-#         ])
-#         return np.matmul(rot, self.bounding_box.T).T + orig
-
-#     def get_object_bounding_box_local(self, agent_state: np.ndarray, ego_state: np.ndarray) -> np.ndarray:
-#         agent_box: np.ndarray = self.get_object_bounding_box(agent_state)
-#         orig, yaw = ego_state[:2], ego_state[2]
-#         rot: np.ndarray = np.array([
-#             [np.cos(yaw), -np.sin(yaw)],
-#             [np.sin(yaw), np.cos(yaw)],
-#         ])
-#         return np.matmul(agent_box - orig, rot)
-
-
 # class HazardDetector:
 #     def __init__(
 #         self,
@@ -117,7 +175,7 @@ def make_halt_decision(
 #     def is_hazard(self, ego_yaw: float, steering: float, agent_orig: np.ndarray) -> bool:
 #         polar_coord: np.ndarray = get_relative_polar_coordinates(np.zeros(2), agent_orig)
 
-#         print(f"polar_coord: {polar_coord[1] / np.pi * 180}")    
+#         print(f"polar_coord: {polar_coord[1] / np.pi * 180}")
 
 #         dist_flag: bool = polar_coord[0] <= self.dist_thresh
 #         angle_flag: bool = -self.angle_thresh + steering <= polar_coord[1] <= self.angle_thresh + steering
