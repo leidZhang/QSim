@@ -26,13 +26,14 @@ def get_lane_edge_polylines(path_waypoints: np.ndarray, road_width: float) -> tu
 def to_pixel(
     pose: np.ndarray,
     state: np.ndarray,
-    region_length: float = 0.4
+    offsets: float = (1.0, 0.4),
+    ratial: float = PIXEL_PER_METER
 ) -> np.ndarray:
     x, y, yaw = state
     yaw -= np.pi / 2
     top_left_px: np.ndarray = np.array([
-        x - 1.0, -y - (2.0 - (region_length / 2))
-    ], dtype=np.float32) * PIXEL_PER_METER
+        x - offsets[0], -y - (2.0 - (offsets[1] / 2))
+    ], dtype=np.float32) * ratial
     rot: np.ndarray = np.array([
         [np.cos(yaw), -np.sin(yaw)],
         [np.sin(yaw), np.cos(yaw)],
@@ -62,12 +63,14 @@ def get_polyline_layer(
     layer: np.ndarray,
     waypoints: np.ndarray,
     state: np.ndarray,
-    rgb_value: tuple
+    rgb_value: tuple,
+    offsets: float = (1.0, 0.4),
+    ratial: float = PIXEL_PER_METER
 ) -> np.ndarray:
     polyline: np.ndarray = np.transpose(waypoints)
     cv2.polylines(
         layer,
-        [to_pixel(polyline, state)],
+        [to_pixel(polyline, state, offsets=offsets, ratial=ratial)],
         color=rgb_value,
         thickness=1,
         isClosed=False,
@@ -80,11 +83,13 @@ def get_box_layer(
     layer: np.ndarray,
     box_poly: np.ndarray,
     state: np.ndarray,
-    rgb_value: tuple
+    rgb_value: tuple,
+    offsets: tuple = (1.0, 0.4),
+    ratial: float = PIXEL_PER_METER
 ) -> np.ndarray:
     cv2.fillPoly(
         layer,
-        [to_pixel(box_poly, state)],
+        [to_pixel(box_poly, state, offsets=offsets, ratial=ratial)],
         color=rgb_value
     )
     return layer
@@ -94,12 +99,14 @@ class RasterMapRenderer(ABC):
     def __init__(
         self,
         road_map: RoadMap,
+        map_size: tuple = (192, 192, 3),
         map_params: Dict[str, tuple] = ACC_MAP_PARAMS
     ) -> None:
         # create polylines for rendering
         self.agent_length: float = 0.4
         self.agent_width: float = 0.2
         self.road_width: float = 0.27
+        self.map_size: tuple = map_size
         self.map_params: Dict[str, tuple] = map_params
         self.map_polylines: List[np.ndarray] = []
         self.__add_map_polylines(road_map)
@@ -117,17 +124,17 @@ class RasterMapRenderer(ABC):
             self.map_polylines.append(left_lane)
 
     def seg_to_image(self, seg: np.ndarray) -> np.ndarray:
-        raster_map = np.zeros((192, 192, 3), dtype=np.uint8)
+        raster_map = np.zeros(self.map_size, dtype=np.uint8)
         for k in self.map_params:
             indices = seg == self.map_params[k][1]
             raster_map[indices] = self.map_params[k][0]
         return raster_map
 
     def draw_map(self, *args) -> tuple:
-        raster_map = np.zeros((192, 192, 3), dtype=np.uint8)
-        segmentation_target: np.ndarray = np.zeros((192, 192), dtype=np.uint8)
+        raster_map = np.zeros(self.map_size, dtype=np.uint8)
+        segmentation_target: np.ndarray = np.zeros(self.map_size[:2], dtype=np.uint8)
         map_info: Dict[str, np.ndarray] = {
-            k: np.zeros((192, 192), dtype=bool) for k in self.map_params.keys()
+            k: np.zeros(self.map_size[:2], dtype=bool) for k in self.map_params.keys()
         }
         return raster_map, segmentation_target, map_info
 
@@ -138,19 +145,19 @@ class ACCRasterMap(RasterMapRenderer):
         self.map_params: Dict[str, Any] = map_params
 
     def _draw_ego_agent(self, pose: np.ndarray, map_info: Dict[str, Any]) -> None:
-        ego_agent_layer: np.ndarray = np.zeros((192, 192, 3), dtype=np.uint8)
+        ego_agent_layer: np.ndarray = np.zeros(self.map_size, dtype=np.uint8)
         ego_box: np.ndarray = get_bounding_box_poly(self.bounding_box, pose)
         ego_agent_layer = get_box_layer(ego_agent_layer, ego_box, pose, (255, 0, 0))
         map_info["ego"] = np.all(ego_agent_layer == (255, 0, 0), axis=-1)
 
     def _draw_edge_layer(self, pose: np.ndarray, map_info: Dict[str, Any]) -> None:
-        edge_layer: np.ndarray = np.zeros((192, 192, 3), dtype=np.uint8)
+        edge_layer: np.ndarray = np.zeros(self.map_size, dtype=np.uint8)
         for map_polyline in self.map_polylines:
             edge_layer = get_polyline_layer(edge_layer, map_polyline, pose, (255, 255, 255))
         map_info["lanes"] = edge_layer[:, :, 0] > 0
 
     def _draw_traffic_lights_layer(self, pose: np.ndarray, map_objects: dict, map_info: Dict[str, Any]) -> None:
-        traffic_light_layer: np.ndarray = np.zeros((192, 192, 3), dtype=np.uint8)
+        traffic_light_layer: np.ndarray = np.zeros(self.map_size, dtype=np.uint8)
         for i, traffic_light in map_objects["traffic_lights"].items():
             color: tuple = TRAFFIC_LIGHT_COLORS[traffic_light.state]
             traffic_light_layer = get_box_layer(traffic_light_layer, traffic_light.bounding_box, pose, color)
@@ -159,7 +166,7 @@ class ACCRasterMap(RasterMapRenderer):
         map_info[f"red_lights"] = np.all(traffic_light_layer == TRAFFIC_LIGHT_COLORS[2], axis=-1)
 
     def _draw_objects_layer(self, pose: np.ndarray, agents: list, map_info: Dict[str, Any]) -> None:
-        agents_layer: np.ndarray = np.zeros((192, 192, 3), dtype=np.uint8)
+        agents_layer: np.ndarray = np.zeros(self.map_size, dtype=np.uint8)
         for agent in agents:
             agent_state: np.ndarray = agent[:3]
             agent_box: np.ndarray = get_bounding_box_poly(self.bounding_box, agent_state)

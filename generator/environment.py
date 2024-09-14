@@ -11,7 +11,8 @@ from core.environment.detector import EnvQCarRef, is_collided
 from core.roadmap.roadmap import ACCRoadMap
 from core.templates import BasePolicy, PolicyAdapter
 from .hazard_decision import *
-from .agents import CarAgent, EgoAgent, HazardAgent, StateDataBus
+from .env_raster_map import *
+from .agents import *
 
 THROTTLE_COEEFS: List[float] = [0.09, 0.064, 0.05]
 START_POSES: Dict[int, List[float]] = {
@@ -39,6 +40,7 @@ class CrossRoadEnvironment(OnlineQLabEnv):
     ) -> None:
         super().__init__(simulator, roadmap, dt, privileged)
         self.car_box: EnvQCarRef = EnvQCarRef()
+        self.renderer: CREnvRasterMap = CREnvRasterMap(self.roadmap, CR_MAP_SIZE, CR_MAP_PARAMS)
         self.detector: HazardDetector = HazardDetector()
         self.__setup_agents()
 
@@ -74,6 +76,14 @@ class CrossRoadEnvironment(OnlineQLabEnv):
         self.agents[actor_id].reset(waypoints, agent_states)
         self.agents[actor_id].set_throttle_coeff(throttle_coeff)
 
+    def __render_raster_map(self) -> None:
+        agent_states: List[np.ndarray] = []
+        waypoint_list: List[np.ndarray] = []
+        for agent in self.agents[1:]:
+            agent_states.append(agent.observation["state"])
+            waypoint_list.append(agent.observation["global_waypoints"])
+        self.renderer.draw_map([0.15, 0.950, np.pi, 0.0, 0.0, 0.0], agent_states, waypoint_list)
+
     def reset(self) -> Tuple[dict, float, bool, dict]:
         # reset the car position in the environment
         self.used: Set[float] = {0, 1, 2}
@@ -96,6 +106,8 @@ class CrossRoadEnvironment(OnlineQLabEnv):
         for agent in reversed(self.agents):
             agent.step(agent_states)
         self.episode_steps += 1
+
+        self.__render_raster_map()
 
         # check for hazard
         hazard_agents: List[CarAgent] = self.agents[1:]
