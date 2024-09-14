@@ -7,7 +7,7 @@ from .agents import CarAgent
 
 class MapQCar:
     WIDTH: float = 0.27# 0.2
-    LENGTH: float = 0.5# 0.54
+    LENGTH: float = 0.80# 0.54
 
     def __init__(self, use_optitrack: bool = False) -> None:
         self.correction: float = np.pi if use_optitrack else 0.0
@@ -40,7 +40,7 @@ class MapQCar:
 class HazardDetector: # Rule is fixed, so no decision making is needed
     def __init__(self, use_optitrack: bool = False) -> None:
         self.map_qcar: MapQCar = MapQCar(use_optitrack)
-        self.hazard_distance: int = 50 # waypoint numbers
+        self.hazard_distance: int = 100 # waypoint numbers
         self.intersection_distance: int = 200 # waypoint numbers
 
     def _cal_waypoint_mask(
@@ -66,31 +66,40 @@ class HazardDetector: # Rule is fixed, so no decision making is needed
         return np.logical_and.reduce(masks)
 
     def _is_waypoint_intersected(self, ego_waypoints: np.ndarray, hazard_waypoint: np.ndarray) -> bool:
-        compare_len: int = min(len(ego_waypoints), self.intersection_distance)
-        ego_compare: np.ndarray = ego_waypoints[-compare_len:]
-        hazard_compare: np.ndarray = hazard_waypoint[-compare_len:][::-1]
-        waypoint_dists: np.ndarray = np.linalg.norm(ego_compare - hazard_compare, axis=1)
-        return np.any(waypoint_dists <= 0.10)
+        compare_len: int = min(len(ego_waypoints), len(hazard_waypoint))
+        waypoint_dists_1: np.ndarray = np.linalg.norm(ego_waypoints[-compare_len:] - hazard_waypoint[-compare_len:][::-1], axis=1)
+        waypoint_dists_2: np.ndarray = np.linalg.norm(ego_waypoints[:compare_len] - hazard_waypoint[:compare_len][::-1], axis=1)
+        return np.any(waypoint_dists_1 <= 0.01) or np.any(waypoint_dists_2 <= 0.01)
 
     def evalueate(self, ego_agent: CarAgent, hazard_agent: CarAgent) -> int:
         # get the state and waypoints of ego and hazard agent
-        ego_id, hazard_id = ego_agent.actor_id, hazard_agent.actor_id
+        ego_progress: float = ego_agent.observation["progress"]
+        hazard_progress: float = hazard_agent.observation["progress"]
         ego_state: np.ndarray = ego_agent.observation["state"]
         hazard_state: np.ndarray = hazard_agent.observation["state"]
         ego_waypoints: np.ndarray = ego_agent.observation["global_waypoints"]
         hazard_waypoints: np.ndarray = hazard_agent.observation["global_waypoints"]
-
+        print(f"Agent {ego_agent.actor_id} checking the agent {hazard_agent.actor_id}")
         # If the hazard car is far away, ignore it
-        if np.linalg.norm(ego_state[:2] - hazard_state[:2]) > 1.60:
+        if np.linalg.norm(ego_state[:2] - hazard_state[:2]) > 1.90:
             return 1
         # Check if the hazard car is in the waypoint mask
+        print("Checking the waypoint mask")
         waypoint_mask: np.ndarray = self.get_waypoint_mask(ego_waypoints, hazard_state)
         if np.any(waypoint_mask):
+            print(f"Agent {ego_agent.actor_id} detects {hazard_agent.actor_id} as a hazard, stop")
             return 0
         # Check if hazard waypoint is intersected with ego waypoints
+        print("Checking the waypoint-obb intersection")
         if not self._is_waypoint_intersected(ego_waypoints, hazard_waypoints):
             return 1
-        return 1 if ego_id > hazard_id else 0
+        
+        print(f"Agent {ego_agent.actor_id} detects {hazard_agent.actor_id} as a hazard")
+        if ego_progress > hazard_progress:
+            print(f"Agent {ego_agent.actor_id} has higher progress than {hazard_agent.actor_id}, move")
+            return 1
+        print(f"Agent {ego_agent.actor_id} has lower progress than {hazard_agent.actor_id}, stop")
+        return 0
 
 
 # TODO: Change a way to detect the intersection

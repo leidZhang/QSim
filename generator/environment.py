@@ -88,6 +88,7 @@ class CrossRoadEnvironment(OnlineQLabEnv):
         return self.agents[0].observation, reward, done, info
 
     def step(self) -> Tuple[dict, float, bool, dict]:
+        print("====================================")
         _, reward, done, info = super().step()
         agent_states: List[np.ndarray] = self.databus.step()
 
@@ -97,10 +98,22 @@ class CrossRoadEnvironment(OnlineQLabEnv):
         self.episode_steps += 1
 
         # check for hazard
-        for i in range(1, len(self.agents) - 1):
-            subject_agent, object_agent = self.agents[i], self.agents[i+1]
-            subject_agent.observation["hazard_coeff"] = self.detector.evalueate(subject_agent, object_agent)
-            object_agent.observation["hazard_coeff"] = self.detector.evalueate(object_agent, subject_agent)
+        hazard_agents: List[CarAgent] = self.agents[1:]
+        i: int = 1
+        while i < len(hazard_agents):
+            j: int = 0
+            while j < len(hazard_agents):
+                if i == j:
+                    j += 1
+                    continue
+                subject: CarAgent = hazard_agents[i]
+                object: CarAgent = hazard_agents[j]
+                subject_coeff: int = self.detector.evalueate(subject, object)
+                subject.observation["hazard_coeff"] = subject_coeff
+                object_coeff: int = self.detector.evalueate(object, subject)
+                object.observation["hazard_coeff"] = object_coeff
+                j += 1
+            i += 1
 
         # ego_agent_state: np.ndarray = self.agents[0].observation["state"]
         # for agent in self.agents[1:]:
