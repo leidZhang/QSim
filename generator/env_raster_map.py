@@ -7,9 +7,9 @@ from core.roadmap.constants import *
 from core.roadmap.raster_map import *
 
 
-CROSS_ROARD_RATIAL: float = 288 * 0.32
+CROSS_ROARD_RATIAL: float = 384 * 0.24
 OFFSET: tuple = (1.55, 0.75)
-CR_MAP_SIZE: tuple = (288, 288, 3)
+CR_MAP_SIZE: tuple = (384, 384, 3)
 CR_MAP_PARAMS: dict = {
     "lanes": ((255, 255, 255), 1),
     "hazards": ((255, 0, 255), 2),

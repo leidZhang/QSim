@@ -68,7 +68,7 @@ class CarAgent(PhysicalCar): # ego vehicle, can be controlled by the user
             waypoints=waypionts,
         )
         current_wayppint_index: int = self.preporcessor.current_waypoint_index
-        start_waypoint_index: int = max(0, current_wayppint_index - 100)
+        start_waypoint_index: int = max(0, current_wayppint_index - 30)
         end_waypoint_index: int = min(len(waypionts) - 1, current_wayppint_index + 200)
         self.observation["global_waypoints"] = waypionts[
             start_waypoint_index:end_waypoint_index
@@ -79,7 +79,7 @@ class CarAgent(PhysicalCar): # ego vehicle, can be controlled by the user
     def _handle_preprocess(self) -> None:
         self.observation = self.preporcessor.execute(self.state, self.observation)
         current_wayppint_index: int = self.preporcessor.current_waypoint_index
-        start_waypoint_index: int = max(0, current_wayppint_index - 100)
+        start_waypoint_index: int = max(0, current_wayppint_index - 30)
         end_waypoint_index: int = min(len(self.preporcessor.waypoints) - 1, current_wayppint_index + 200)
         self.observation["global_waypoints"] = self.preporcessor.waypoints[
             start_waypoint_index:end_waypoint_index

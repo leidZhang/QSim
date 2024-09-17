@@ -6,16 +6,16 @@ from .agents import CarAgent
 
 
 class MapQCar:
-    WIDTH: float = 0.27# 0.2
-    LENGTH: float = 0.80# 0.54
+    WIDTH: float = 0.215 # 0.2
+    LENGTH: float = 0.54 # 0.54
 
     def __init__(self, use_optitrack: bool = False) -> None:
         self.correction: float = np.pi if use_optitrack else 0.0
         self.bounding_box: np.ndarray = np.array([
-            np.array([-self.WIDTH/2, self.LENGTH/2]),
-            np.array([self.WIDTH/2, self.LENGTH/2]),
-            np.array([self.WIDTH/2, -self.LENGTH/2]),
-            np.array([-self.WIDTH/2, -self.LENGTH/2])
+            np.array([-self.WIDTH / 2, self.LENGTH / 2]),
+            np.array([self.WIDTH / 2, self.LENGTH / 2]),
+            np.array([self.WIDTH / 2, -self.LENGTH / 2]),
+            np.array([-self.WIDTH / 2, -self.LENGTH / 2])
         ])
 
     def get_object_bounding_box(self, state: np.ndarray) -> np.ndarray:
@@ -40,8 +40,8 @@ class MapQCar:
 class HazardDetector: # Rule is fixed, so no decision making is needed
     def __init__(self, use_optitrack: bool = False) -> None:
         self.map_qcar: MapQCar = MapQCar(use_optitrack)
-        self.hazard_distance: int = 100 # waypoint numbers
-        self.intersection_distance: int = 200 # waypoint numbers
+        self.hazard_distance: int = 80 # waypoint numbers
+        # self.intersection_distance: int = 200 # waypoint numbers
 
     def _cal_waypoint_mask(
         self,
@@ -65,11 +65,13 @@ class HazardDetector: # Rule is fixed, so no decision making is needed
             masks.append(mask)
         return np.logical_and.reduce(masks)
 
+    # TODO: This method should be improved
     def _is_waypoint_intersected(self, ego_waypoints: np.ndarray, hazard_waypoint: np.ndarray) -> bool:
         compare_len: int = min(len(ego_waypoints), len(hazard_waypoint))
         waypoint_dists_1: np.ndarray = np.linalg.norm(ego_waypoints[-compare_len:] - hazard_waypoint[-compare_len:][::-1], axis=1)
         waypoint_dists_2: np.ndarray = np.linalg.norm(ego_waypoints[:compare_len] - hazard_waypoint[:compare_len][::-1], axis=1)
-        return np.any(waypoint_dists_1 <= 0.01) or np.any(waypoint_dists_2 <= 0.01)
+        print(f"min_dist_1", min(waypoint_dists_1), "min_dist_2", min(waypoint_dists_2))
+        return np.any(waypoint_dists_1 <= 0.20) or np.any(waypoint_dists_2 <= 0.20)
 
     def evalueate(self, ego_agent: CarAgent, hazard_agent: CarAgent) -> int:
         # get the state and waypoints of ego and hazard agent

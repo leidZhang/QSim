@@ -82,7 +82,11 @@ class CrossRoadEnvironment(OnlineQLabEnv):
         for agent in self.agents[1:]:
             agent_states.append(agent.observation["state"])
             waypoint_list.append(agent.observation["global_waypoints"])
-        self.renderer.draw_map([0.15, 0.950, np.pi, 0.0, 0.0, 0.0], agent_states, waypoint_list)
+        raster_map, _, _ = self.renderer.draw_map(
+            [0.15, 0.950, np.pi, 0.0, 0.0, 0.0], agent_states, waypoint_list
+        )
+        cv2.imshow("Raster Map", raster_map)
+        cv2.waitKey(1)
 
     def reset(self) -> Tuple[dict, float, bool, dict]:
         # reset the car position in the environment

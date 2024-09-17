@@ -104,7 +104,7 @@ class RasterMapRenderer(ABC):
     ) -> None:
         # create polylines for rendering
         self.agent_length: float = 0.4
-        self.agent_width: float = 0.2
+        self.agent_width: float = 0.215
         self.road_width: float = 0.27
         self.map_size: tuple = map_size
         self.map_params: Dict[str, tuple] = map_params
@@ -112,8 +112,8 @@ class RasterMapRenderer(ABC):
         self.__add_map_polylines(road_map)
         self.bounding_box: np.ndarray = np.array([
             [-(self.agent_length / 2), -(self.agent_width / 2)],
-            [+(self.agent_length / 2), -(self.agent_width / 2)],
-            [+(self.agent_length / 2), +(self.agent_width / 2)],
+            [+(self.agent_length / 2 + 0.05), -(self.agent_width / 2)],
+            [+(self.agent_length / 2 + 0.05), +(self.agent_width / 2)],
             [-(self.agent_length / 2), +(self.agent_width / 2)],
         ])
 
