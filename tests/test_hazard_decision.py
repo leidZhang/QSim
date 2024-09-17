@@ -1,21 +1,12 @@
-from typing import List, Dict
+from typing import List
 
-import cv2
 import numpy as np
 
 from core.roadmap import ACCRoadMap
 from core.roadmap.raster_map import to_pixel
-from generator.env_raster_map import CREnvRasterMap, CROSS_ROARD_RATIAL
 
 CR_REFERENCE_POINT: np.ndarray = np.array([0.15, 0.950, np.pi])
-CR_MAP_SIZE: tuple = (384, 384, 3)
-CR_MAP_PARAMS: dict = {
-    "lanes": ((255, 255, 255), 1),
-    "hazards": ((255, 0, 255), 2),
-    "waypoints": ((255, 255, 0), 3)
-}
 roadmap: ACCRoadMap = ACCRoadMap()
-renderer: CREnvRasterMap = CREnvRasterMap(roadmap, CR_MAP_SIZE, CR_MAP_PARAMS)
 
 
 def get_test_trajs(task_1: List[int], task_2: List[int]) -> None:
@@ -25,8 +16,8 @@ def get_test_trajs(task_1: List[int], task_2: List[int]) -> None:
 
 
 def is_traj_intersected(ego_traj: np.ndarray, hazard_traj: np.ndarray) -> bool:
-    ego_polyline = to_pixel(ego_traj, CR_REFERENCE_POINT, offsets=(1.55, 0.75), ratial=CROSS_ROARD_RATIAL)
-    hazard_polyline = to_pixel(hazard_traj, CR_REFERENCE_POINT, offsets=(1.55, 0.75), ratial=CROSS_ROARD_RATIAL)
+    ego_polyline = to_pixel(ego_traj, CR_REFERENCE_POINT)
+    hazard_polyline = to_pixel(hazard_traj, CR_REFERENCE_POINT)
     set1 = set(map(tuple, ego_polyline))
     set2 = set(map(tuple, hazard_polyline))
     common_points = set1.intersection(set2)
