@@ -24,36 +24,12 @@ def get_test_trajs(task_1: List[int], task_2: List[int]) -> None:
     return ego_traj, hazard_traj
 
 
-# TODO: Implement the function is_traj_intersected
 def is_traj_intersected(ego_traj: np.ndarray, hazard_traj: np.ndarray) -> bool:
-    # polyline = np.transpose(ego_traj)
-
     ego_polyline = to_pixel(ego_traj, CR_REFERENCE_POINT, offsets=(1.55, 0.75), ratial=CROSS_ROARD_RATIAL)
     hazard_polyline = to_pixel(hazard_traj, CR_REFERENCE_POINT, offsets=(1.55, 0.75), ratial=CROSS_ROARD_RATIAL)
-    common_points = np.array([point for point in ego_polyline if np.any(np.all(hazard_polyline == point, axis=1))])
-
-    layer: np.ndarray = np.zeros(CR_MAP_SIZE, dtype=np.uint8)
-    cv2.polylines(
-        layer,
-        [ego_polyline],
-        color=(255, 0, 255),
-        thickness=1,
-        isClosed=False,
-        lineType=cv2.LINE_AA
-    )
-    cv2.polylines(
-        layer,
-        [hazard_polyline],
-        color=(255, 255, 0),
-        thickness=1,
-        isClosed=False,
-        lineType=cv2.LINE_AA
-    )
-
-    # sliced_img = layer[topbound:bottombound, leftbound:rightbound]
-    # cv2.imshow("raster_map", layer)
-    # cv2.imshow("sliced_img", sliced_img)
-    # cv2.waitKey(0)
+    set1 = set(map(tuple, ego_polyline))
+    set2 = set(map(tuple, hazard_polyline))
+    common_points = set1.intersection(set2)
 
     return len(common_points) != 0
 
