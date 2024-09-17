@@ -41,6 +41,11 @@ class CREnvRasterMap(RasterMapRenderer):
             hazards_layer = get_box_layer(hazards_layer, hazard_box, pose, (255, 0, 255), OFFSET, CROSS_ROARD_RATIAL)
         map_info["hazards"] = np.all(hazards_layer == (255, 0, 255), axis=-1)
 
+    def render_map(self, raster_map: np.ndarray, map_info: Dict[str, Any]) -> np.ndarray:
+        for k in map_info:
+            raster_map[map_info[k]] = self.map_params[k][0]
+        return raster_map
+
     def draw_map(self, state: np.ndarray, hazards: list, waypoint_lists: List[np.ndarray]) -> tuple:
         pose: np.ndarray = state[:3] # we do not need velocity and acceleration for rendering
         raster_map, segmentation_target, map_info = super().draw_map() # draw base map
@@ -50,7 +55,6 @@ class CREnvRasterMap(RasterMapRenderer):
         self._draw_waypoints_layer(pose, waypoint_lists, map_info)
 
         # render raster map
-        for k in map_info:
-            raster_map[map_info[k]] = self.map_params[k][0]
-            # segmentation_target[map_info[k]] = self.map_params[k][1]
+        raster_map = self.render_map(raster_map, map_info)
+
         return raster_map, segmentation_target, map_info
