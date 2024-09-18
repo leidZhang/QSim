@@ -1,7 +1,7 @@
 import time
 import pickle
 import logging
-import warnings
+from typing import Callable
 from socket import *
 from typing import Tuple, Any, Union
 from queue import Queue
@@ -76,69 +76,15 @@ class UDPServer(LifeCycleWrapper):
             logging.warning(str(e))
 
 
-# TODO: Change to UDP for faster transmission
-class TCPVideoServer(LifeCycleWrapper):
-    """
-    The VideoServer class is a primitive server that sends images to the client using
-    TCP protocol.
-
-    Attributes:
-    - server_socket (socket): The server socket object
-    - client_socket (socket): The client socket object
-    - address (Tuple[str, int]): The address of the server
-    """
-
-    def __init__(self, port: int = 8082) -> None:
-        """
-        Initializes the VideoServer object. The server socket is created and binded to
-        the given address. The default port is 8082.
-
-        Parameters:
-        - port (int): The port number of the server
-        """
-        warnings.warn("The VideoServer class is no longer maintained", DeprecationWarning)
+class TCPServer(LifeCycleWrapper):
+    def __init__(self, port: int = 8080) -> None:
         self.server_socket: socket = socket(AF_INET, SOCK_STREAM)
         self.address: Tuple[str, int] = ('0.0.0.0', port)
 
     def setup(self) -> None:
-        """
-        Sets up the server socket.
-
-        Returns:
-        - None
-        """
         self.server_socket.bind(self.address)
 
-    def send_image(self, image: np.ndarray, quality: int) -> None:
-        """
-        Sends the image to the client.
-
-        Parameters:
-        - image (np.ndarray): The image to be sent
-        - quality (int): The quality of the image
-
-        Returns:
-        - None
-        """
-        if image is None:
-            return
-
-        # encode the input image
-        _, send_data = cv2.imencode('.jpg', image, [cv2.IMWRITE_JPEG_QUALITY, quality])
-        # send image to the client
-        self.server_socket.sendall(send_data.tobytes())
-
-    def execute(self, data_queue: MPQueue, quality: int = 100) -> None:
-        """
-        Executes the video server module, sending images to the client.
-
-        Parameters:
-        - data_queue (MPQueue): The data queue to get the image from
-        - quality (int): The quality of the image
-
-        Returns:
-        - None
-        """
+    def execute(self, data_queue: Union[MPQueue, Queue], response: Callable = lambda *args: "received") -> None:
         # wait for client to connect to the server
         logging.info("The video server module is ready to accept connection...")
         self.client_socket, self.client_address = self.server_socket.accept()
@@ -148,10 +94,15 @@ class TCPVideoServer(LifeCycleWrapper):
         client_is_alive: bool = True
         while client_is_alive:
             try:
-                # fetch image from the multiprocessing queue
-                image: np.ndarray = fetch_latest_in_queue(data_queue, quality)
-                # send image to the client
-                self.send_image(image=image)
+                # receive the data from the client
+                serialized_data: bytes = self.client_socket.recv(1024)
+                data: Any = pickle.loads(serialized_data)
+                data_queue.put(data) 
+
+                # send the response back to the client
+                response_data: Any = response(data)
+                serialized_data: bytes = pickle.dumps(response_data)
+                self.client_socket.sendall(serialized_data)
             except Exception as e:
                 logging.warning(str(e))
                 client_is_alive = False

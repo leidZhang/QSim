@@ -2,20 +2,18 @@ import time
 from abc import abstractmethod
 from typing import List, Tuple, Dict, Union
 
+import cv2
 import numpy as np
 
 from qvl.qlabs import QuanserInteractiveLabs
-from core.qcar import CSICamera
-from core.qcar import PhysicalCar
-from core.qcar import VirtualOptitrack, QCAR_ACTOR_ID
+from core.qcar import QCAR_ACTOR_ID, CSICamera
+from core.qcar import PhysicalCar, VirtualOptitrack
 from core.qcar.virtual import VirtualRuningGear
 from core.templates import PolicyAdapter, BasePolicy
 from core.control import WaypointProcessor
+from settings import IMAGE_SIZE
+from hitl.hitl_policy import KeyboardPolicy
 from .hazard_decision import HazardDetector, is_in_area_aabb
-
-CROSS_ROAD_AREA: Dict[str, float] = {
-    "min_x": -1.1, "max_x": 1.3, "min_y": -0.3, "max_y": 1.7
-}
 
 
 class StateDataBus: # get all the state information of the car agents
@@ -109,29 +107,39 @@ class EgoAgent(CarAgent):
     def __init__(self, actor_id: int = 0) -> None:
         super().__init__(actor_id)
         self.cameras: List[CSICamera] = [CSICamera(i) for i in range(4)]
+        self.expert_policy: KeyboardPolicy = KeyboardPolicy()
 
     def __get_image_data(self) -> None:
         images: List[np.ndarray] = [None, None, None, None]
         for i, camera in enumerate(self.cameras):
             images[i] = camera.await_image()
+            images[i] = cv2.resize(images[i], IMAGE_SIZE)
         self.observation["images"] = images
 
-    def handle_action(self, action: np.ndarray) -> None:
-        throttle: float = 0 # action[0] * self.throttle_coeff
+    def __handle_policy(self) -> Tuple[np.ndarray, np.ndarray]:
+        action, _ = self.expert_policy.execute(self.observation)
+        intervention = self.expert_policy.execute()
+        self.observation["intervention"] = np.array(list(intervention))
+        return action, intervention
+
+    def handle_action(self, action: np.ndarray, intervention: np.ndarray) -> None:
+        intervention_coeff: float = 0 if intervention[1] == 1 else intervention[0]
+        throttle: float = action[0] * self.throttle_coeff * intervention_coeff
         steering: float = action[1] * self.steering_coeff
         self.running_gear.read_write_std(throttle, steering)
         self.observation["action"] = action
 
     def reset(self, waypoints: np.ndarray, agent_states: List[np.ndarray]) -> None:
         self.__get_image_data()
+        self.observation["intervention"] = (0, 0)
         super().reset(waypoints, agent_states)
 
     def step(self, agent_states: List[np.ndarray], *args) -> None:
         self.__get_image_data()
         self._get_ego_state(agent_states)
         self._handle_preprocess()
-        action, _ = self.policy.execute(self.observation)
-        self.handle_action(action)
+        action, intervention = self.__handle_policy()
+        self.handle_action(action, intervention)
 
 
 class HazardAgent(CarAgent):
@@ -172,7 +180,7 @@ class HazardAgent(CarAgent):
         self.observation["hazard_coeff"] = decision
 
     def handle_action(self, action: np.ndarray) -> None:
-        self.leds[0], self.leds[3] = not self.leds[0], not self.leds[3]
+        # self.leds[0], self.leds[3] = not self.leds[0], not self.leds[3]
         throttle: float = action[0] * self.throttle_coeff * self.observation["hazard_coeff"]
         steering: float = action[1] * self.steering_coeff
         self.running_gear.read_write_std(self.qlabs, throttle, steering, self.leds)

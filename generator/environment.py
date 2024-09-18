@@ -11,11 +11,13 @@ from core.environment.detector import EnvQCarRef, is_collided
 from core.roadmap.roadmap import ACCRoadMap
 from core.templates import BasePolicy, PolicyAdapter
 from settings import REFERENCE_POSE
-from .hazard_decision import *
-from .env_raster_map import *
 from .agents import *
+from .env_raster_map import *
+from .hazard_decision import *
 
-
+CROSS_ROAD_AREA: Dict[str, float] = {
+    "min_x": -0.7, "max_x": 0.9, "min_y": -0.3, "max_y": 2.2
+}
 THROTTLE_COEEFS: List[float] = [0.09, 0.064, 0.05]
 START_POSES: Dict[int, List[float]] = {
     0: [0.0, 2.118, -np.pi / 2],
@@ -69,7 +71,7 @@ class CrossRoadEnvironment(OnlineQLabEnv):
             random_throttle_index: int = random.choice(list(self.used))
             self.used.remove(random_throttle_index)
             throttle_coeff: float = THROTTLE_COEEFS[random_throttle_index]
-            print(f"Actor {actor_id} is using throttle coefficient {throttle_coeff}")
+            # print(f"Actor {actor_id} is using throttle coefficient {throttle_coeff}")
         else:
             throttle_coeff: float = 0.08
 
@@ -97,6 +99,22 @@ class CrossRoadEnvironment(OnlineQLabEnv):
         cv2.imshow("Raster Map", raster_map)
         cv2.waitKey(1)
 
+    def __detect_collision(self, ego_state: np.ndarray) -> bool:
+        for agent in self.agents[1:]:
+            agent_state: np.ndarray = agent.observation["state"]
+            if is_collided(ego_state, agent_state, self.car_box):
+                print(f"Collision detected between ego agent and agent {agent.actor_id}")
+                return True
+        return False
+    
+    def handle_reward(self, agent: CarAgent) -> Tuple[float, bool]:
+        state: np.ndarray = agent.observation["state"]
+        if self.__detect_collision(state):
+            return 0, True
+        if not is_in_area_aabb(state, CROSS_ROAD_AREA):
+            return 1, True
+        return 0.0, False
+
     def get_hazard_info(self) -> None:
         hazard_trajs: List[np.ndarray] = [None]
         hazard_progresses: List[int] = [0]
@@ -120,7 +138,7 @@ class CrossRoadEnvironment(OnlineQLabEnv):
 
     def step(self) -> Tuple[dict, float, bool, dict]:
         # print("====================================")
-        _, reward, done, info = super().step()
+        _, _, done, info = super().step()
         agent_states: List[np.ndarray] = self.databus.step()
         agent_trajs, agent_progresses = self.get_hazard_info()
         # update the agent's state
@@ -128,16 +146,9 @@ class CrossRoadEnvironment(OnlineQLabEnv):
             agent.step(agent_states, agent_trajs, agent_progresses)
         self.episode_steps += 1
 
-        self.__render_raster_map()
-
-        # ego_agent_state: np.ndarray = self.agents[0].observation["state"]
-        # for agent in self.agents[1:]:
-        #     agent_state: np.ndarray = agent.observation["state"]
-        #     if is_collided(ego_agent_state, agent_state, self.car_box):
-        #         print(f"Collision detected between ego agent and agent {agent.actor_id}")
-        #         done = True
-        #         break
-
+        # self.__render_raster_map()
+        # done = self.__detect_collision() or done
+        reward, done = self.handle_reward(self.agents[0])
         done = self.agents[0].observation["done"] or done
         return self.agents[0].observation, reward, done, info
 

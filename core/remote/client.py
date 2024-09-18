@@ -8,6 +8,7 @@ from multiprocessing import Queue as MPQueue
 
 from ..templates.life_cycle import LifeCycleWrapper
 
+
 class UDPClient(LifeCycleWrapper):
     """
     UDP client is a simple client that sends and receives data using UDP protocol.
@@ -58,10 +59,7 @@ class UDPClient(LifeCycleWrapper):
         serialized_data: bytes = pickle.dumps(data)
         self.client_socket.sendto(serialized_data, self.address)
 
-    def execute(
-        self,
-        data_queue: Union[Queue, MPQueue]
-    ) -> None:
+    def execute(self, data_queue: Union[Queue, MPQueue]) -> None:
         """
         Executes the client by receiving data from the server and putting it
         into the data queue.
@@ -71,3 +69,29 @@ class UDPClient(LifeCycleWrapper):
             # self._send_data(response_data)
         except Exception as e:
             logging.warning(str(e))
+
+
+class TCPClient(LifeCycleWrapper):
+    def __init__(self, ip: str, port: int = 8080) -> None:
+        self.client_socket: socket = socket(AF_INET, SOCK_STREAM)
+        self.address: Tuple[str, int] = (ip, port)
+
+    def connect(self) -> None:
+        self.client_socket.connect(self.address)
+
+    def _send_request(self, data: Any) -> Any:
+        serialized_data: bytes = pickle.dumps(data)
+        self.client_socket.sendall(serialized_data)
+        response_data: bytes = self.client_socket.recv(1024)
+        return pickle.loads(response_data)
+
+    def execute(self, data_queue: Union[Queue, MPQueue]) -> Any:
+        response_data: Any = None
+
+        try:
+            data = data_queue.get()
+            response_data = self._send_request(data)
+        except Exception as e:
+            logging.warning(str(e))
+        
+        return response_data

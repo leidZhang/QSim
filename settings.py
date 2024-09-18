@@ -36,3 +36,8 @@ INIT_TEMPERATURE: float = 0.1
 # Set environment variable
 os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
 REFERENCE_POSE: List[float] = [0.15, 0.950, np.pi, 0.0, 0.0, 0.0]
+IMAGE_SIZE: tuple = (84, 84)
+
+# HITL settings
+IP: str = "127.0.0.1"
+HITL_PORT: int = 5000

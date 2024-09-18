@@ -6,6 +6,8 @@ class KeyboardPolicy(BasePolicy):
     def __init__(self) -> None:
         self.controller: KeyboardController = KeyboardController()
         
-    def execute(self) -> int:
+    def execute(self) -> tuple:
         self.controller.read()
-        return self.controller.state['v_slider']
+        v_slider: int = self.controller.state["v_slider"]
+        x_signal: int = self.controller.state["x_signal"]
+        return x_signal, v_slider
