@@ -145,7 +145,7 @@ class HazardAgent(CarAgent):
         super()._handle_preprocess()
         current_wayppint_index: int = self.preporcessor.current_waypoint_index
         start_waypoint_index: int = max(0, current_wayppint_index - 25)
-        hazard_dist: int = 150 if is_in_area_aabb(self.state, self.restricted_area) else 50
+        hazard_dist: int = 180 if is_in_area_aabb(self.state, self.restricted_area) else 50
         end_waypoint_index: int = min(len(self.preporcessor.waypoints) - 1, current_wayppint_index + hazard_dist)
         self.observation["global_waypoints"] = self.preporcessor.waypoints[
             start_waypoint_index:end_waypoint_index
@@ -161,9 +161,9 @@ class HazardAgent(CarAgent):
         for i, traj in enumerate(agent_trajs):
             if i == 0 or i == self.actor_id:
                 continue            
-            print(f"Agent {self.actor_id} checking agent {i}'s trajectory...")
+            # print(f"Agent {self.actor_id} checking agent {i}'s trajectory...")
             if decision == 0:
-                print(f"Agent {self.actor_id} detects agent {i} as a hazard")
+                # print(f"Agent {self.actor_id} detects agent {i} as a hazard")
                 break            
 
             ego_traj: np.ndarray = self.observation["global_waypoints"]

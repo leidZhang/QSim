@@ -27,7 +27,7 @@ RESTRICTED_AREAS: List[Dict[str, float]] = [
     None,
     {"max_x": 0.8, "min_x": -0.5, "max_y": 0.2, "min_y": -0.3},
     {"max_x": 1.3, "min_x": 0.5, "max_y": 1.6, "min_y": 0.5},
-    {"max_x": -0.05, "min_x": -1.1, "max_y": 1.6, "min_y": 0},
+    {"max_x": 0.05, "min_x": -1.1, "max_y": 1.6, "min_y": 0},
 ]
 ROUTES: Dict[str, List[int]] = {
     0: [[11, 12, 0, 2], [11, 12, 8, 10], [11, 12, 7, 5]],
@@ -119,7 +119,7 @@ class CrossRoadEnvironment(OnlineQLabEnv):
         return self.agents[0].observation, reward, done, info
 
     def step(self) -> Tuple[dict, float, bool, dict]:
-        print("====================================")
+        # print("====================================")
         _, reward, done, info = super().step()
         agent_states: List[np.ndarray] = self.databus.step()
         agent_trajs, agent_progresses = self.get_hazard_info()
