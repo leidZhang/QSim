@@ -1,6 +1,8 @@
 import os
+from typing import List
 
 import torch
+import numpy as np
 
 DATASET_DIR: str = "assets"
 MODEL_TYPE: str = "Reinformer"
@@ -33,3 +35,4 @@ INIT_TEMPERATURE: float = 0.1
 
 # Set environment variable
 os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
+REFERENCE_POSE: List[float] = [0.15, 0.950, np.pi, 0.0, 0.0, 0.0]

@@ -8,10 +8,10 @@ from qvl.qlabs import QuanserInteractiveLabs
 from core.qcar import CSICamera
 from core.qcar import PhysicalCar
 from core.qcar import VirtualOptitrack, QCAR_ACTOR_ID
-
 from core.qcar.virtual import VirtualRuningGear
 from core.templates import PolicyAdapter, BasePolicy
 from core.control import WaypointProcessor
+from .hazard_decision import HazardDetector
 
 
 class StateDataBus: # get all the state information of the car agents
@@ -69,23 +69,23 @@ class CarAgent(PhysicalCar): # ego vehicle, can be controlled by the user
         )
         current_wayppint_index: int = self.preporcessor.current_waypoint_index
         start_waypoint_index: int = max(0, current_wayppint_index - 30)
-        end_waypoint_index: int = min(len(waypionts) - 1, current_wayppint_index + 200)
+        end_waypoint_index: int = min(len(waypionts) - 1, current_wayppint_index + 600)
         self.observation["global_waypoints"] = waypionts[
             start_waypoint_index:end_waypoint_index
         ]
-        self.observation["progress"] = current_wayppint_index / len(waypionts)
+        self.observation["progress"] = current_wayppint_index # / len(waypionts)
         # self.observation["progress"] = np.linalg.norm(self.state[:2] - waypionts[-1])
 
     def _handle_preprocess(self) -> None:
         self.observation = self.preporcessor.execute(self.state, self.observation)
         current_wayppint_index: int = self.preporcessor.current_waypoint_index
         start_waypoint_index: int = max(0, current_wayppint_index - 30)
-        end_waypoint_index: int = min(len(self.preporcessor.waypoints) - 1, current_wayppint_index + 200)
+        end_waypoint_index: int = min(len(self.preporcessor.waypoints) - 1, current_wayppint_index + 180)
         self.observation["global_waypoints"] = self.preporcessor.waypoints[
             start_waypoint_index:end_waypoint_index
         ]
 
-        self.observation["progress"] = current_wayppint_index / len(self.preporcessor.waypoints)
+        self.observation["progress"] = current_wayppint_index # / len(self.preporcessor.waypoints)
         # self.observation["progress"] = np.linalg.norm(self.state[:2] - self.preporcessor.waypoints[-1])
 
 
@@ -141,10 +141,26 @@ class HazardAgent(CarAgent):
         super().__init__(actor_id)
         self.qlabs: QuanserInteractiveLabs = qlabs
         self.running_gear: VirtualRuningGear = VirtualRuningGear(QCAR_ACTOR_ID, actor_id)
+        self.detector: HazardDetector = HazardDetector()
 
     def halt_car(self, steering: float = 0, halt_time: float = 0.1) -> None:
         self.running_gear.read_write_std(self.qlabs, throttle=0.0, steering=steering)
         time.sleep(halt_time)
+
+    def handle_avoid_collide(self, agent_trajs: np.ndarray, agent_progresses: np.ndarray) -> None:
+        decision: int = 1
+        for i, traj in enumerate(agent_trajs):
+            if i == 0 or i == self.actor_id:
+                continue            
+            print(f"Agent {self.actor_id} checking agent {i}'s trajectory...")
+            if decision == 0:
+                print(f"Agent {self.actor_id} detects agent {i} as a hazard")
+                break            
+
+            ego_traj: np.ndarray = self.observation["global_waypoints"]
+            if agent_progresses[i] > agent_progresses[self.actor_id]:
+                decision: int = self.detector.evalueate(ego_traj, traj)
+        self.observation["hazard_coeff"] = decision
 
     def handle_action(self, action: np.ndarray) -> None:
         self.leds[0], self.leds[3] = not self.leds[0], not self.leds[3]
@@ -153,8 +169,14 @@ class HazardAgent(CarAgent):
         self.running_gear.read_write_std(self.qlabs, throttle, steering, self.leds)
         self.observation["action"] = action
 
-    def step(self, agent_states: List[np.ndarray]) -> None:
+    def step(
+        self, 
+        agent_states: List[np.ndarray], 
+        agent_trajs: np.ndarray,
+        agent_progresses: np.ndarray
+    ) -> None:
         self._get_ego_state(agent_states)
+        self.handle_avoid_collide(agent_trajs, agent_progresses)
         self._handle_preprocess()
         action, _ = self.policy.execute(self.observation)
         self.handle_action(action)

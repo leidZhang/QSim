@@ -104,7 +104,7 @@ class RasterMapRenderer(ABC):
     ) -> None:
         # create polylines for rendering
         self.agent_length: float = 0.4
-        self.agent_width: float = 0.215
+        self.agent_width: float = 0.18
         self.road_width: float = 0.27
         self.map_size: tuple = map_size
         self.map_params: Dict[str, tuple] = map_params

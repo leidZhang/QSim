@@ -4,10 +4,10 @@ import numpy as np
 
 from core.roadmap import ACCRoadMap
 from core.roadmap.raster_map import to_pixel
+from generator.hazard_decision import HazardDetector
 
-CR_REFERENCE_POINT: np.ndarray = np.array([0.15, 0.950, np.pi])
 roadmap: ACCRoadMap = ACCRoadMap()
-
+detector: HazardDetector = HazardDetector()
 
 def get_test_trajs(task_1: List[int], task_2: List[int]) -> None:
     ego_traj: np.ndarray = roadmap.generate_path(task_1)
@@ -16,13 +16,7 @@ def get_test_trajs(task_1: List[int], task_2: List[int]) -> None:
 
 
 def is_traj_intersected(ego_traj: np.ndarray, hazard_traj: np.ndarray) -> bool:
-    ego_polyline = to_pixel(ego_traj, CR_REFERENCE_POINT)
-    hazard_polyline = to_pixel(hazard_traj, CR_REFERENCE_POINT)
-    set1 = set(map(tuple, ego_polyline))
-    set2 = set(map(tuple, hazard_polyline))
-    common_points = set1.intersection(set2)
-
-    return len(common_points) != 0
+    return detector._is_waypoint_intersected(ego_traj, hazard_traj)
 
 
 def test_is_traj_intersected_1() -> None:
