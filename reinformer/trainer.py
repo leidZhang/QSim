@@ -121,6 +121,8 @@ class ReinFormerTrainer:
             traj_mask.view(-1,) > 0
         ]
 
+        # state_loss -----------------------------------------
+
         # returns_to_go_loss -----------------------------------------
         norm = returns_to_go_target.abs().mean()
         u = (returns_to_go_target - returns_to_go_preds) / norm
