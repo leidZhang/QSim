@@ -8,11 +8,14 @@ from qvl.qlabs import QuanserInteractiveLabs
 from core.qcar import CSICamera
 from core.qcar import PhysicalCar
 from core.qcar import VirtualOptitrack, QCAR_ACTOR_ID
-
 from core.qcar.virtual import VirtualRuningGear
 from core.templates import PolicyAdapter, BasePolicy
 from core.control import WaypointProcessor
-from .hazard_decision import HazardDetector
+from .hazard_decision import HazardDetector, is_in_area_aabb
+
+CROSS_ROAD_AREA: Dict[str, float] = {
+    "min_x": -1.1, "max_x": 1.3, "min_y": -0.3, "max_y": 1.7
+}
 
 
 class StateDataBus: # get all the state information of the car agents
@@ -47,29 +50,42 @@ class CarAgent(PhysicalCar): # ego vehicle, can be controlled by the user
         self.actor_id: int = actor_id
         self.policy: Union[BasePolicy, PolicyAdapter] = None
         self.preporcessor: WaypointProcessor = WaypointProcessor(auto_stop=True)
-        self.observation: Dict[str, np.ndarray] = {"action": np.zeros(2)}
+        self.observation: Dict[str, np.ndarray] = {"action": np.zeros(2), "hazard_coeff": 1}
+        self.restricted_area: Dict[str, float] = None
 
-    def _get_ego_state(self, agent_states: List[np.ndarray]) -> None:
+    def set_restricted_area(self, area: Dict[str, float]) -> None:
+        self.restricted_area = area
+
+    def _get_ego_state(self, agent_states: List[np.ndarray], agent_ranks: List[int] = [0, 1, 2, 3]) -> None:
         ego_state: np.ndarray = agent_states[self.actor_id]
         hazard_states: List[np.ndarray] = [
-            state for i, state in enumerate(agent_states) if i != self.actor_id and i != 0
+            state if i != self.actor_id and i != 0 else None for i, state in enumerate(agent_states)
+        ]
+        self.hazard_ranks: List[int] = [
+            rank if rank != self.actor_id and rank != 0 else None for rank in agent_ranks
         ]
 
         self.state = ego_state
         self.observation["hazards"] = hazard_states
 
-    def reset(self, wayponts: np.ndarray, agent_states: List[np.ndarray]) -> None:
+    def reset(self, waypionts: np.ndarray, agent_states: List[np.ndarray]) -> None:
         self._get_ego_state(agent_states)
         self.observation = self.preporcessor.setup(
             ego_state=self.state,
             observation=self.observation,
-            waypoints=wayponts,
+            waypoints=waypionts,
         )
-        self.observation["global_waypoints"] = self.preporcessor.global_waypoints
+        current_wayppint_index: int = self.preporcessor.current_waypoint_index
+        start_waypoint_index: int = max(0, current_wayppint_index - 25)
+        end_waypoint_index: int = min(len(waypionts) - 1, current_wayppint_index + 600)
+        self.observation["global_waypoints"] = waypionts[
+            start_waypoint_index:end_waypoint_index
+        ]
+        self.observation["progress"] = current_wayppint_index # / len(waypionts)
+        # self.observation["progress"] = np.linalg.norm(self.state[:2] - waypionts[-1])
 
     def _handle_preprocess(self) -> None:
-        self.observation = self.preporcessor.execute(self.state, self.observation)
-        self.observation["global_waypoints"] = self.preporcessor.global_waypoints
+        self.observation = self.preporcessor.execute(self.state, self.observation) 
 
     @abstractmethod
     def handle_action(self, action: np.ndarray) -> None:
@@ -110,7 +126,7 @@ class EgoAgent(CarAgent):
         self.__get_image_data()
         super().reset(waypoints, agent_states)
 
-    def step(self, agent_states: List[np.ndarray]) -> None:
+    def step(self, agent_states: List[np.ndarray], *args) -> None:
         self.__get_image_data()
         self._get_ego_state(agent_states)
         self._handle_preprocess()
@@ -122,32 +138,54 @@ class HazardAgent(CarAgent):
     def __init__(self, actor_id: int, qlabs: QuanserInteractiveLabs) -> None:
         super().__init__(actor_id)
         self.qlabs: QuanserInteractiveLabs = qlabs
-        self.detector: HazardDetector = HazardDetector()
         self.running_gear: VirtualRuningGear = VirtualRuningGear(QCAR_ACTOR_ID, actor_id)
-
-    def _detect_hazard(self) -> None:
-        ego_state: np.ndarray = self.observation["state"]
-        hazard_decision: int = self.detector.get_hazard_decision(
-            ego_state, self.observation["hazards"]
-        )
-        self.observation["hazard_decision"] = hazard_decision
-        print(f"Agent {self.actor_id} has Hazard decision: {hazard_decision}")
+        self.detector: HazardDetector = HazardDetector()
+    
+    def _handle_preprocess(self) -> None:
+        super()._handle_preprocess()
+        current_wayppint_index: int = self.preporcessor.current_waypoint_index
+        start_waypoint_index: int = max(0, current_wayppint_index - 25)
+        hazard_dist: int = 150 if is_in_area_aabb(self.state, self.restricted_area) else 50
+        end_waypoint_index: int = min(len(self.preporcessor.waypoints) - 1, current_wayppint_index + hazard_dist)
+        self.observation["global_waypoints"] = self.preporcessor.waypoints[
+            start_waypoint_index:end_waypoint_index
+        ]
+        self.observation["progress"] = current_wayppint_index 
 
     def halt_car(self, steering: float = 0, halt_time: float = 0.1) -> None:
         self.running_gear.read_write_std(self.qlabs, throttle=0.0, steering=steering)
         time.sleep(halt_time)
 
+    def handle_avoid_collide(self, agent_trajs: np.ndarray, agent_progresses: np.ndarray) -> None:
+        decision: int = 1
+        for i, traj in enumerate(agent_trajs):
+            if i == 0 or i == self.actor_id:
+                continue            
+            print(f"Agent {self.actor_id} checking agent {i}'s trajectory...")
+            if decision == 0:
+                print(f"Agent {self.actor_id} detects agent {i} as a hazard")
+                break            
+
+            ego_traj: np.ndarray = self.observation["global_waypoints"]
+            if agent_progresses[i] > agent_progresses[self.actor_id]: # or not is_in_area_aabb(self.state, CROSS_ROAD_AREA):
+                decision: int = self.detector.evalueate(ego_traj, traj)
+        self.observation["hazard_coeff"] = decision
+
     def handle_action(self, action: np.ndarray) -> None:
         self.leds[0], self.leds[3] = not self.leds[0], not self.leds[3]
-        throttle: float = action[0] * self.throttle_coeff * self.observation["hazard_decision"]
+        throttle: float = action[0] * self.throttle_coeff * self.observation["hazard_coeff"]
         steering: float = action[1] * self.steering_coeff
         self.running_gear.read_write_std(self.qlabs, throttle, steering, self.leds)
         self.observation["action"] = action
 
-    def step(self, agent_states: List[np.ndarray]) -> None:
-        print(f"Agent {self.actor_id} is running...")
+    def step(
+        self, 
+        agent_states: List[np.ndarray], 
+        agent_trajs: np.ndarray,
+        agent_progresses: np.ndarray
+    ) -> None:
         self._get_ego_state(agent_states)
-        self._detect_hazard()
+        self.handle_avoid_collide(agent_trajs, agent_progresses)
         self._handle_preprocess()
         action, _ = self.policy.execute(self.observation)
         self.handle_action(action)

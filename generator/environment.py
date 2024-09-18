@@ -10,14 +10,30 @@ from core.environment.simulator import QLabSimulator
 from core.environment.detector import EnvQCarRef, is_collided
 from core.roadmap.roadmap import ACCRoadMap
 from core.templates import BasePolicy, PolicyAdapter
-from .agents import CarAgent, EgoAgent, HazardAgent, StateDataBus
+from settings import REFERENCE_POSE
+from .hazard_decision import *
+from .env_raster_map import *
+from .agents import *
+
 
 THROTTLE_COEEFS: List[float] = [0.09, 0.064, 0.05]
+START_POSES: Dict[int, List[float]] = {
+    0: [0.0, 2.118, -np.pi / 2],
+    1: [0.264, -0.29, np.pi / 2],
+    2: [1.206, 1.082, np.pi],
+    3: [-1.036, 0.816, 0.0],
+}
+RESTRICTED_AREAS: List[Dict[str, float]] = [
+    None,
+    {"max_x": 0.8, "min_x": -0.5, "max_y": 0.2, "min_y": -0.3},
+    {"max_x": 1.3, "min_x": 0.5, "max_y": 1.6, "min_y": 0.5},
+    {"max_x": -0.05, "min_x": -1.1, "max_y": 1.6, "min_y": 0},
+]
 ROUTES: Dict[str, List[int]] = {
-    0: [[12, 0, 2], [12, 7, 5], [12, 8, 10]],
-    1: [[1, 8, 10], [1, 13, 19, 17, 15], [1, 7, 5]],
-    2: [[6, 0, 2], [6, 8, 10], [6, 13, 19, 17, 15]],
-    3: [[9, 0, 2], [9, 7, 5], [9, 13, 19, 17, 15]],
+    0: [[11, 12, 0, 2], [11, 12, 8, 10], [11, 12, 7, 5]],
+    1: [[3, 1, 13, 19, 17], [3, 1, 8, 10], [3, 1, 7, 5]],
+    2: [[15, 6, 0, 2], [15, 6, 8, 10], [15, 6, 13, 19, 17]],
+    3: [[22, 9, 0, 2], [22, 9, 7, 5], [22, 9, 13, 19, 17]],
 }
 
 
@@ -32,6 +48,7 @@ class CrossRoadEnvironment(OnlineQLabEnv):
     ) -> None:
         super().__init__(simulator, roadmap, dt, privileged)
         self.car_box: EnvQCarRef = EnvQCarRef()
+        self.renderer: CREnvRasterMap = CREnvRasterMap(self.roadmap, CR_MAP_SIZE, CR_MAP_PARAMS)
         self.__setup_agents()
 
     def __setup_agents(self) -> None:
@@ -46,26 +63,47 @@ class CrossRoadEnvironment(OnlineQLabEnv):
     def __reset_agent(self, actor_id: int, agent_states: np.ndarray) -> None:
         # get the waypoints and start node for the agent
         random_route_index: int = random.randint(0, 2)
-
-
         task: List[int] = ROUTES[actor_id][random_route_index]
+        restricted_area: Dict[str, float] = RESTRICTED_AREAS[actor_id]        
         if actor_id != 0:
             random_throttle_index: int = random.choice(list(self.used))
             self.used.remove(random_throttle_index)
             throttle_coeff: float = THROTTLE_COEEFS[random_throttle_index]
-            print(f"Actor {actor_id} has throttle index {THROTTLE_COEEFS[random_throttle_index]}")
+            print(f"Actor {actor_id} is using throttle coefficient {throttle_coeff}")
         else:
             throttle_coeff: float = 0.08
-        start_node: int = task[0] # the start node of the task
+
         waypoints: np.ndarray = self.roadmap.generate_path(task)
         # put the car actor to the start point
-        pose: List[float] = self.roadmap.nodes[start_node].pose
+        pose: List[float] = START_POSES[actor_id]
         location: List[float] = [pose[0], pose[1], 0.0]
         orientation: List[float] = [0.0, 0.0, pose[2]]
+        # print(f"Actor {actor_id} is at {location} with orientation {orientation}")
         self.simulator.set_car_pos(actor_id, location, orientation)
         # reset the agent's waypoints
         self.agents[actor_id].reset(waypoints, agent_states)
+        self.agents[actor_id].set_restricted_area(restricted_area)        
         self.agents[actor_id].set_throttle_coeff(throttle_coeff)
+
+    def __render_raster_map(self) -> None:
+        agent_states: List[np.ndarray] = []
+        waypoint_list: List[np.ndarray] = []
+        for agent in self.agents[1:]:
+            agent_states.append(agent.observation["state"])
+            waypoint_list.append(agent.observation["global_waypoints"])
+        raster_map, _, _ = self.renderer.draw_map(
+            REFERENCE_POSE, agent_states, waypoint_list
+        )
+        cv2.imshow("Raster Map", raster_map)
+        cv2.waitKey(1)
+
+    def get_hazard_info(self) -> None:
+        hazard_trajs: List[np.ndarray] = [None]
+        hazard_progresses: List[int] = [0]
+        for agent in self.agents[1:]:
+            hazard_trajs.append(agent.observation["global_waypoints"])
+            hazard_progresses.append(agent.observation["progress"])
+        return hazard_trajs, hazard_progresses
 
     def reset(self) -> Tuple[dict, float, bool, dict]:
         # reset the car position in the environment
@@ -81,11 +119,16 @@ class CrossRoadEnvironment(OnlineQLabEnv):
         return self.agents[0].observation, reward, done, info
 
     def step(self) -> Tuple[dict, float, bool, dict]:
+        print("====================================")
         _, reward, done, info = super().step()
         agent_states: List[np.ndarray] = self.databus.step()
+        agent_trajs, agent_progresses = self.get_hazard_info()
+        # update the agent's state
         for agent in reversed(self.agents):
-            agent.step(agent_states)
+            agent.step(agent_states, agent_trajs, agent_progresses)
         self.episode_steps += 1
+
+        self.__render_raster_map()
 
         # ego_agent_state: np.ndarray = self.agents[0].observation["state"]
         # for agent in self.agents[1:]:

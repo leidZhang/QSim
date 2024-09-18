@@ -35,7 +35,7 @@ def run_cross_road_env_demo():
     for i in range(500):
         print(f"Starting episode {i}...")
         env.reset() # use this to set the agents to their initial positions
-        for _ in range(50):
+        for _ in range(100):
             _, _, done, _ = env.step()
             if done:
                 print(f"Episode {i + 1} complete")
