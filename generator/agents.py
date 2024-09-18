@@ -11,7 +11,11 @@ from core.qcar import VirtualOptitrack, QCAR_ACTOR_ID
 from core.qcar.virtual import VirtualRuningGear
 from core.templates import PolicyAdapter, BasePolicy
 from core.control import WaypointProcessor
-from .hazard_decision import HazardDetector
+from .hazard_decision import HazardDetector, is_in_area_aabb
+
+CROSS_ROAD_AREA: Dict[str, float] = {
+    "min_x": -1.1, "max_x": 1.3, "min_y": -0.3, "max_y": 1.7
+}
 
 
 class StateDataBus: # get all the state information of the car agents
@@ -47,6 +51,10 @@ class CarAgent(PhysicalCar): # ego vehicle, can be controlled by the user
         self.policy: Union[BasePolicy, PolicyAdapter] = None
         self.preporcessor: WaypointProcessor = WaypointProcessor(auto_stop=True)
         self.observation: Dict[str, np.ndarray] = {"action": np.zeros(2), "hazard_coeff": 1}
+        self.restricted_area: Dict[str, float] = None
+
+    def set_restricted_area(self, area: Dict[str, float]) -> None:
+        self.restricted_area = area
 
     def _get_ego_state(self, agent_states: List[np.ndarray], agent_ranks: List[int] = [0, 1, 2, 3]) -> None:
         ego_state: np.ndarray = agent_states[self.actor_id]
@@ -68,7 +76,7 @@ class CarAgent(PhysicalCar): # ego vehicle, can be controlled by the user
             waypoints=waypionts,
         )
         current_wayppint_index: int = self.preporcessor.current_waypoint_index
-        start_waypoint_index: int = max(0, current_wayppint_index - 30)
+        start_waypoint_index: int = max(0, current_wayppint_index - 25)
         end_waypoint_index: int = min(len(waypionts) - 1, current_wayppint_index + 600)
         self.observation["global_waypoints"] = waypionts[
             start_waypoint_index:end_waypoint_index
@@ -77,17 +85,7 @@ class CarAgent(PhysicalCar): # ego vehicle, can be controlled by the user
         # self.observation["progress"] = np.linalg.norm(self.state[:2] - waypionts[-1])
 
     def _handle_preprocess(self) -> None:
-        self.observation = self.preporcessor.execute(self.state, self.observation)
-        current_wayppint_index: int = self.preporcessor.current_waypoint_index
-        start_waypoint_index: int = max(0, current_wayppint_index - 30)
-        end_waypoint_index: int = min(len(self.preporcessor.waypoints) - 1, current_wayppint_index + 180)
-        self.observation["global_waypoints"] = self.preporcessor.waypoints[
-            start_waypoint_index:end_waypoint_index
-        ]
-
-        self.observation["progress"] = current_wayppint_index # / len(self.preporcessor.waypoints)
-        # self.observation["progress"] = np.linalg.norm(self.state[:2] - self.preporcessor.waypoints[-1])
-
+        self.observation = self.preporcessor.execute(self.state, self.observation) 
 
     @abstractmethod
     def handle_action(self, action: np.ndarray) -> None:
@@ -142,6 +140,17 @@ class HazardAgent(CarAgent):
         self.qlabs: QuanserInteractiveLabs = qlabs
         self.running_gear: VirtualRuningGear = VirtualRuningGear(QCAR_ACTOR_ID, actor_id)
         self.detector: HazardDetector = HazardDetector()
+    
+    def _handle_preprocess(self) -> None:
+        super()._handle_preprocess()
+        current_wayppint_index: int = self.preporcessor.current_waypoint_index
+        start_waypoint_index: int = max(0, current_wayppint_index - 25)
+        hazard_dist: int = 150 if is_in_area_aabb(self.state, self.restricted_area) else 50
+        end_waypoint_index: int = min(len(self.preporcessor.waypoints) - 1, current_wayppint_index + hazard_dist)
+        self.observation["global_waypoints"] = self.preporcessor.waypoints[
+            start_waypoint_index:end_waypoint_index
+        ]
+        self.observation["progress"] = current_wayppint_index 
 
     def halt_car(self, steering: float = 0, halt_time: float = 0.1) -> None:
         self.running_gear.read_write_std(self.qlabs, throttle=0.0, steering=steering)
@@ -158,7 +167,7 @@ class HazardAgent(CarAgent):
                 break            
 
             ego_traj: np.ndarray = self.observation["global_waypoints"]
-            if agent_progresses[i] > agent_progresses[self.actor_id]:
+            if agent_progresses[i] > agent_progresses[self.actor_id]: # or not is_in_area_aabb(self.state, CROSS_ROAD_AREA):
                 decision: int = self.detector.evalueate(ego_traj, traj)
         self.observation["hazard_coeff"] = decision
 

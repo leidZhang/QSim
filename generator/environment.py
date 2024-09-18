@@ -23,6 +23,12 @@ START_POSES: Dict[int, List[float]] = {
     2: [1.206, 1.082, np.pi],
     3: [-1.036, 0.816, 0.0],
 }
+RESTRICTED_AREAS: List[Dict[str, float]] = [
+    None,
+    {"max_x": 0.8, "min_x": -0.5, "max_y": 0.2, "min_y": -0.3},
+    {"max_x": 1.3, "min_x": 0.5, "max_y": 1.6, "min_y": 0.5},
+    {"max_x": -0.05, "min_x": -1.1, "max_y": 1.6, "min_y": 0},
+]
 ROUTES: Dict[str, List[int]] = {
     0: [[11, 12, 0, 2], [11, 12, 8, 10], [11, 12, 7, 5]],
     1: [[3, 1, 13, 19, 17], [3, 1, 8, 10], [3, 1, 7, 5]],
@@ -58,6 +64,7 @@ class CrossRoadEnvironment(OnlineQLabEnv):
         # get the waypoints and start node for the agent
         random_route_index: int = random.randint(0, 2)
         task: List[int] = ROUTES[actor_id][random_route_index]
+        restricted_area: Dict[str, float] = RESTRICTED_AREAS[actor_id]        
         if actor_id != 0:
             random_throttle_index: int = random.choice(list(self.used))
             self.used.remove(random_throttle_index)
@@ -75,6 +82,7 @@ class CrossRoadEnvironment(OnlineQLabEnv):
         self.simulator.set_car_pos(actor_id, location, orientation)
         # reset the agent's waypoints
         self.agents[actor_id].reset(waypoints, agent_states)
+        self.agents[actor_id].set_restricted_area(restricted_area)        
         self.agents[actor_id].set_throttle_coeff(throttle_coeff)
 
     def __render_raster_map(self) -> None:

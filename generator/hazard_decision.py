@@ -1,9 +1,13 @@
-from typing import List
+from typing import List, Dict
 
 import numpy as np
 
 from core.roadmap.raster_map import to_pixel
 from settings import REFERENCE_POSE
+
+
+def is_in_area_aabb(state: np.ndarray, area_box: Dict[str, float]) -> bool:
+    return area_box["min_x"] <= state[0] <= area_box["max_x"] and area_box["min_y"] <= state[1] <= area_box["max_y"]
 
 
 class MapQCar:
