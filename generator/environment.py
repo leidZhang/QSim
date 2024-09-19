@@ -1,6 +1,7 @@
 import time
 import random
 from copy import deepcopy
+from multiprocessing import Queue
 from typing import Tuple, List, Union, Dict, Set
 
 import numpy as np
@@ -10,9 +11,7 @@ from core.environment.simulator import QLabSimulator
 from core.environment.detector import EnvQCarRef, is_collided
 from core.roadmap.roadmap import ACCRoadMap
 from core.templates import BasePolicy, PolicyAdapter
-from settings import REFERENCE_POSE
 from .agents import *
-from .env_raster_map import *
 from .hazard_decision import *
 
 CROSS_ROAD_AREA: Dict[str, float] = {
@@ -32,7 +31,7 @@ RESTRICTED_AREAS: List[Dict[str, float]] = [
     {"max_x": 0.05, "min_x": -1.1, "max_y": 1.6, "min_y": 0},
 ]
 ROUTES: Dict[str, List[int]] = {
-    0: [[11, 12, 0, 2], [11, 12, 8, 10], [11, 12, 7, 5]],
+    0: [[12, 0, 2], [12, 8, 10], [12, 7, 5]],
     1: [[3, 1, 13, 19, 17], [3, 1, 8, 10], [3, 1, 7, 5]],
     2: [[15, 6, 0, 2], [15, 6, 8, 10], [15, 6, 13, 19, 17]],
     3: [[22, 9, 0, 2], [22, 9, 7, 5], [22, 9, 13, 19, 17]],
@@ -50,7 +49,7 @@ class CrossRoadEnvironment(OnlineQLabEnv):
     ) -> None:
         super().__init__(simulator, roadmap, dt, privileged)
         self.car_box: EnvQCarRef = EnvQCarRef()
-        self.renderer: CREnvRasterMap = CREnvRasterMap(self.roadmap, CR_MAP_SIZE, CR_MAP_PARAMS)
+        # self.renderer: CREnvRasterMap = CREnvRasterMap(self.roadmap, CR_MAP_SIZE, CR_MAP_PARAMS)
         self.__setup_agents()
 
     def __setup_agents(self) -> None:
@@ -87,17 +86,17 @@ class CrossRoadEnvironment(OnlineQLabEnv):
         self.agents[actor_id].set_restricted_area(restricted_area)
         self.agents[actor_id].set_throttle_coeff(throttle_coeff)
 
-    def __render_raster_map(self) -> None:
-        agent_states: List[np.ndarray] = []
-        waypoint_list: List[np.ndarray] = []
-        for agent in self.agents[1:]:
-            agent_states.append(agent.observation["state"])
-            waypoint_list.append(agent.observation["global_waypoints"])
-        raster_map, _, _ = self.renderer.draw_map(
-            REFERENCE_POSE, agent_states, waypoint_list
-        )
-        cv2.imshow("Raster Map", raster_map)
-        cv2.waitKey(1)
+    # def __render_raster_map(self) -> None:
+    #     agent_states: List[np.ndarray] = []
+    #     waypoint_list: List[np.ndarray] = []
+    #     for agent in self.agents[1:]:
+    #         agent_states.append(agent.observation["state"])
+    #         waypoint_list.append(agent.observation["global_waypoints"])
+    #     raster_map, _, _ = self.renderer.draw_map(
+    #         REFERENCE_POSE, agent_states, waypoint_list
+    #     )
+    #     cv2.imshow("Raster Map", raster_map)
+    #     cv2.waitKey(1)
 
     def __detect_collision(self, ego_state: np.ndarray) -> bool:
         for agent in self.agents[1:]:
@@ -109,10 +108,14 @@ class CrossRoadEnvironment(OnlineQLabEnv):
 
     def handle_reward(self, agent: CarAgent) -> Tuple[float, bool]:
         state: np.ndarray = agent.observation["state"]
+
+        # When the ego agent collides with any other agent, it gets a penalty and the episode ends
         if self.__detect_collision(state):
             return 0, True
+        # When the ego agent reaches the goal, it gets a reward and the episode ends
         if not is_in_area_aabb(state, CROSS_ROAD_AREA):
             return 1, True
+
         return 0.0, False
 
     def get_hazard_info(self) -> None:
@@ -123,7 +126,7 @@ class CrossRoadEnvironment(OnlineQLabEnv):
             hazard_progresses.append(agent.observation["progress"])
         return hazard_trajs, hazard_progresses
 
-    def reset(self) -> Tuple[dict, float, bool, dict]:
+    def reset(self, raster_info_queue: Queue = None) -> Tuple[dict, float, bool, dict]:
         # reset the car position in the environment
         self.used: Set[float] = {0, 1, 2}
         _, reward, done, info = super().reset()
@@ -136,12 +139,12 @@ class CrossRoadEnvironment(OnlineQLabEnv):
             self.__reset_agent(index, agent_states)
         return self.agents[0].observation, reward, done, info
 
-    def step(self) -> Tuple[dict, float, bool, dict]:
+    def step(self, raster_info_queue: Queue = None) -> Tuple[dict, float, bool, dict]:
         # print("====================================")
         _, _, done, info = super().step()
         agent_states: List[np.ndarray] = self.databus.step()
         agent_trajs, agent_progresses = self.get_hazard_info()
-        # update the agent's state
+        # update the agent's state and do the action
         for agent in reversed(self.agents):
             agent.step(agent_states, agent_trajs, agent_progresses)
         self.episode_steps += 1

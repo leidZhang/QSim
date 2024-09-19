@@ -17,7 +17,7 @@ CR_MAP_PARAMS: dict = {
 }
 
 
-class CREnvRasterMap(RasterMapRenderer):
+class HITLRasterMap(RasterMapRenderer):
     def _draw_edge_layer(self, pose: np.ndarray, map_info: Dict[str, Any]) -> None:
         edge_layer: np.ndarray = np.zeros(self.map_size, dtype=np.uint8)
         for map_polyline in self.map_polylines:
@@ -50,11 +50,9 @@ class CREnvRasterMap(RasterMapRenderer):
         pose: np.ndarray = state[:3] # we do not need velocity and acceleration for rendering
         raster_map, segmentation_target, map_info = super().draw_map() # draw base map
 
-        # self._draw_edge_layer(pose, map_info)
         self._draw_hazard_layer(pose, hazards, map_info)
         self._draw_waypoints_layer(pose, waypoint_lists, map_info)
 
         # render raster map
         raster_map = self.render_map(raster_map, map_info)
-
         return raster_map, segmentation_target, map_info

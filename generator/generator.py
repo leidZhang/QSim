@@ -30,7 +30,7 @@ def prepare_cross_road_env() -> CrossRoadEnvironment:
     print("Starting the environment...")
     env: OnlineQLabEnv = CrossRoadEnvironment(sim, roadmap, privileged=True)
     env.set_ego_policy(PurePursuiteAdaptor())
-    env.set_hazard_policy(PurePursuiteAdaptor())    
+    env.set_hazard_policy(PurePursuiteAdaptor())
 
     return env
 
@@ -54,14 +54,14 @@ def run_generator():
         for _ in range(100):
             observation, reward, done, _ = env.step()
             observation["reward"] = reward
-            episode_observation.append(observation)            
+            episode_observation.append(observation)
             episode_reward += reward
             if done:
                 break
         print(f"Episode {i + 1} complete with reward {episode_reward}")
         env.stop_all_agents()
 
-        data = transform_observation(episode_observation)
-        print(data.keys())
+        # data = transform_observation(episode_observation)
+        # print(data.keys())
         time.sleep(2)
     print("Demo complete")
