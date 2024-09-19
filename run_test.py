@@ -1,6 +1,8 @@
 import os
 import sys
 
+from hitl import run_keyboard_policy
+
 
 if __name__ == "__main__":
     python_path: str = sys.executable

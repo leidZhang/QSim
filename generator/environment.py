@@ -16,7 +16,7 @@ from .env_raster_map import *
 from .hazard_decision import *
 
 CROSS_ROAD_AREA: Dict[str, float] = {
-    "min_x": -0.7, "max_x": 0.9, "min_y": -0.3, "max_y": 2.2
+    "min_x": -0.7, "max_x": 0.9, "min_y": -0.0, "max_y": 2.2
 }
 THROTTLE_COEEFS: List[float] = [0.09, 0.064, 0.05]
 START_POSES: Dict[int, List[float]] = {
@@ -66,7 +66,7 @@ class CrossRoadEnvironment(OnlineQLabEnv):
         # get the waypoints and start node for the agent
         random_route_index: int = random.randint(0, 2)
         task: List[int] = ROUTES[actor_id][random_route_index]
-        restricted_area: Dict[str, float] = RESTRICTED_AREAS[actor_id]        
+        restricted_area: Dict[str, float] = RESTRICTED_AREAS[actor_id]
         if actor_id != 0:
             random_throttle_index: int = random.choice(list(self.used))
             self.used.remove(random_throttle_index)
@@ -84,7 +84,7 @@ class CrossRoadEnvironment(OnlineQLabEnv):
         self.simulator.set_car_pos(actor_id, location, orientation)
         # reset the agent's waypoints
         self.agents[actor_id].reset(waypoints, agent_states)
-        self.agents[actor_id].set_restricted_area(restricted_area)        
+        self.agents[actor_id].set_restricted_area(restricted_area)
         self.agents[actor_id].set_throttle_coeff(throttle_coeff)
 
     def __render_raster_map(self) -> None:
@@ -106,7 +106,7 @@ class CrossRoadEnvironment(OnlineQLabEnv):
                 print(f"Collision detected between ego agent and agent {agent.actor_id}")
                 return True
         return False
-    
+
     def handle_reward(self, agent: CarAgent) -> Tuple[float, bool]:
         state: np.ndarray = agent.observation["state"]
         if self.__detect_collision(state):

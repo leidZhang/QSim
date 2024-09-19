@@ -83,7 +83,7 @@ class CarAgent(PhysicalCar): # ego vehicle, can be controlled by the user
         # self.observation["progress"] = np.linalg.norm(self.state[:2] - waypionts[-1])
 
     def _handle_preprocess(self) -> None:
-        self.observation = self.preporcessor.execute(self.state, self.observation) 
+        self.observation = self.preporcessor.execute(self.state, self.observation)
 
     @abstractmethod
     def handle_action(self, action: np.ndarray) -> None:
@@ -117,13 +117,13 @@ class EgoAgent(CarAgent):
         self.observation["images"] = images
 
     def __handle_policy(self) -> Tuple[np.ndarray, np.ndarray]:
-        action, _ = self.expert_policy.execute(self.observation)
+        action, _ = self.policy.execute(self.observation)
         intervention = self.expert_policy.execute()
         self.observation["intervention"] = np.array(list(intervention))
         return action, intervention
 
     def handle_action(self, action: np.ndarray, intervention: np.ndarray) -> None:
-        intervention_coeff: float = 0 if intervention[1] == 1 else intervention[0]
+        intervention_coeff: float = 0 if intervention[1] == 1 else (intervention[0] * 0.2 + 1)
         throttle: float = action[0] * self.throttle_coeff * intervention_coeff
         steering: float = action[1] * self.steering_coeff
         self.running_gear.read_write_std(throttle, steering)
@@ -148,7 +148,7 @@ class HazardAgent(CarAgent):
         self.qlabs: QuanserInteractiveLabs = qlabs
         self.running_gear: VirtualRuningGear = VirtualRuningGear(QCAR_ACTOR_ID, actor_id)
         self.detector: HazardDetector = HazardDetector()
-    
+
     def _handle_preprocess(self) -> None:
         super()._handle_preprocess()
         current_wayppint_index: int = self.preporcessor.current_waypoint_index
@@ -158,7 +158,7 @@ class HazardAgent(CarAgent):
         self.observation["global_waypoints"] = self.preporcessor.waypoints[
             start_waypoint_index:end_waypoint_index
         ]
-        self.observation["progress"] = current_wayppint_index 
+        self.observation["progress"] = current_wayppint_index
 
     def halt_car(self, steering: float = 0, halt_time: float = 0.1) -> None:
         self.running_gear.read_write_std(self.qlabs, throttle=0.0, steering=steering)
@@ -168,11 +168,11 @@ class HazardAgent(CarAgent):
         decision: int = 1
         for i, traj in enumerate(agent_trajs):
             if i == 0 or i == self.actor_id:
-                continue            
+                continue
             # print(f"Agent {self.actor_id} checking agent {i}'s trajectory...")
             if decision == 0:
                 # print(f"Agent {self.actor_id} detects agent {i} as a hazard")
-                break            
+                break
 
             ego_traj: np.ndarray = self.observation["global_waypoints"]
             if agent_progresses[i] > agent_progresses[self.actor_id]: # or not is_in_area_aabb(self.state, CROSS_ROAD_AREA):
@@ -187,8 +187,8 @@ class HazardAgent(CarAgent):
         self.observation["action"] = action
 
     def step(
-        self, 
-        agent_states: List[np.ndarray], 
+        self,
+        agent_states: List[np.ndarray],
         agent_trajs: np.ndarray,
         agent_progresses: np.ndarray
     ) -> None:
