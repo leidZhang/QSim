@@ -107,7 +107,7 @@ class EgoAgent(CarAgent):
     def __init__(self, actor_id: int = 0) -> None:
         super().__init__(actor_id)
         self.cameras: List[CSICamera] = [CSICamera(i) for i in range(4)]
-        self.expert_policy: KeyboardPolicy = KeyboardPolicy()
+        # self.expert_policy: KeyboardPolicy = KeyboardPolicy()
 
     def __get_image_data(self) -> None:
         images: List[np.ndarray] = [None, None, None, None]
@@ -117,21 +117,21 @@ class EgoAgent(CarAgent):
         self.observation["images"] = images
 
     def __handle_policy(self) -> Tuple[np.ndarray, np.ndarray]:
-        action, _ = self.expert_policy.execute(self.observation)
-        intervention = self.expert_policy.execute()
+        action, _ = self.policy.execute(self.observation)
+        intervention = (0, 0) # self.expert_policy.execute()
+        print(f"Action: {action}, Intervention: {intervention}")
         self.observation["intervention"] = np.array(list(intervention))
         return action, intervention
 
-    def handle_action(self, action: np.ndarray, intervention: np.ndarray) -> None:
-        intervention_coeff: float = 0 if intervention[1] == 1 else intervention[0]
-        throttle: float = action[0] * self.throttle_coeff * intervention_coeff
+    def handle_action(self, action: np.ndarray, intervention: np.ndarray = None) -> None:
+        throttle: float = action[0] * self.throttle_coeff
         steering: float = action[1] * self.steering_coeff
         self.running_gear.read_write_std(throttle, steering)
         self.observation["action"] = action
 
     def reset(self, waypoints: np.ndarray, agent_states: List[np.ndarray]) -> None:
         self.__get_image_data()
-        self.observation["intervention"] = (0, 0)
+        self.observation["intervention"] = np.zeros(2)
         super().reset(waypoints, agent_states)
 
     def step(self, agent_states: List[np.ndarray], *args) -> None:
