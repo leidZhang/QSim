@@ -31,10 +31,10 @@ RESTRICTED_AREAS: List[Dict[str, float]] = [
     {"max_x": 0.05, "min_x": -1.1, "max_y": 1.6, "min_y": 0},
 ]
 ROUTES: Dict[str, List[int]] = {
-    0: [[12, 0, 2], [12, 8, 10], [12, 7, 5]],
-    1: [[3, 1, 13, 19, 17], [3, 1, 8, 10], [3, 1, 7, 5]],
-    2: [[15, 6, 0, 2], [15, 6, 8, 10], [15, 6, 13, 19, 17]],
-    3: [[22, 9, 0, 2], [22, 9, 7, 5], [22, 9, 13, 19, 17]],
+    0: [[11, 0, 2], [11, 8, 10], [11, 7, 5]],
+    1: [[1, 13, 19, 17], [1, 8, 10], [1, 7, 5]],
+    2: [[6, 0, 2], [6, 8, 10], [6, 13, 19, 17]],
+    3: [[9, 0, 2], [9, 7, 5], [9, 13, 19, 17]],
 }
 
 
@@ -47,6 +47,7 @@ class AnomalousEpisodeDetector:
         if action[0] >= 0.045:
             res: int = 1 if np.array_equal(pose, self.last_pose) else -1
             self.accumulator = max(0, self.accumulator + res) # accumulator more than 0
+            self.last_pose = deepcopy(pose)
 
         if self.accumulator >= 10:
             raise AnomalousEpisodeException("Anomalous episode detected")
