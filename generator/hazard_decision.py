@@ -60,7 +60,7 @@ class HazardDetector: # Rule is fixed, so no decision making is needed
             (y1 - y2) * (waypoints[:self.hazard_distance, 0] - x1)
 
     def get_waypoint_mask(self, waypoints: np.ndarray, hazard_state: np.ndarray) -> np.ndarray:
-        # OBB detection, is the waypoint pass the object bounding box of the hazard car?
+        # OBB detection, does the waypoint pass the object bounding box of the hazard car?
         masks: List[np.ndarray] = []
         bounding_box: np.ndarray = self.map_qcar.get_object_bounding_box(hazard_state)
         for i in range(4):

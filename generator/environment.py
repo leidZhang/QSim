@@ -86,17 +86,11 @@ class CrossRoadEnvironment(OnlineQLabEnv):
         self.agents[actor_id].set_restricted_area(restricted_area)
         self.agents[actor_id].set_throttle_coeff(throttle_coeff)
 
-    # def __render_raster_map(self) -> None:
-    #     agent_states: List[np.ndarray] = []
-    #     waypoint_list: List[np.ndarray] = []
-    #     for agent in self.agents[1:]:
-    #         agent_states.append(agent.observation["state"])
-    #         waypoint_list.append(agent.observation["global_waypoints"])
-    #     raster_map, _, _ = self.renderer.draw_map(
-    #         REFERENCE_POSE, agent_states, waypoint_list
-    #     )
-    #     cv2.imshow("Raster Map", raster_map)
-    #     cv2.waitKey(1)
+    def __render_raster_map(self, raster_info_queue: Queue) -> None:
+        ego_state: np.ndarray = self.agents[0].observation["state"]
+        hazard_states: List[np.ndarray] = [agent.observation["state"] for agent in self.agents[1:]]
+        rendered_waypoint_list: List[np.ndarray] = [self.agents[0].get_task_trajectory()]
+        raster_info_queue.put((ego_state, hazard_states, rendered_waypoint_list))
 
     def __detect_collision(self, ego_state: np.ndarray) -> bool:
         for agent in self.agents[1:]:
@@ -127,6 +121,9 @@ class CrossRoadEnvironment(OnlineQLabEnv):
         return hazard_trajs, hazard_progresses
 
     def reset(self, raster_info_queue: Queue = None) -> Tuple[dict, float, bool, dict]:
+        if raster_info_queue is None:
+            raise ValueError("Raster info queue cannot be None")
+
         # reset the car position in the environment
         self.used: Set[float] = {0, 1, 2}
         _, reward, done, info = super().reset()

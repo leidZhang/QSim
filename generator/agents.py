@@ -102,6 +102,9 @@ class CarAgent(PhysicalCar):
     def set_steering_coeff(self, coeff: float) -> None:
         self.steering_coeff = coeff
 
+    def get_task_trajectory(self) -> np.ndarray:
+        return self.preporcessor.waypoints
+
 
 class EgoAgent(CarAgent): # ego vehicle, can be controlled by the user
     def __init__(self, actor_id: int = 0) -> None:

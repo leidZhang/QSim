@@ -1,7 +1,7 @@
 import os
 import sys
 
-from hitl import run_keyboard_policy
+# from hitl import run_keyboard_policy
 
 
 if __name__ == "__main__":
