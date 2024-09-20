@@ -13,3 +13,5 @@ if __name__ == "__main__":
         process.start()
 
     run_generator()
+    for process in pool:
+        process.join()
