@@ -1,9 +1,11 @@
 import time
 from copy import deepcopy
 from typing import Any, Dict
+from multiprocessing import Queue
 
 from qvl.qlabs import QuanserInteractiveLabs
 from core.roadmap import ACCRoadMap
+from core.environment import AnomalousEpisodeException
 from core.environment.builder import GeneralMapBuilder
 from core.environment.director import GeneralDirector
 from core.environment.constants import FULL_CONFIG
@@ -28,9 +30,9 @@ def prepare_cross_road_env() -> CrossRoadEnvironment:
     sim.render_map(director, config)
 
     print("Starting the environment...")
-    env: OnlineQLabEnv = CrossRoadEnvironment(sim, roadmap, privileged=True)
+    env: OnlineQLabEnv = CrossRoadEnvironment(sim, roadmap, privileged=True, dt=0.02)
     env.set_ego_policy(PurePursuiteAdaptor())
-    env.set_hazard_policy(PurePursuiteAdaptor())    
+    env.set_hazard_policy(PurePursuiteAdaptor())
 
     return env
 
@@ -45,23 +47,30 @@ def transform_observation(episode_observation: Dict[str, Any]) -> Dict[str, list
     return data
 
 
-def run_generator():
+# TODO: Refactor it to a class
+def run_generator(raster_queue: Queue):
     env: OnlineQLabEnv = prepare_cross_road_env()
     for i in range(500):
-        print(f"Starting episode {i}...")
-        episode_reward, episode_observation = 0, []
-        observation, reward, done, _ = env.reset() # use this to set the agents to their initial positions
-        for _ in range(100):
-            observation, reward, done, _ = env.step()
-            observation["reward"] = reward
-            episode_observation.append(observation)            
-            episode_reward += reward
-            if done:
-                break
-        print(f"Episode {i + 1} complete with reward {episode_reward}")
-        env.stop_all_agents()
+        try:
+            print(f"Starting episode {i}...")
+            episode_reward, episode_observation = 0, []
+            # use this to set the agents to their initial positions
+            observation, reward, done, _ = env.reset(raster_queue)
+            for _ in range(100):
+                start: float = time.time()
+                observation, reward, done, _ = env.step(raster_queue)
+                observation["reward"] = reward
+                episode_observation.append(observation)
+                episode_reward += reward
+                if done:
+                    break
+                time.sleep(max(0, env.dt - (time.time() - start)))
+            print(f"Episode {i + 1} complete with reward {episode_reward}")
+            env.stop_all_agents()
 
-        data = transform_observation(episode_observation)
-        print(data.keys())
-        time.sleep(2)
+            # data = transform_observation(episode_observation)
+            # print(data.keys())
+            time.sleep(2)
+        except AnomalousEpisodeException:
+            print("Anomalous episode detected, skipping...")
     print("Demo complete")
