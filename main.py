@@ -1,3 +1,4 @@
+import time
 from typing import List
 from multiprocessing import Queue, Process
 
@@ -12,6 +13,7 @@ if __name__ == "__main__":
     for process in pool:
         process.start()
 
-    run_generator()
-    for process in pool:
-        process.join()
+    time.sleep(5)
+    run_generator(raster_info_queue)
+    # for process in pool:
+    #     process.join()

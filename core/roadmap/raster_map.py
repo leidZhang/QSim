@@ -111,10 +111,10 @@ class RasterMapRenderer(ABC):
         self.map_polylines: List[np.ndarray] = []
         self.__add_map_polylines(road_map)
         self.bounding_box: np.ndarray = np.array([
-            [-(self.agent_length / 2), -(self.agent_width / 2)],
-            [+(self.agent_length / 2), -(self.agent_width / 2)],
-            [+(self.agent_length / 2), +(self.agent_width / 2)],
-            [-(self.agent_length / 2), +(self.agent_width / 2)],
+            [-(self.agent_length / 2 - 0.15), -(self.agent_width / 2)],
+            [+(self.agent_length / 2 + 0.15), -(self.agent_width / 2)],
+            [+(self.agent_length / 2 + 0.15), +(self.agent_width / 2)],
+            [-(self.agent_length / 2 - 0.15), +(self.agent_width / 2)],
         ])
 
     def __add_map_polylines(self, road_map: RoadMap) -> None:

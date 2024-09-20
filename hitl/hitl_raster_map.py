@@ -13,7 +13,8 @@ CR_MAP_SIZE: tuple = (384, 384, 3)
 CR_MAP_PARAMS: dict = {
     "lanes": ((255, 255, 255), 1),
     "hazards": ((255, 0, 255), 2),
-    "waypoints": ((255, 255, 0), 3)
+    "waypoints": ((255, 255, 0), 3),
+    "ego": ((0, 255, 0), 4)
 }
 
 
@@ -33,6 +34,12 @@ class HITLRasterMap(RasterMapRenderer):
             )
         map_info["waypoints"] = waypoints_layer[:, :, 0] > 0
 
+    def _draw_ego_layer(self, pose: np.ndarray, map_info: Dict[str, Any]) -> None:
+        ego_layer: np.ndarray = np.zeros(self.map_size, dtype=np.uint8)
+        ego_box: np.ndarray = get_bounding_box_poly(self.bounding_box, pose)
+        ego_layer = get_box_layer(ego_layer, ego_box, pose, (0, 255, 0), OFFSET, CROSS_ROARD_RATIAL)
+        map_info["ego"] = np.all(ego_layer == (0, 255, 0), axis=-1)
+
     def _draw_hazard_layer(self, pose: np.ndarray, hazards: list, map_info: Dict[str, Any]) -> None:
         hazards_layer: np.ndarray = np.zeros(self.map_size, dtype=np.uint8)
         for hazard in hazards:
@@ -51,6 +58,7 @@ class HITLRasterMap(RasterMapRenderer):
         raster_map, segmentation_target, map_info = super().draw_map() # draw base map
 
         self._draw_hazard_layer(pose, hazards, map_info)
+        self._draw_ego_layer(pose, map_info)
         self._draw_waypoints_layer(pose, waypoint_lists, map_info)
 
         # render raster map

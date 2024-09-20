@@ -8,9 +8,9 @@ class KeyboardPolicy(BasePolicy):
 
     def execute(self) -> tuple:
         self.controller.read()
-        v_slider: int = self.controller.state["v_slider"]
+        # v_slider: int = self.controller.state["v_slider"]
         x_signal: int = self.controller.state["x_signal"]
 
         accelerate: float = 1.0 if x_signal > 0 else 0.0
-        break_pedal: float = 1.0 if v_slider > 0 else 0.0
+        break_pedal: float = 1.0 if x_signal < 0 else 0.0
         return accelerate, break_pedal

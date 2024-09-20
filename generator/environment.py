@@ -1,12 +1,12 @@
-import time
 import random
 from copy import deepcopy
 from multiprocessing import Queue
+from queue import Queue as MtQueue
 from typing import Tuple, List, Union, Dict, Set
 
 import numpy as np
 
-from core.environment import OnlineQLabEnv
+from core.environment import OnlineQLabEnv, AnomalousEpisodeException
 from core.environment.simulator import QLabSimulator
 from core.environment.detector import EnvQCarRef, is_collided
 from core.roadmap.roadmap import ACCRoadMap
@@ -38,6 +38,24 @@ ROUTES: Dict[str, List[int]] = {
 }
 
 
+class AnomalousEpisodeDetector:
+    def __init__(self) -> None:
+        self.last_pose: np.ndarray = np.array([999, 999, 999, 999, 999, 999])
+        self.accumulator: int = 0
+
+    def detect(self, pose: np.ndarray, action: np.ndarray) -> bool:
+        if action[0] >= 0.045:
+            res: int = 1 if np.array_equal(pose, self.last_pose) else -1
+            self.accumulator = max(0, self.accumulator + res) # accumulator more than 0
+
+        if self.accumulator >= 10:
+            raise AnomalousEpisodeException("Anomalous episode detected")
+
+    def reset_detector(self) -> None:
+        self.last_pose = np.array([999, 999, 999, 999, 999, 999])
+        self.accumulator = 0
+
+
 # TODO: Get all the agent states first then check for collision
 class CrossRoadEnvironment(OnlineQLabEnv):
     def __init__(
@@ -49,7 +67,7 @@ class CrossRoadEnvironment(OnlineQLabEnv):
     ) -> None:
         super().__init__(simulator, roadmap, dt, privileged)
         self.car_box: EnvQCarRef = EnvQCarRef()
-        # self.renderer: CREnvRasterMap = CREnvRasterMap(self.roadmap, CR_MAP_SIZE, CR_MAP_PARAMS)
+        self.detector: AnomalousEpisodeDetector = AnomalousEpisodeDetector()
         self.__setup_agents()
 
     def __setup_agents(self) -> None:
@@ -100,6 +118,11 @@ class CrossRoadEnvironment(OnlineQLabEnv):
                 return True
         return False
 
+    def __detect_anomalous_episode(self) -> bool:
+        pose: np.ndarray = self.agents[0].observation["state"]
+        action: np.ndarray = self.agents[0].observation["action"]
+        self.detector.detect(pose, action)
+
     def handle_reward(self, agent: CarAgent) -> Tuple[float, bool]:
         state: np.ndarray = agent.observation["state"]
 
@@ -126,6 +149,7 @@ class CrossRoadEnvironment(OnlineQLabEnv):
 
         # reset the car position in the environment
         self.used: Set[float] = {0, 1, 2}
+        self.detector.reset_detector()
         _, reward, done, info = super().reset()
         # get the initial state of the agents
         agent_states: List[np.ndarray] = self.databus.reset()
@@ -134,16 +158,19 @@ class CrossRoadEnvironment(OnlineQLabEnv):
         self.__reset_agent(0, agent_states)
         for index in indices:
             self.__reset_agent(index, agent_states)
+        self.__render_raster_map(raster_info_queue)
         return self.agents[0].observation, reward, done, info
 
     def step(self, raster_info_queue: Queue = None) -> Tuple[dict, float, bool, dict]:
-        # print("====================================")
+        self.__detect_anomalous_episode()
+
         _, _, done, info = super().step()
         agent_states: List[np.ndarray] = self.databus.step()
         agent_trajs, agent_progresses = self.get_hazard_info()
         # update the agent's state and do the action
         for agent in reversed(self.agents):
             agent.step(agent_states, agent_trajs, agent_progresses)
+        self.__render_raster_map(raster_info_queue)
         self.episode_steps += 1
 
         # self.__render_raster_map()

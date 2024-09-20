@@ -27,6 +27,7 @@ def render_raster_map(raster_queue: Queue) -> None:
             map_params=CR_MAP_PARAMS
         )
 
+        print("Start rendering HITL Raster Map")
         while True:
             map_info: Any = raster_queue.get()
             ego_state, hazard_states, waypoint_list = map_info
