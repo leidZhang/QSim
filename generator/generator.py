@@ -31,7 +31,7 @@ def prepare_cross_road_env() -> CrossRoadEnvironment:
 
     print("Starting the environment...")
     env: OnlineQLabEnv = CrossRoadEnvironment(sim, roadmap, privileged=True, dt=0.02)
-    env.set_ego_policy(PurePursuiteAdaptor())
+    env.set_ego_policy(PurePursuiteAdaptor(max_lookahead_distance=0.7))
     env.set_hazard_policy(PurePursuiteAdaptor())
 
     return env
@@ -64,7 +64,7 @@ def run_generator(raster_queue: Queue):
                 episode_reward += reward
                 if done:
                     break
-                time.sleep(max(0, env.dt - (time.time() - start)))
+                # time.sleep(max(0, env.dt - (time.time() - start)))
             print(f"Episode {i + 1} complete with reward {episode_reward}")
             env.stop_all_agents()
 
@@ -73,4 +73,5 @@ def run_generator(raster_queue: Queue):
             time.sleep(2)
         except AnomalousEpisodeException:
             print("Anomalous episode detected, skipping...")
+            time.sleep(2)
     print("Demo complete")

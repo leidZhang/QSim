@@ -164,7 +164,7 @@ class HazardAgent(CarAgent): # auto stop when detect hazard, will not respond to
         super()._handle_preprocess()
         current_wayppint_index: int = self.preporcessor.current_waypoint_index
         start_waypoint_index: int = max(0, current_wayppint_index - 25)
-        hazard_dist: int = 180 if is_in_area_aabb(self.state, self.restricted_area) else 50
+        hazard_dist: int = 210 if is_in_area_aabb(self.state, self.restricted_area) else 50
         end_waypoint_index: int = min(len(self.preporcessor.waypoints) - 1, current_wayppint_index + hazard_dist)
         self.observation["global_waypoints"] = self.preporcessor.waypoints[
             start_waypoint_index:end_waypoint_index

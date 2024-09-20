@@ -31,9 +31,9 @@ RESTRICTED_AREAS: List[Dict[str, float]] = [
     {"max_x": 0.05, "min_x": -1.1, "max_y": 1.6, "min_y": 0},
 ]
 ROUTES: Dict[str, List[int]] = {
-    0: [[11, 0, 2], [11, 8, 10], [11, 7, 5]],
-    1: [[1, 13, 19, 17], [1, 8, 10], [1, 7, 5]],
-    2: [[6, 0, 2], [6, 8, 10], [6, 13, 19, 17]],
+    0: [[12, 0, 2], [12, 8, 23], [12, 7, 5]],
+    1: [[1, 13, 19, 17], [1, 8, 23], [1, 7, 5]],
+    2: [[6, 0, 2], [6, 8, 23], [6, 13, 19, 17]],
     3: [[9, 0, 2], [9, 7, 5], [9, 13, 19, 17]],
 }
 
@@ -165,7 +165,7 @@ class CrossRoadEnvironment(OnlineQLabEnv):
     def step(self, raster_info_queue: Queue = None) -> Tuple[dict, float, bool, dict]:
         self.__detect_anomalous_episode()
 
-        _, _, done, info = super().step()
+        _, reward, done, info = super().step()
         agent_states: List[np.ndarray] = self.databus.step()
         agent_trajs, agent_progresses = self.get_hazard_info()
         # update the agent's state and do the action
@@ -174,8 +174,6 @@ class CrossRoadEnvironment(OnlineQLabEnv):
         self.__render_raster_map(raster_info_queue)
         self.episode_steps += 1
 
-        # self.__render_raster_map()
-        # done = self.__detect_collision() or done
         reward, done = self.handle_reward(self.agents[0])
         done = self.agents[0].observation["done"] or done
         return self.agents[0].observation, reward, done, info
