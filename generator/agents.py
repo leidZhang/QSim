@@ -42,7 +42,7 @@ class StateDataBus: # get all the state information of the car agents
         return agent_states
 
 
-class CarAgent(PhysicalCar): # ego vehicle, can be controlled by the user
+class CarAgent(PhysicalCar):
     def __init__(self, actor_id: int = 0) -> None:
         super().__init__(throttle_coeff=0.10)
         self.actor_id: int = actor_id
@@ -102,12 +102,23 @@ class CarAgent(PhysicalCar): # ego vehicle, can be controlled by the user
     def set_steering_coeff(self, coeff: float) -> None:
         self.steering_coeff = coeff
 
+    def get_task_trajectory(self) -> np.ndarray:
+        return self.preporcessor.waypoints
 
-class EgoAgent(CarAgent):
+
+class EgoAgent(CarAgent): # ego vehicle, can be controlled by the user
     def __init__(self, actor_id: int = 0) -> None:
         super().__init__(actor_id)
         self.cameras: List[CSICamera] = [CSICamera(i) for i in range(4)]
         self.expert_policy: KeyboardPolicy = KeyboardPolicy()
+
+    def _handle_preprocess(self) -> None:
+        super()._handle_preprocess()
+        current_wayppint_index: int = self.preporcessor.current_waypoint_index
+        end_waypoint_index: int = min(len(self.preporcessor.waypoints) - 1, current_wayppint_index + 50)
+        self.observation["global_waypoints"] = self.preporcessor.waypoints[
+            current_wayppint_index:end_waypoint_index
+        ]
 
     def __get_image_data(self) -> None:
         images: List[np.ndarray] = [None, None, None, None]
@@ -142,7 +153,7 @@ class EgoAgent(CarAgent):
         self.handle_action(action, intervention)
 
 
-class HazardAgent(CarAgent):
+class HazardAgent(CarAgent): # auto stop when detect hazard, will not respond to the ego vehicle's action
     def __init__(self, actor_id: int, qlabs: QuanserInteractiveLabs) -> None:
         super().__init__(actor_id)
         self.qlabs: QuanserInteractiveLabs = qlabs
@@ -153,7 +164,7 @@ class HazardAgent(CarAgent):
         super()._handle_preprocess()
         current_wayppint_index: int = self.preporcessor.current_waypoint_index
         start_waypoint_index: int = max(0, current_wayppint_index - 25)
-        hazard_dist: int = 180 if is_in_area_aabb(self.state, self.restricted_area) else 50
+        hazard_dist: int = 210 if is_in_area_aabb(self.state, self.restricted_area) else 50
         end_waypoint_index: int = min(len(self.preporcessor.waypoints) - 1, current_wayppint_index + hazard_dist)
         self.observation["global_waypoints"] = self.preporcessor.waypoints[
             start_waypoint_index:end_waypoint_index
