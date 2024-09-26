@@ -167,3 +167,5 @@ assets/
 images/
 wandb/
 test_data/
+Reinformer/models/
+.idea/

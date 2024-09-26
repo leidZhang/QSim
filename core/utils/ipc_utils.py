@@ -1,10 +1,99 @@
 import time
-from typing import Any, Dict
+import warnings
+from typing import Any
 from queue import Empty, Full
-from multiprocessing import Queue
+from multiprocessing import Queue, Event, Lock
 # from multiprocessing.shared_memory import SharedMemory
 
-import numpy as np
+
+def fetch_latest_in_queue(data_queue: Queue) -> None:
+    warnings.warn("fetch_latest_in_queue is deprecated, use DoubleBuffer.get() instead", DeprecationWarning)
+    latest_data: Any = None
+    try:
+        latest_data = data_queue.get_nowait()
+    except Empty:
+        pass
+    return latest_data
+
+
+def put_latest_in_queue(data: Any, data_queue: Queue) -> None:
+    warnings.warn("fetch_latest_in_queue is deprecated, use DoubleBuffer.put() instead", DeprecationWarning)
+    try:
+        data_queue.put_nowait(data)
+    except Full:
+        data_queue.get()
+        data_queue.put(data)
+
+
+def clear_queue(data_queue: Queue) -> None:
+    while not data_queue.empty():
+        data_queue.get()
+
+
+class DoubleBuffer:
+    def __init__(self, size: int) -> None:
+        self.buffer: Queue = Queue(size)
+        self.queue: Queue = Queue(size)
+
+    def _switch_queue_and_buffer(self) -> None:
+        self.queue, self.buffer = self.buffer, self.queue
+
+    def put(self, data: Any) -> None:
+        try:
+            if self.buffer.full():
+                self.buffer.get()
+            self.buffer.put(data)
+        except Exception as e:
+            print(f"Error in DoubleBuffer.put: {e}")
+
+    def get(self) -> Any:
+        self._switch_queue_and_buffer()
+        if self.queue.qsize() == 0:
+            return None
+
+        data: Any = None
+        while not self.queue.empty():
+            data = self.queue.get()
+
+        return data
+
+        # if not self.queue.empty():
+        #     res = self.queue.get()
+        #     return res
+        # return None
+
+    def terminate(self) -> None:
+        # clear the queues
+        while self.buffer.qsize() > 0:
+            self.buffer.get()
+        while self.queue.qsize() > 0:
+            self.queue.get()
+        # print(f"{self.buffer.qsize()}, {self.queue.qsize()}")
+        # close the queues
+        self.buffer.close()
+        self.queue.close()
+        # join the queues
+        self.buffer.join_thread()
+        self.queue.join_thread()
+
+
+class EventDoubleBuffer(DoubleBuffer):
+    def __init__(self, size: int = 1) -> None:
+        super().__init__(size)
+        self.timer = time.time()
+        self.event = Event() # multiprocessing event
+
+    def put(self, data: Any) -> None:
+        super().put(data)
+        if not self.event.is_set():
+            self.event.set()
+
+    def get(self) -> Any:
+        if self.event.is_set():
+            data = super().get()
+            self.event.clear()  # Reset event after consuming data
+            return data
+        return None
 
 
 # class StructedDataTypeFactory:
@@ -31,28 +120,3 @@ import numpy as np
 
 #     def read_from_shm(self, key: str) -> Any:
 #         return self.shared_data[0][key]
-
-
-def fetch_latest_in_queue(data_queue: Queue) -> None:
-    latest_data: Any = None
-    # if not data_queue.empty():
-    #     latest_data = data_queue.get()
-    try:
-        latest_data = data_queue.get_nowait()
-    except Empty:
-        pass
-    return latest_data
-
-
-def put_latest_in_queue(data: Any, data_queue: Queue) -> None:
-    # print(f"put latest data {data}")
-    try:
-        data_queue.put_nowait(data)
-    except Full:
-        data_queue.get()
-        data_queue.put(data)
-
-
-def clear_queue(data_queue: Queue) -> None:
-    while not data_queue.empty():
-        data_queue.get()

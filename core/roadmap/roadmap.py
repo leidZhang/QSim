@@ -13,9 +13,9 @@ from .constants import EDGE_CONFIGS_RIGHT_LARGE_MAP
 
 class ACCRoadMap(RoadMap):
     """
-    The road map class for the ACC2024 competition
+    This class is responsible for generating waypoints of the roadmap used in
+    the ACC2024 student self-driving competition
     """
-
     def __init__(self) -> None:
         """
         Initializes the ACCRoadMap object
@@ -81,6 +81,40 @@ class ACCRoadMap(RoadMap):
 
         return np.array(super().generate_path(node_sequence)).transpose(1, 0) #[N, (x, y)]
 
+    def generate_path_and_segments(self, node_sequence: Union[np.ndarray, list]) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Wraps the generated path and segments as a numpy array object
+
+        Parameters:
+        - node_sequence: Union[np.ndarray, list]: The sequence of nodes
+
+        Returns:
+        - Tuple[np.ndarray, np.ndarray]: The path and segments as numpy arrays
+        """
+        if type(node_sequence) == np.ndarray:
+            node_sequence = node_sequence.tolist()
+
+        # convert from map node to index
+        sequence_ids = node_sequence
+        if not type(sequence_ids[0]) == int:
+            sequence_ids = [node.index for node in sequence_ids]
+
+        # generate path and find which waypoints belong to which road segment
+        path = []
+        segments = {}
+        waypoint_index = 0
+        for i in range(1, len(sequence_ids)):
+            sub_sequence = sequence_ids[i-1:i+1]
+            sub_sequence_path = np.array(super().generate_path(sub_sequence)).transpose(1, 0) #[N, (x, y)]
+            sub_sequence_length = sub_sequence_path.shape[0]
+
+            path.append(sub_sequence_path)
+            segments[(waypoint_index, waypoint_index + sub_sequence_length - 1)] = np.array(sub_sequence)
+            waypoint_index += sub_sequence_length
+
+        path = np.vstack(path)
+        return path, segments
+
     def prepare_map_info(self, node_sequence: list) -> Tuple[dict, np.ndarray]:
         """
         Provide the position informations related to the node sequence
@@ -98,4 +132,3 @@ class ACCRoadMap(RoadMap):
 
         waypoint_sequence = self.generate_path(node_sequence)
         return node_dict, waypoint_sequence
-    

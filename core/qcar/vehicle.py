@@ -8,8 +8,8 @@ from pal.products.qcar import QCar
 from qvl.qlabs import QuanserInteractiveLabs
 
 # from core.sensor.sensor import VirtualCSICamera, VirtualRGBDCamera
-from core.policies.base_policy import PolicyAdapter, BasePolicy
-from .monitor import Monitor
+from core.templates.base_policy import PolicyAdapter, BasePolicy
+from .virtual import VirtualOptitrack
 from .constants import QCAR_ACTOR_ID, ENCODER_COUNTS_PER_REV
 from .constants import PIN_TO_SPUR_RATIO, WHEEL_RADIUS
 
@@ -40,7 +40,6 @@ class BaseCar:
         """
         ...
 
-    @abstractmethod
     def execute(self, *args) -> Tuple:
         """
         The execute method is an abstract method that executes the action of the car
@@ -83,8 +82,8 @@ class VirtualCar(BaseCar):
         super().__init__(throttle_coeff, steering_coeff)
         self.qlabs: QuanserInteractiveLabs = qlabs
         self.actor_id: int = actor_id
-        self.running_gear: QCar = QCar(id=actor_id)
-        self.monitor: Monitor = Monitor(QCAR_ACTOR_ID, actor_id, dt=dt)
+        self.running_gear: QCar = QCar()
+        self.monitor: VirtualOptitrack = VirtualOptitrack(QCAR_ACTOR_ID, actor_id, dt=dt)
 
     def halt(self) -> None:
         self.running_gear.read_write_std(0, 0)
@@ -101,7 +100,7 @@ class VirtualCar(BaseCar):
 
     def cal_vehicle_state(self, ego_state: np.ndarray) -> Tuple[np.ndarray, float, np.ndarray]:
         """
-        Gets the position, yaw and rotation of the vehicle
+        Gets the position, yaw and rotation matrix of the vehicle
 
         Parameters:
         - ego_state: np.ndarray: The ego state of the car
@@ -202,6 +201,9 @@ class PhysicalCar(BaseCar):
     def setup(self, *args) -> None:
         ...
 
+    def terminate(self) -> None:
+        self.running_gear.terminate()
+
     def handle_leds(self, throttle: float, steering: float) -> None:
         """
         The handle_leds method handles the LEDs of the car, when the
@@ -224,8 +226,10 @@ class PhysicalCar(BaseCar):
         else:
             self.leds = np.array([0, 0, 0, 0, 0, 0, self.leds[6], self.leds[7]])
         # reverse indicator
-        if throttle < 0:
+        if throttle < -0.02:
             self.leds[5] = 1
+        elif -0.02 <= throttle < 0:
+            self.leds[4] = 1
 
     def estimate_speed(self) -> float:
         """
@@ -236,7 +240,7 @@ class PhysicalCar(BaseCar):
         """
         return float(self.running_gear.motorTach)
 
-    def halt_car(self, steering: float = 0.0, halt_time: float = 1.0) -> None:
+    def halt_car(self, steering: float = 0.0, halt_time: float = 0.1) -> None:
         """
         Halts the QCar.
 
@@ -249,7 +253,7 @@ class PhysicalCar(BaseCar):
         """
         # if halt_time >= 3:
         #     self.leds: np.ndarray = np.concatenate((self.leds[:6], [1, 1]))
-        self.running_gear.read_write_std(throttle=0, steering=steering, LEDs=self.leds)
+        self.running_gear.read_write_std(throttle=-0.01, steering=steering, LEDs=self.leds)
         time.sleep(halt_time)
         # self.leds = np.concatenate((self.leds[:6], [0, 0]))
         # self.running_gear.read_write_std(throttle=0, steering=steering, LEDs=self.leds)
