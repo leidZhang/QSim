@@ -5,6 +5,15 @@ import numpy as np
 from core.roadmap.raster_map import to_pixel
 from settings import REFERENCE_POSE
 
+ACTION_PROIORITY = {
+    "left": 0,
+    "straight": 1,
+    "right": 2
+}
+CROSS_ROAD_AREA: Dict[str, float] = {
+    "min_x": -1.1, "max_x": 1.21, "min_y": -0.3, "max_y": 1.8
+}
+
 
 def is_in_area_aabb(state: np.ndarray, area_box: Dict[str, float]) -> bool:
     return area_box["min_x"] <= state[0] <= area_box["max_x"] and area_box["min_y"] <= state[1] <= area_box["max_y"]
@@ -40,6 +49,39 @@ class MapQCar:
             [np.sin(yaw), np.cos(yaw)],
         ])
         return np.matmul(agent_box - orig, rot)
+    
+
+class PriorityNode:
+    def __init__(self) -> None:
+        self.left: PriorityNode = None
+        self.right: PriorityNode = None
+        self.action: str = None
+
+    def set_left(self, left: 'PriorityNode') -> None:
+        self.left = left
+
+    def set_right(self, right: 'PriorityNode') -> None:
+        self.right = right
+
+    def set_action(self, action: str) -> None:
+        self.action = action 
+
+    def has_higher_priority(self, other: 'PriorityNode' = None) -> bool:
+        if other is None or type(other) != PriorityNode:
+            raise ValueError("Invalid other node, other node should be a PriorityNode object")
+
+        if self.left is not None and self.left == other: # come from left
+            if other.action == "straight" and self.action == "left":
+                return False
+            return True
+        if self.right is not None and self.right == other: # come from right
+            if self.action == "straight" and other.action == "left":
+                return True
+            return False
+
+        if ACTION_PROIORITY[self.action] > ACTION_PROIORITY[other.action]:
+            return True
+        return False
 
 
 class HazardDetector: # Rule is fixed, so no decision making is needed
@@ -78,7 +120,24 @@ class HazardDetector: # Rule is fixed, so no decision making is needed
         common_points: set = set1.intersection(set2)
         return len(common_points) != 0
 
-    def evalueate(self, ego_traj: np.ndarray, hazard_traj: np.ndarray) -> int:
+    def evaluate(
+        self, 
+        ego_state: np.ndarray,
+        ego_traj: np.ndarray, 
+        hazard_traj: np.ndarray,
+        ego_priority: PriorityNode,
+        hazard_priority: PriorityNode,
+        ego_progress: int,
+        hazard_progress: int
+    ) -> int:
         if not self._is_waypoint_intersected(ego_traj, hazard_traj):
+            return 1
+        
+        has_higher_priority: bool = ego_priority.has_higher_priority(hazard_priority)
+        is_in_cross_road: bool = is_in_area_aabb(ego_state, CROSS_ROAD_AREA)
+        print(has_higher_priority, is_in_cross_road)
+        if has_higher_priority and is_in_cross_road:
+            return 1
+        if not is_in_cross_road and ego_progress > hazard_progress:
             return 1
         return 0

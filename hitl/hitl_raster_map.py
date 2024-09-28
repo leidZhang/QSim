@@ -57,8 +57,8 @@ class HITLRasterMap(RasterMapRenderer):
         pose: np.ndarray = state[:3] # we do not need velocity and acceleration for rendering
         raster_map, segmentation_target, map_info = super().draw_map() # draw base map
 
-        self._draw_hazard_layer(pose, hazards, map_info)
-        self._draw_ego_layer(pose, map_info)
+        # self._draw_hazard_layer(pose, hazards, map_info)
+        # self._draw_ego_layer(pose, map_info)
         self._draw_waypoints_layer(pose, waypoint_lists, map_info)
 
         # render raster map

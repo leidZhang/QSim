@@ -169,3 +169,5 @@ wandb/
 test_data/
 Reinformer/models/
 .idea/
+myenv/
+myenv_test/
