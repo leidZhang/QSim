@@ -1,112 +1,167 @@
 import math
+import warnings
 from abc import abstractmethod
-from typing import Tuple, Dict
+from typing import Tuple, List
 
 from gym import Env
 import numpy as np
 
+from core.roadmap import ACCRoadMap
 from .simulator import QLabSimulator
-from constants import DEFAULT_MAX_STEPS
 
+DEFAULT_MAX_STEPS: int = 1000
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+class BaseQLabEnv(Env):
+    """
+    Base class for QLab Environment, which defines the basic structure
+    of the environment.
+    """
 
-class QLabEnvironment(Env):
-    def __init__(self, dt: float = 0.05, action_size: int = 2, privileged: bool = False, offsets: Tuple[float] = (0, 0)) -> None:
-        self.dt: float = dt
-        self.action_size: int = action_size
-        self.offsets: Tuple[float] = offsets
-        self.privileged: bool = privileged
-        self.max_episode_steps: int = DEFAULT_MAX_STEPS
-        self.simulator: QLabSimulator = QLabSimulator(offsets=self.offsets)
+    def _init_step_params(self) -> Tuple[dict, float, dict]:
+        """
+        Initialize the parameters for each step in the environment.
 
-    def setup(self, nodes: Dict[str, np.ndarray], sequence: np.ndarray) -> None:
-        self.simulator.render_map()
-        self.set_waypoint_sequence(sequence)
-        self.set_nodes(nodes=nodes)
-
-    def set_nodes(self, nodes: Dict[str, np.ndarray]) -> None:
-        self.nodes: Dict[str, np.ndarray] = nodes
-
-    def set_waypoint_sequence(self, sequence: np.ndarray) -> None:
-        self.waypoint_sequence: np.ndarray = sequence
-        self.goal: np.ndarray = self.waypoint_sequence[-1]
-
-    def init_step_params(self) -> tuple:
+        Returns:
+        - observation (dict): The observation of the environment
+        - reward (float): The reward of the environment
+        - info (dict): The information of the environment
+        """
         observation: dict = {}
         reward: float = 0.0
         info: dict = {}
         return observation, reward, info
-    
-    def recover_state_info(self, state: np.ndarray, recover_indices: list) -> np.ndarray:
-        recovered_state: np.ndarray = state.copy()
-        for index in recover_indices:
-            recovered_state[index] -= self.offsets[0]
-            recovered_state[index + 1] -= self.offsets[1]
-        return recovered_state
 
-    def cal_waypoint_angle(self, delta_x: float, delta_y: float) -> float:
-        if delta_x < 0 and delta_y == 0:
-            return math.pi # up to bottom
-        elif delta_x == 0 and delta_y > 0:
-            return math.pi / 2 # right to left
-        elif delta_x < 0 and delta_y > 0:
-            return math.atan(delta_y / delta_x) + math.pi # right bottom
-        elif delta_x > 0 and delta_y > 0:
-            return math.atan(delta_y / delta_x) # left bottom
-        elif delta_x > 0 and delta_y == 0:
-            return 0 # bottom to up
-        elif delta_x > 0 and delta_y < 0:
-            return math.atan(delta_y / delta_x) # left top
-        elif delta_x == 0 and delta_y < 0:
-            return 3 * math.pi / 2 # left to right
-        else:
-            return math.atan(delta_y / delta_x) + math.pi # right top
+    def handle_reward(self, *args) -> Tuple[float, bool]:
+        """
+        This method handles the reward calculation for the environment.
+        The function should return the reward and the done flag, and is
+        expected to be implemented by the subclass.
+        """
+        return 0, False
 
-    def spawn_on_waypoints(self, waypoint_index: int = 0) -> Tuple[list, list]:
-        if waypoint_index < 0 or waypoint_index >= len(self.waypoint_sequence):
-            raise ValueError('Invalid Waypoint index format')
+    def step(self, *args) -> Tuple[dict, float, bool, dict]:
+        """
+        The base step method for the environment. It executes the action in the environment
+        and returns the observation, reward, done flag, and additional information of the
+        environment. Other functions is expected to be implemented by the subclass.
 
-        # handle final index
-        if waypoint_index < len(self.waypoint_sequence) - 1:
-            current_waypoint: np.ndarray = self.waypoint_sequence[waypoint_index]
-            next_waypoint: np.ndarray = self.waypoint_sequence[waypoint_index+1]
-        else:
-            current_waypoint: np.ndarray = self.waypoint_sequence[waypoint_index-1]
-            next_waypoint: np.ndarray = self.waypoint_sequence[waypoint_index]
-        # calculate x, y coordinates
-        x_position: float = current_waypoint[0]
-        y_position: float = current_waypoint[1]
-        # calcualte angle
-        delta_x: float = next_waypoint[0] - current_waypoint[0]
-        delta_y: float = next_waypoint[1] - current_waypoint[1]
-        orientation: float = self.cal_waypoint_angle(delta_x, delta_y)
+        Returns:
+        - observation (dict): The observation of the environment
+        - reward (float): The reward of the environment
+        - done (bool): The done flag of the environment
+        - info (dict): The information of the environment
+        """
+        return {}, 0, False, {}
 
-        return [x_position, y_position, 0], [0, 0, orientation]
 
-    def spawn_on_nodes(self, node_index: int) -> Tuple[list, list]:
-        if node_index not in self.nodes.keys():
-            raise ValueError("Index not exist!")
-        node_pose: np.ndarray = self.nodes[node_index]
-        x_position, y_position, orientation = node_pose
-        return [x_position, y_position, 0], [0, 0, orientation]
+class OfflineQLabEnv(BaseQLabEnv):
+    """
+    The OfflineQLabEnv class is a subclass of the BaseQLabEnv class, which is used in the
+    offline RL training. It defines the methods for getting the dataset and normalizing
+    the score.
 
-    def reset(self, location, orientation) -> Tuple[dict, float, bool, dict]:
-        self.simulator.reset_map(location=location, orientation=orientation)
+    Attributes:
+    - episode_steps (int): The number of steps in the episode
+    - reference_max_score_per_step (float): The reference maximum score per step
+    - reference_min_score_per_step (float): The reference minimum score per step
+    """
+
+    def __init__(
+        self,
+        reference_max_score_per_step: float,
+        reference_min_score_per_step: float
+    ) -> None:
+        """
+        Initialize the OfflineQLabEnv object with the reference maximum score per step
+
+        Parameters:
+        - reference_max_score_per_step (float): The reference maximum score per step
+        - reference_min_score_per_step (float): The reference minimum score per step
+        """
+        self.episode_steps: int = 0
+        self.reference_max_score_per_step: float = reference_max_score_per_step
+        self.reference_min_score_per_step: float = reference_min_score_per_step
+
+    def get_normalized_score(self, score: float) -> float:
+        """
+        Get the normalized score based on the reference maximum and minimum score per step.
+
+        Parameters:
+        - score (float): The score to be normalized
+
+        Returns:
+        - float: The normalized score
+        """
+        return (score - self.reference_min_score_per_step) / \
+            (self.reference_max_score_per_step - self.reference_min_score_per_step)
+
+    @abstractmethod
+    def get_dataset(self, *args) -> None:
+        """
+        Get the dataset for the offline RL training. This method is expected to be
+        implemented by the subclass.
+
+        Returns:
+        - None
+        """
+        ...
+
+class OnlineQLabEnv(BaseQLabEnv):
+    """
+    OnlineQLabEnv is a subclass of the Base QLab Environment class, which is used in
+    the online reinforcement learning training. It defines the methods for setting up
+    the environment, handling the spawn position, and resetting the environment. It is
+    expected to use the roadmaps provided by Quanser.
+
+    Attributes:
+    - dt (float): The time step of the environment
+    - offsets (Tuple[float]): The offsets of the environment
+    - privileged (bool): The privileged information flag
+    - max_episode_steps (int): The maximum number of steps in the episode
+    - simulator (QLabSimulator): The simulator of the environment
+    """
+
+    def __init__(
+        self,
+        simulator: QLabSimulator,
+        roadmap: ACCRoadMap,
+        dt: float = 0.05,
+        privileged: bool = False,
+    ) -> None:
+        """
+        Initialize the OnlineQLabEnv object with the time step, action size, offsets, and
+        privileged information flag.
+
+        Parameters:
+        - simulator (QLabSimulator): The simulator of the environment
+        - roadmap (RoadMap): The roadmap of the environment
+        - dt (float): The time step of the environment
+        - privileged (bool): The privileged information flag
+        """
+        self.dt: float = dt
+        self.privileged: bool = privileged
+        self.max_episode_steps: int = DEFAULT_MAX_STEPS
+
+        self.roadmap: ACCRoadMap = roadmap
+        self.simulator: QLabSimulator = simulator
+
+    def reset(self) -> Tuple[dict, float, bool, dict]:
+        """
+        The base reset method for the environment. It resets the environment to the
+        initial state. Other functions is expected to be implemented by the subclass.
+
+        Returns:
+        - observation (dict): The observation of the environment
+        - reward (float): The reward of the environment
+        - done (bool): The done flag of the environment
+        - info (dict): The information of the environment
+        """
         done: bool = False
-        observation, reward, info = self.init_step_params()
-        self.deviate_steps: int = 0
+        self.simulator.reset_map()
+        observation, reward, info = self._init_step_params()
+
         self.episode_steps: int = 0
         return observation, reward, done, info
 
-    @abstractmethod
-    def handle_spawn_pos(self, *args) -> Tuple[list, list]:
-        ...
-
-    @abstractmethod
-    def handle_reward(self, *args) -> Tuple[float, bool]:
-        ...
-
-    @abstractmethod
-    def step(self, action: np.ndarray, metrics: np.ndarray, *args) -> Tuple[dict, float, bool, dict]:
-        ...
+QLabEnvironment = OnlineQLabEnv

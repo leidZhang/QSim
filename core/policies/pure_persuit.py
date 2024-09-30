@@ -3,18 +3,20 @@ from typing import Tuple
 import torch
 import numpy as np
 import random
+import time
 
 #project imports
 from core.models.torch.model import Model
 from core.data.preprocessor import Preprocessor
 from core.policies.network import NetworkPolicy
 from core.utils.agg_utils import map_structure
-from core.policies.base_policy import PolicyAdapter
-from constants import action_v
+from core.templates.base_policy import PolicyAdapter
+
 
 class PurePursuitPolicy:
     def __init__(self, max_lookahead_distance: float = 0.5) -> None:
         self.max_lookahead_distance = max_lookahead_distance
+        self.start_time = time.time()
 
     def __call__(self, obs: dict) -> Tuple[dict, dict]:
         # action = np.array([0.074, 0.0]) #v, steer
@@ -40,36 +42,54 @@ class PurePursuitPolicy:
         tx, ty = waypoints[i]
 
         # compute steer action
-        x, y, yaw = state[:3]        
+        x, y, yaw = state[:3]
         alpha: float = np.arctan2(ty - y, tx - x) - yaw
         l: float = np.sqrt((x - tx)**2 + (y - ty)**2)
         theta: float = np.arctan2(2 * 0.256 * np.sin(alpha), l)
         action[1] = theta / 0.5
 
-        # # add noise
-        # with torch.no_grad():
-        #
-        #     action_tensor = torch.from_numpy(action).float()
-        #     # epsilon = max(1 - data_size / 400_000, 0.04)
-        #     epsilon = 0.7
-        #
-        #     rand_action_v = torch.rand(1)
-        #     rand_action_yaw = torch.rand(1) * 2 - 1
-        #
-        #     if random.uniform(0, 1) < epsilon:
-        #         action_tensor[0] = rand_action_v
-        #         action_tensor[1] = rand_action_yaw
-        #
-        #     action = action_tensor.cpu().numpy()
-
         return action, metrics
-    
+
+        # print("waypoints: ", waypoints[1:10])
+        # print("waypoints_shape: ", waypoints.shape)
+        # delta_waypoints = np.diff(waypoints, axis=0)
+        # theta = np.arctan2(delta_waypoints[:, 1], delta_waypoints[:, 0]) + np.pi / 2
+        # new_waypoints = waypoints[1:] + 0.3 * np.stack([np.cos(theta), np.sin(theta)], axis=-1)
+        # print("new_waypoints: ", new_waypoints[1:10])
+
+        # while 1 < time.time() - self.start_time < 5:
+        #     metrics["waypoints"] = new_waypoints
+
+        #     lad = 0.0
+        #     i = 0
+        #     for i in range(new_waypoints.shape[0] - 1):
+        #         current_waypoint_x = new_waypoints[i, 0]
+        #         current_waypoint_y = new_waypoints[i, 1]
+        #         next_waypoint_x = new_waypoints[i + 1, 0]
+        #         next_waypoint_y = new_waypoints[i + 1, 1]
+
+        #         lad = lad + np.hypot(next_waypoint_x - current_waypoint_x, next_waypoint_y - current_waypoint_y)
+        #         if lad > self.max_lookahead_distance:
+        #             break
+
+        #     tx, ty = new_waypoints[i]
+
+        #     x, y, yaw = state[:3]
+        #     alpha: float = np.arctan2(ty - y, tx - x) - yaw
+        #     l: float = np.sqrt((x - tx)**2 + (y - ty)**2)
+        #     theta: float = np.arctan2(2 * 0.256 * np.sin(alpha), l)
+        #     action[1] = theta / 0.5
+
+        #     return action, metrics
+
 
 class PurePursuiteAdaptor(PolicyAdapter):
     def __init__(self, max_lookahead_distance=0.5) -> None:
         self.policy = PurePursuitPolicy(max_lookahead_distance)
 
     def execute(self, obs) -> Tuple[dict, dict]:
+        if "done" in obs.keys() and obs["done"]:
+            return np.zeros(2), {}
         return self.policy(obs)
 
 

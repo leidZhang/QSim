@@ -6,7 +6,7 @@ import numpy as np
 
 from core.control.pid_control import PIDController
 from core.control.pid_control import SteeringPIDController, ThrottlePIDController
-from core.policies.base_policy import BasePolicy
+from core.templates.base_policy import BasePolicy
 
 
 class CompositePIDPolicy(BasePolicy):
