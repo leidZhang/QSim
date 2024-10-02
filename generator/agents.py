@@ -132,6 +132,7 @@ class EgoAgent(CarAgent): # ego vehicle, can be controlled by the user
 
     def __handle_policy(self) -> Tuple[np.ndarray, np.ndarray]:
         action, _ = self.policy.execute(self.observation)
+        print(action)
         intervention = self.expert_policy.execute()
         self.observation["intervention"] = np.array(list(intervention))
         return action, intervention
@@ -186,7 +187,7 @@ class HazardAgent(CarAgent): # auto stop when detect hazard, will not respond to
             if decision == 0:
                 break
             
-            ego_state: np.ndarray = self.observation["state"]
+            ego_state: np.ndarray = self.observation["state_info"]
             ego_traj: np.ndarray = self.observation["global_waypoints"]
             ego_priority, hazard_priority = priorities[self.actor_id], priorities[i]
             decision = self.detector.evaluate(

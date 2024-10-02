@@ -123,15 +123,15 @@ class CrossRoadEnvironment(OnlineQLabEnv):
         self.agents[actor_id].set_look_ahead(look_ahead)
 
     def __render_raster_map(self, raster_info_queue: Queue) -> None:
-        ego_state: np.ndarray = self.agents[0].observation["state"]
-        hazard_states: List[np.ndarray] = [agent.observation["state"] for agent in self.agents[1:]]
+        ego_state: np.ndarray = self.agents[0].observation["state_info"]
+        hazard_states: List[np.ndarray] = [agent.observation["state_info"] for agent in self.agents[1:]]
         rendered_waypoint_list: List[np.ndarray] = [self.agents[0].get_task_trajectory()]
         raster_info_queue.put((ego_state, hazard_states, rendered_waypoint_list))
 
         # agent_states: List[np.ndarray] = []
         # waypoint_list: List[np.ndarray] = []
         # for agent in self.agents[1:]:
-        #     agent_states.append(agent.observation["state"])
+        #     agent_states.append(agent.observation["state_info"])
         #     waypoint_list.append(agent.observation["global_waypoints"])
         # raster_map, _, _ = self.renderer.draw_map(
         #     REFERENCE_POSE, agent_states, waypoint_list
@@ -141,19 +141,19 @@ class CrossRoadEnvironment(OnlineQLabEnv):
 
     def __detect_collision(self, ego_state: np.ndarray) -> bool:
         for agent in self.agents[1:]:
-            agent_state: np.ndarray = agent.observation["state"]
+            agent_state: np.ndarray = agent.observation["state_info"]
             if is_collided(ego_state, agent_state, self.car_box):
                 print(f"Collision detected between ego agent and agent {agent.actor_id}")
                 return True
         return False
 
     def __detect_anomalous_episode(self) -> bool:
-        pose: np.ndarray = self.agents[0].observation["state"]
+        pose: np.ndarray = self.agents[0].observation["state_info"]
         action: np.ndarray = self.agents[0].observation["action"]
         self.detector.detect(pose, action)
 
     def handle_reward(self, agent: CarAgent) -> Tuple[float, bool]:
-        state: np.ndarray = agent.observation["state"]
+        state: np.ndarray = agent.observation["state_info"]
 
         # When the ego agent collides with any other agent, it gets a penalty and the episode ends
         if self.__detect_collision(state):

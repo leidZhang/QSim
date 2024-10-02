@@ -15,6 +15,7 @@ from core.environment.constants import FULL_CONFIG
 from core.environment.simulator import QLabSimulator
 from core.policies import PurePursuiteAdaptor
 from settings import *
+from dqn import DQNPolicy
 from .environment import CrossRoadEnvironment, OnlineQLabEnv
 
 
@@ -35,7 +36,8 @@ def prepare_cross_road_env() -> CrossRoadEnvironment:
 
     print("Starting the environment...")
     env: OnlineQLabEnv = CrossRoadEnvironment(sim, roadmap, privileged=True, dt=0.02)
-    env.set_ego_policy(PurePursuiteAdaptor(max_lookahead_distance=0.68))
+    # env.set_ego_policy(PurePursuiteAdaptor(max_lookahead_distance=0.68))
+    env.set_ego_policy(DQNPolicy(action_size=2))
     env.set_hazard_policy(PurePursuiteAdaptor())
 
     return env

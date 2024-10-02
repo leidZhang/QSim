@@ -3,9 +3,11 @@ import math
 import numpy as np
 import torch
 import torch.optim as optim
-from net import DuelingDQN
-from memory import PrioritizedReplayMemory, Transition
 import torch.nn.functional as F
+
+from .net import DuelingDQN
+from .memory import PrioritizedReplayMemory, Transition
+
 
 class Agent:
     """
@@ -26,6 +28,10 @@ class Agent:
         self.batch_size = 64
         self.sequence_length = 4  # For LSTM sequence length
         self.target_update = 10  # Frequency of target network update
+        self.hidden = (
+            torch.zeros(1, self.batch_size, 256).to('cuda'),
+            torch.zeros(1, self.batch_size, 256).to('cuda')
+        )  # Initialize hidden state
 
         # Initialize target network
         self.update_target_network()
@@ -49,11 +55,12 @@ class Agent:
         No resize, should done resize before here
         """
         images: np.ndarray = np.concatenate(images, axis=-1)
+        print(images.shape)
         images = torch.tensor(images, dtype=torch.float32) / 255.0 - 0.5  # Normalize to [-0.5, 0.5]
-        images = images.permute(0, 3, 1, 2)  # Change to (sequence_length, channels, height, width)
+        images = images.permute(2, 0, 1)  # Change to (channels, height, width)
         return images
 
-    def select_action(self, state, hidden):
+    def select_action(self, state):
         """
         Select an action using epsilon-greedy policy.
         """
@@ -67,12 +74,12 @@ class Agent:
 
         if sample > eps_threshold:
             with torch.no_grad():
-                q_values, hidden = self.policy_net(images, state_info, hidden)
+                q_values, self.hidden = self.policy_net(images, state_info, self.hidden)
                 action = q_values.max(1)[1].item()
         else:
             action = random.randrange(self.action_size)
 
-        return action, hidden
+        return action
 
     def optimize_model(self):
         """
@@ -95,16 +102,15 @@ class Agent:
         next_state_info_batch = torch.stack([b['state_info'] for b in batch.next_state]).to('cuda')
 
         # Compute current Q values
-        hidden = (torch.zeros(1, self.batch_size, 256).to('cuda'),
-                  torch.zeros(1, self.batch_size, 256).to('cuda'))  # Initialize hidden state
-        q_values, _ = self.policy_net(images_batch, state_info_batch, hidden)
+
+        q_values, _ = self.policy_net(images_batch, state_info_batch, self.hidden)
         state_action_values = q_values.gather(1, actions_batch)
 
         # Compute target Q values
         with torch.no_grad():
-            next_q_values_policy, _ = self.policy_net(next_images_batch, next_state_info_batch, hidden)
+            next_q_values_policy, _ = self.policy_net(next_images_batch, next_state_info_batch, self.hidden)
             next_actions = next_q_values_policy.max(1)[1].unsqueeze(1)
-            next_q_values_target, _ = self.target_net(next_images_batch, next_state_info_batch, hidden)
+            next_q_values_target, _ = self.target_net(next_images_batch, next_state_info_batch, self.hidden)
             next_state_values = next_q_values_target.gather(1, next_actions)
 
         expected_state_action_values = (next_state_values * self.gamma * (1 - dones_batch)) + rewards_batch
@@ -130,3 +136,5 @@ class Agent:
         Update the target network with the policy network's weights.
         """
         self.target_net.load_state_dict(self.policy_net.state_dict())
+
+DQNPolicy = Agent
