@@ -48,7 +48,7 @@ class Agent:
         Preprocess images for input into the network: cancatenate, normalize, reorder
         No resize, should done resize before here
         """
-        image: np.ndarray = np.concatenate(step_data["image"], axis=-1)
+        images: np.ndarray = np.concatenate(images, axis=-1)
         images = torch.tensor(images, dtype=torch.float32) / 255.0 - 0.5  # Normalize to [-0.5, 0.5]
         images = images.permute(0, 3, 1, 2)  # Change to (sequence_length, channels, height, width)
         return images
@@ -95,7 +95,8 @@ class Agent:
         next_state_info_batch = torch.stack([b['state_info'] for b in batch.next_state]).to('cuda')
 
         # Compute current Q values
-        hidden = None
+        hidden = (torch.zeros(1, self.batch_size, 256).to('cuda'),
+                  torch.zeros(1, self.batch_size, 256).to('cuda'))  # Initialize hidden state
         q_values, _ = self.policy_net(images_batch, state_info_batch, hidden)
         state_action_values = q_values.gather(1, actions_batch)
 
