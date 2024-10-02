@@ -1,7 +1,10 @@
 import time
 from copy import deepcopy
-from typing import Any, Dict
+from typing import *
 from multiprocessing import Queue
+
+import wandb
+import numpy as np
 
 from qvl.qlabs import QuanserInteractiveLabs
 from core.roadmap import ACCRoadMap
@@ -11,6 +14,7 @@ from core.environment.director import GeneralDirector
 from core.environment.constants import FULL_CONFIG
 from core.environment.simulator import QLabSimulator
 from core.policies import PurePursuiteAdaptor
+from settings import *
 from .environment import CrossRoadEnvironment, OnlineQLabEnv
 
 
@@ -31,7 +35,7 @@ def prepare_cross_road_env() -> CrossRoadEnvironment:
 
     print("Starting the environment...")
     env: OnlineQLabEnv = CrossRoadEnvironment(sim, roadmap, privileged=True, dt=0.02)
-    env.set_ego_policy(PurePursuiteAdaptor(max_lookahead_distance=0.7))
+    env.set_ego_policy(PurePursuiteAdaptor(max_lookahead_distance=0.68))
     env.set_hazard_policy(PurePursuiteAdaptor())
 
     return env
@@ -47,31 +51,58 @@ def transform_observation(episode_observation: Dict[str, Any]) -> Dict[str, list
     return data
 
 
-# TODO: Refactor it to a class
-def run_generator(raster_queue: Queue):
-    env: OnlineQLabEnv = prepare_cross_road_env()
-    for i in range(500):
-        try:
-            print(f"Starting episode {i}...")
-            episode_reward, episode_observation = 0, []
-            # use this to set the agents to their initial positions
-            observation, reward, done, _ = env.reset(raster_queue)
-            for _ in range(100):
-                start: float = time.time()
-                observation, reward, done, _ = env.step(raster_queue)
-                observation["reward"] = reward
-                episode_observation.append(observation)
-                episode_reward += reward
-                if done:
-                    break
-                # time.sleep(max(0, env.dt - (time.time() - start)))
-            print(f"Episode {i + 1} complete with reward {episode_reward}")
-            env.stop_all_agents()
+def run_episode(env: CrossRoadEnvironment, i: int, raster_queue: Queue) -> List[Dict[str, Any]]:
+    # print(f"Starting episode {i}...")
+    episode_reward, episode_observation = 0, []
+    # use this to set the agents to their initial positions
+    observation, reward, done, _ = env.reset(raster_queue)
+    for _ in range(200):
+        start: float = time.time()
+        observation, reward, done, _ = env.step(raster_queue)
+        observation["reward"] = reward
+        episode_observation.append(observation)
+        episode_reward += reward
+        if done:
+            break
+        time.sleep(max(0, env.dt - (time.time() - start)))
+    print(f"Episode {i + 1} complete with reward {episode_reward} and {len(episode_observation)} steps")
+    env.stop_all_agents()
+    return episode_observation
 
-            # data = transform_observation(episode_observation)
-            # print(data.keys())
-            time.sleep(2)
+
+def save_to_npz(data: Dict[str, List[Any]], i: int) -> None:
+    episode_length: int = len(data["reward"])
+    episode_reward: float = sum(data["reward"])
+    file_name: str = f"episode_{i}_{episode_length}_{episode_reward}.npz"
+
+    rand_int: int = np.random.randint(0, 10)
+    if rand_int != 1 and rand_int != 2:
+        file_path: str = os.path.join(f"{DATASET_DIR}/train", file_name)
+        print(f"Episode {i} saved as training data")
+    else:
+        file_path: str = os.path.join(f"{DATASET_DIR}/eval", file_name)
+        print(f"Episode {i} saved as evaluation data")
+    np.savez(file_path, **data)
+
+
+def log_data(data: Dict[str, List[Any]], i: int) -> None:
+    episode_length: int = len(data["reward"])
+    episode_reward: float = sum(data["reward"])
+    wandb.log(data={
+        "reward": episode_reward,
+        "length": episode_length
+    }, step=i)
+
+
+def run_generator(raster_queue: Queue) -> None:
+    env: OnlineQLabEnv = prepare_cross_road_env()
+    for i in range(1000):
+        try:
+            ego_episode_observation: List[Dict[str, Any]] = run_episode(env, i, raster_queue)
+            episode_data: Dict[str, List[Any]] = transform_observation(ego_episode_observation)
+            save_to_npz(episode_data, i)
+            # log_data(episode_data, i)
         except AnomalousEpisodeException:
             print("Anomalous episode detected, skipping...")
+        finally:
             time.sleep(2)
-    print("Demo complete")

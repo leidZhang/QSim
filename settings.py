@@ -4,7 +4,6 @@ from typing import List
 import torch
 import numpy as np
 
-DATASET_DIR: str = "assets"
 MODEL_TYPE: str = "Reinformer"
 DATASET_DIR: str = "assets"
 CONTEXT_LEN: int = 4
@@ -26,7 +25,7 @@ INIT_TEMPERATURE: float = 0.1
 USE_WANDB: bool = True
 STATE_DIM: int = 6  # 400
 ACT_DIM: int = 2
-MODEL_PATH: str = os.path.join(os.getcwd(), "Reinformer/models/latest_checkpoint.pt")
+MODEL_PATH: str = os.path.join(os.getcwd(), "reinformer/models/latest_checkpoint.pt")
 RESUME: bool = False
 WORKERS: int = 4
 DEVICE: str = "cuda:1"

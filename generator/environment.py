@@ -33,7 +33,7 @@ RESTRICTED_AREAS: List[Dict[str, float]] = [
 ]
 ROUTES: Dict[str, List[int]] = {
     #      straight,     right,         left
-    0: [([12, 0, 2], 110, "straight"), ([12, 8, 23], 90, "right"), ([12, 7, 5], 120, "left")],
+    0: [([11, 12, 0, 2], 110, "straight"), ([11, 12, 8, 23], 90, "right"), ([11, 12, 7, 5], 120, "left")],
     1: [([1, 13, 19, 17], 110, "straight"), ([1, 7, 5], 90, "right"), ([1, 8, 23], 120, "left")],
     2: [([6, 8, 23], 110, "straight"), ([6, 13, 19, 17], 90, "right"), ([6, 0, 2], 120, "left")],
     3: [([9, 7, 5], 110, "straight"), ([9, 0, 2], 90, "right"), ([9, 13, 19, 17], 120, "left")],
@@ -123,21 +123,21 @@ class CrossRoadEnvironment(OnlineQLabEnv):
         self.agents[actor_id].set_look_ahead(look_ahead)
 
     def __render_raster_map(self, raster_info_queue: Queue) -> None:
-        # ego_state: np.ndarray = self.agents[0].observation["state"]
-        # hazard_states: List[np.ndarray] = [agent.observation["state"] for agent in self.agents[1:]]
-        # rendered_waypoint_list: List[np.ndarray] = [self.agents[0].get_task_trajectory()]
-        # raster_info_queue.put((ego_state, hazard_states, rendered_waypoint_list))
+        ego_state: np.ndarray = self.agents[0].observation["state"]
+        hazard_states: List[np.ndarray] = [agent.observation["state"] for agent in self.agents[1:]]
+        rendered_waypoint_list: List[np.ndarray] = [self.agents[0].get_task_trajectory()]
+        raster_info_queue.put((ego_state, hazard_states, rendered_waypoint_list))
 
-        agent_states: List[np.ndarray] = []
-        waypoint_list: List[np.ndarray] = []
-        for agent in self.agents[1:]:
-            agent_states.append(agent.observation["state"])
-            waypoint_list.append(agent.observation["global_waypoints"])
-        raster_map, _, _ = self.renderer.draw_map(
-            REFERENCE_POSE, agent_states, waypoint_list
-        )
-        cv2.imshow("Raster Map", raster_map)
-        cv2.waitKey(1)
+        # agent_states: List[np.ndarray] = []
+        # waypoint_list: List[np.ndarray] = []
+        # for agent in self.agents[1:]:
+        #     agent_states.append(agent.observation["state"])
+        #     waypoint_list.append(agent.observation["global_waypoints"])
+        # raster_map, _, _ = self.renderer.draw_map(
+        #     REFERENCE_POSE, agent_states, waypoint_list
+        # )
+        # cv2.imshow("Raster Map", raster_map)
+        # cv2.waitKey(1)
 
     def __detect_collision(self, ego_state: np.ndarray) -> bool:
         for agent in self.agents[1:]:
@@ -191,8 +191,8 @@ class CrossRoadEnvironment(OnlineQLabEnv):
         return self.agents[0].observation, reward, done, info
 
     def step(self, raster_info_queue: Queue = None) -> Tuple[dict, float, bool, dict]:
-        print("====================================")
-        # self.__detect_anomalous_episode()
+        # print("====================================")
+        self.__detect_anomalous_episode()
 
         _, reward, done, info = super().step()
         agent_states: List[np.ndarray] = self.databus.step()
