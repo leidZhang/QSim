@@ -54,11 +54,10 @@ class Agent:
         Preprocess images for input into the network: cancatenate, normalize, reorder
         No resize, should done resize before here
         """
-        images: np.ndarray = np.concatenate(images, axis=-1)
-        print(images.shape)
-        images = torch.tensor(images, dtype=torch.float32) / 255.0 - 0.5  # Normalize to [-0.5, 0.5]
-        images = images.permute(2, 0, 1)  # Change to (channels, height, width)
-        return images
+        concat_images: np.ndarray = np.concatenate(images, axis=-1)
+        concat_images = torch.tensor(concat_images, dtype=torch.float32) / 255.0 - 0.5  # Normalize to [-0.5, 0.5]
+        concat_images = concat_images.permute(2, 0, 1)  # Change to (channels, height, width)
+        return concat_images
 
     def select_action(self, state):
         """
@@ -68,7 +67,6 @@ class Agent:
         eps_threshold = self.epsilon_end + (self.epsilon_start - self.epsilon_end) * \
             math.exp(-1. * self.steps_done / self.epsilon_decay)
         self.steps_done += 1
-
         images = state['images'].unsqueeze(0).to('cuda')
         state_info = state['state_info'].unsqueeze(0).to('cuda')
 
