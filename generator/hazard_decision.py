@@ -135,7 +135,7 @@ class HazardDetector: # Rule is fixed, so no decision making is needed
         
         has_higher_priority: bool = ego_priority.has_higher_priority(hazard_priority)
         is_in_cross_road: bool = is_in_area_aabb(ego_state, CROSS_ROAD_AREA)
-        print(has_higher_priority, is_in_cross_road)
+        # print(has_higher_priority, is_in_cross_road)
         if has_higher_priority and is_in_cross_road:
             return 1
         if not is_in_cross_road and ego_progress > hazard_progress:

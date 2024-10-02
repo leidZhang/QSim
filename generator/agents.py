@@ -79,7 +79,7 @@ class CarAgent(PhysicalCar):
         self.observation["global_waypoints"] = waypionts[
             start_waypoint_index:end_waypoint_index
         ]
-        self.observation["progress"] = current_wayppint_index # / len(waypionts)
+        self.observation["progress"] = current_wayppint_index / len(waypionts)
         # self.observation["progress"] = np.linalg.norm(self.state[:2] - waypionts[-1])
 
     def _handle_preprocess(self) -> None:
@@ -132,13 +132,14 @@ class EgoAgent(CarAgent): # ego vehicle, can be controlled by the user
 
     def __handle_policy(self) -> Tuple[np.ndarray, np.ndarray]:
         action, _ = self.policy.execute(self.observation)
+        print(action)
         intervention = self.expert_policy.execute()
         self.observation["intervention"] = np.array(list(intervention))
         return action, intervention
 
     def handle_action(self, action: np.ndarray, intervention: np.ndarray) -> None:
         intervention_coeff: float = 0 if intervention[1] == 1 else (intervention[0] * 0.2 + 1)
-        throttle: float = 0 # action[0] * self.throttle_coeff * intervention_coeff
+        throttle: float = action[0] * self.throttle_coeff * intervention_coeff
         steering: float = action[1] * self.steering_coeff
         self.running_gear.read_write_std(throttle, steering)
         self.observation["action"] = action
@@ -186,7 +187,7 @@ class HazardAgent(CarAgent): # auto stop when detect hazard, will not respond to
             if decision == 0:
                 break
             
-            ego_state: np.ndarray = self.observation["state"]
+            ego_state: np.ndarray = self.observation["state_info"]
             ego_traj: np.ndarray = self.observation["global_waypoints"]
             ego_priority, hazard_priority = priorities[self.actor_id], priorities[i]
             decision = self.detector.evaluate(
@@ -196,7 +197,7 @@ class HazardAgent(CarAgent): # auto stop when detect hazard, will not respond to
                 agent_progresses[self.actor_id], agent_progresses[i]
             )
         self.observation["hazard_coeff"] = decision
-        print(f"Agent {self.actor_id} decision: {decision}")
+        # print(f"Agent {self.actor_id} decision: {decision}")
 
     def handle_action(self, action: np.ndarray) -> None:
         # self.leds[0], self.leds[3] = not self.leds[0], not self.leds[3]
@@ -212,7 +213,7 @@ class HazardAgent(CarAgent): # auto stop when detect hazard, will not respond to
         agent_progresses: np.ndarray,
         priorities: list
     ) -> None:
-        print(f"Agent {self.actor_id} is stepping...")
+        # print(f"Agent {self.actor_id} is stepping...")
         self._get_ego_state(agent_states)
         self.handle_avoid_collide(agent_trajs, agent_progresses, priorities)
         self._handle_preprocess()
