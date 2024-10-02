@@ -11,7 +11,7 @@ def train():
     for episode in range(num_episodes):
         observation, reward, done, info = env.reset()
         state = agent.process_observation(observation)
-        batch_size = Agent.batch_size
+        batch_size = agent.batch_size
         hidden = (torch.zeros(1, batch_size, 256),
                   torch.zeros(1, batch_size, 256))  # Initialize LSTM hidden state
         total_reward = 0
