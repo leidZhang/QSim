@@ -31,9 +31,9 @@ class DuelingDQN(nn.Module):
 
     def forward(self, images, state_info, hidden):
         """
-        Forward pass through the network.
+        Stacked images.
         """
-        batch_size, seq_len, C, H, W = images.size()
+        batch_size, seq_len, C, H, W = images.size()  # Channels, Height, Width
 
         # Reshape for CNN
         images = images.view(batch_size * seq_len, C, H, W)
