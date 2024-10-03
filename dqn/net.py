@@ -33,6 +33,7 @@ class DuelingDQN(nn.Module):
         """
         Stacked images.
         """
+        print(images)
         batch_size, seq_len, C, H, W = images.size()  # Channels, Height, Width
 
         # Reshape for CNN

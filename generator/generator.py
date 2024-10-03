@@ -15,7 +15,7 @@ from core.environment.constants import FULL_CONFIG
 from core.environment.simulator import QLabSimulator
 from core.policies import PurePursuiteAdaptor
 from settings import *
-from dqn import DQNPolicy
+from dqn import CompositeDQNPolicy
 from .environment import CrossRoadEnvironment, OnlineQLabEnv
 
 
@@ -37,7 +37,7 @@ def prepare_cross_road_env() -> CrossRoadEnvironment:
     print("Starting the environment...")
     env: OnlineQLabEnv = CrossRoadEnvironment(sim, roadmap, privileged=True, dt=0.02)
     # env.set_ego_policy(PurePursuiteAdaptor(max_lookahead_distance=0.68))
-    env.set_ego_policy(DQNPolicy(action_size=2))
+    env.set_ego_policy(CompositeDQNPolicy())
     env.set_hazard_policy(PurePursuiteAdaptor())
 
     return env
@@ -96,7 +96,7 @@ def log_data(data: Dict[str, List[Any]], i: int) -> None:
     }, step=i)
 
 
-def run_generator(raster_queue: Queue) -> None:
+def run_generator(raster_queue: Queue, data_queue: Queue) -> None:
     env: OnlineQLabEnv = prepare_cross_road_env()
     for i in range(1000):
         try:
@@ -104,6 +104,10 @@ def run_generator(raster_queue: Queue) -> None:
             episode_data: Dict[str, List[Any]] = transform_observation(ego_episode_observation)
             save_to_npz(episode_data, i)
             # log_data(episode_data, i)
+            data_queue.put(episode_data)
+
+            if data_queue.qsize() > 100: # Remove this code segment when the trainer is ready
+                raise NotImplementedError("Please implement a method to get the data from the queue in the trainer")
         except AnomalousEpisodeException:
             print("Anomalous episode detected, skipping...")
         finally:

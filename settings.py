@@ -4,6 +4,11 @@ from typing import List
 import torch
 import numpy as np
 
+DQN_MODEL_PATH: str = os.path.join(os.getcwd(), "dqn/models/latest_checkpoint.pt")
+UPDATE_FREQ: float = 30
+BATCH_SIZE: int = 64
+MAX_TRAIN_STEPS: int = 100_000_000
+
 MODEL_TYPE: str = "Reinformer"
 DATASET_DIR: str = "assets"
 CONTEXT_LEN: int = 4
