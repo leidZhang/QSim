@@ -67,8 +67,8 @@ class Agent:
         eps_threshold = self.epsilon_end + (self.epsilon_start - self.epsilon_end) * \
             math.exp(-1. * self.steps_done / self.epsilon_decay)
         self.steps_done += 1
-        images = state['images'].unsqueeze(0).to('cuda')
-        state_info = state['state_info'].unsqueeze(0).to('cuda')
+        images = state['images'].unsqueeze(0).to('cuda')  # images shape: (1, 12, 84, 84)
+        state_info = state['state_info'].unsqueeze(0).to('cuda')  # state_info shape: (1, 6)
 
         if sample > eps_threshold:
             with torch.no_grad():
