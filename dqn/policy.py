@@ -18,8 +18,8 @@ class CompositeDQNPolicy(PolicyAdapter):
         self.throttle_control: DQNPolicy = DQNPolicy(action_size=action_size)
 
     def __handle_throttle(self, observation: Dict[str, Any]) -> float:
-        state: Dict[str, torch.Tensor] = self.throttle_control.process_observation(observation)
-        throttle: float = self.throttle_control.select_action(state)
+        state: Dict[str, torch.Tensor] = self.throttle_control.process_observation(observation)  # observation['images']: 4 84*84 images
+        throttle: float = self.throttle_control.select_action(state)  # state["images"]: has been cancatenate, normalize, reorder: (12 channels, height, width)
         return throttle
     
     def __handle_steering(self, observation: Dict[str, Any]) -> float:
