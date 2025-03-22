@@ -18,25 +18,37 @@ from .hazard_decision import *
 THROTTLE_COEEFS: List[float] = [0.09, 0.064, 0.05]
 START_POSES: Dict[int, List[float]] = {
     0: [0.0, 2.118, -np.pi / 2],
-    1: [0.264, -0.29, np.pi / 2],
+    1: [0.264, -0.19, np.pi / 2],
     2: [1.206, 1.082, np.pi],
     3: [-1.036, 0.816, 0.0],
 }
 BOUNDARY: Dict[str, float] = {
-    "min_x": -0.7, "max_x": 0.9, "min_y": -0.0, "max_y": 2.2
+    "min_x": -0.4, "max_x": 0.5, "min_y": 0.5, "max_y": 1.3
 }
 RESTRICTED_AREAS: List[Dict[str, float]] = [
-    None,
-    {"max_x": 0.8, "min_x": -0.5, "max_y": 0.3, "min_y": -0.3},
-    {"max_x": 1.3, "min_x": 0.6, "max_y": 1.6, "min_y": 0.5},
-    {"max_x": 0.1, "min_x": -1.1, "max_y": 1.6, "min_y": 0},
+    {"max_x": 0.5, "min_x": -0.4, "max_y": 2.5, "min_y": 1.3},
+    {"max_x": 0.5, "min_x": -0.4, "max_y": 0.5, "min_y": -0.3},
+    {"max_x": 1.3, "min_x": 0.5, "max_y": 1.3, "min_y": 0.5},
+    {"max_x": -0.1, "min_x": -1.1, "max_y": 1.3, "min_y": 0.5},
 ]
+# BOUNDARY: Dict[str, float] = {
+#     "min_x": -0.7, "max_x": 0.9, "min_y": -0.0, "max_y": 2.2
+# }
+# RESTRICTED_AREAS: List[Dict[str, float]] = [
+#     {"max_x": 0.8, "min_x": -0.5, "max_y": 2.5, "min_y": 1.5},
+#     {"max_x": 0.8, "min_x": -0.5, "max_y": 0.3, "min_y": -0.0},
+#     {"max_x": 1.3, "min_x": 0.6, "max_y": 1.6, "min_y": 0.5},
+#     {"max_x": 0.1, "min_x": -1.1, "max_y": 1.6, "min_y": 0.5},
+# ]
+STRAIGHT_LOOKAHEAD = 145 # 210
+LEFT_LOOKAHEAD = 140
+RIGHT_LOOKAHEAD = 90
 ROUTES: Dict[str, List[int]] = {
     #      straight,     right,         left
-    0: [([11, 12, 0, 2], 110, "straight"), ([11, 12, 8, 23], 90, "right"), ([11, 12, 7, 5], 120, "left")],
-    1: [([1, 13, 19, 17], 110, "straight"), ([1, 7, 5], 90, "right"), ([1, 8, 23], 120, "left")],
-    2: [([6, 8, 23], 110, "straight"), ([6, 13, 19, 17], 90, "right"), ([6, 0, 2], 120, "left")],
-    3: [([9, 7, 5], 110, "straight"), ([9, 0, 2], 90, "right"), ([9, 13, 19, 17], 120, "left")],
+    0: [([12, 0, 2, 4], STRAIGHT_LOOKAHEAD, "straight"), ([12, 8, 23, 21], RIGHT_LOOKAHEAD, "right"), ([12, 7, 5, 3], LEFT_LOOKAHEAD, "left")],
+    1: [([1, 13, 19, 17, 15], STRAIGHT_LOOKAHEAD, "straight"), ([1, 7, 5, 3], RIGHT_LOOKAHEAD, "right"), ([1, 8, 23, 21], LEFT_LOOKAHEAD, "left")],
+    2: [([6, 8, 23, 21], STRAIGHT_LOOKAHEAD, "straight"), ([6, 13, 19, 17, 15], RIGHT_LOOKAHEAD, "right"), ([6, 0, 2, 4], LEFT_LOOKAHEAD, "left")],
+    3: [([9, 7, 5, 3], STRAIGHT_LOOKAHEAD, "straight"), ([9, 0, 2, 4], RIGHT_LOOKAHEAD, "right"), ([9, 13, 19, 17, 15], LEFT_LOOKAHEAD, "left")],
 }
 
 
@@ -85,7 +97,7 @@ class CrossRoadEnvironment(OnlineQLabEnv):
         )
 
     def __setup_priorities(self) -> None:
-        self.priorities: List[PriorityNode] = [PriorityNode() for _ in range(4)]
+        self.priorities: List[PriorityNode] = [PriorityNode(i) for i in range(4)]
         self.priorities[1].set_left(self.priorities[3])
         self.priorities[1].set_right(self.priorities[2])  
 
@@ -113,19 +125,19 @@ class CrossRoadEnvironment(OnlineQLabEnv):
         pose: List[float] = START_POSES[actor_id]
         location: List[float] = [pose[0], pose[1], 0.0]
         orientation: List[float] = [0.0, 0.0, pose[2]]
-        # print(f"Actor {actor_id} is at {location} with orientation {orientation}")
+        print(f"Actor {actor_id} has action type {action_type}")
         self.priorities[actor_id].set_action(action_type)
         self.simulator.set_car_pos(actor_id, location, orientation)
         # reset the agent's waypoints
         self.agents[actor_id].reset(waypoints, agent_states)
-        self.agents[actor_id].set_restricted_area(restricted_area)
+        self.agents[actor_id].set_restricted_area(restricted_area, BOUNDARY)
         self.agents[actor_id].set_throttle_coeff(throttle_coeff)
         self.agents[actor_id].set_look_ahead(look_ahead)
 
     def __render_raster_map(self, raster_info_queue: Queue) -> None:
         ego_state: np.ndarray = self.agents[0].observation["state_info"]
         hazard_states: List[np.ndarray] = [agent.observation["state_info"] for agent in self.agents[1:]]
-        rendered_waypoint_list: List[np.ndarray] = [self.agents[0].get_task_trajectory()]
+        rendered_waypoint_list: List[np.ndarray] = [agent.get_task_trajectory() for agent in self.agents]
         raster_info_queue.put((ego_state, hazard_states, rendered_waypoint_list))
 
         # agent_states: List[np.ndarray] = []
@@ -148,26 +160,30 @@ class CrossRoadEnvironment(OnlineQLabEnv):
         return False
 
     def __detect_anomalous_episode(self) -> bool:
-        pose: np.ndarray = self.agents[0].observation["state_info"]
-        action: np.ndarray = self.agents[0].observation["action"]
-        self.detector.detect(pose, action)
+        for agent in self.agents:
+            pose: np.ndarray = agent.observation["state_info"]
+            action: np.ndarray = agent.observation["action"]
+            self.detector.detect(pose, action)
+        for agent in self.agents[1:]:
+            if not agent.normal:
+                raise AnomalousEpisodeException("Anomalous episode detected")
 
     def handle_reward(self, agent: CarAgent) -> Tuple[float, bool]:
         state: np.ndarray = agent.observation["state_info"]
 
         # When the ego agent collides with any other agent, it gets a penalty and the episode ends
-        if self.__detect_collision(state):
-            return 0, True
+        # if self.__detect_collision(state):
+        #     return 0, True
         # When the ego agent reaches the goal, it gets a reward and the episode ends
-        if not is_in_area_aabb(state, BOUNDARY):
-            return 1, True
+        # if not is_in_area_aabb(state, BOUNDARY):
+        #     return 1, True
 
         return 0.0, False
 
     def get_hazard_info(self) -> None:
-        hazard_trajs: List[np.ndarray] = [None]
-        hazard_progresses: List[int] = [0]
-        for agent in self.agents[1:]:
+        hazard_trajs: List[np.ndarray] = [] 
+        hazard_progresses: List[int] = []
+        for agent in self.agents: # 0 - 3
             hazard_trajs.append(agent.observation["global_waypoints"])
             hazard_progresses.append(agent.observation["progress"])
         return hazard_trajs, hazard_progresses
@@ -191,7 +207,7 @@ class CrossRoadEnvironment(OnlineQLabEnv):
         return self.agents[0].observation, reward, done, info
 
     def step(self, raster_info_queue: Queue = None) -> Tuple[dict, float, bool, dict]:
-        # print("====================================")
+        print("====================================")
         self.__detect_anomalous_episode()
 
         _, reward, done, info = super().step()
@@ -204,7 +220,7 @@ class CrossRoadEnvironment(OnlineQLabEnv):
         self.episode_steps += 1
 
         reward, done = self.handle_reward(self.agents[0])
-        done = self.agents[0].observation["done"] or done
+        # done = self.agents[0].observation["done"] or done
         return self.agents[0].observation, reward, done, info
 
     def stop_all_agents(self) -> None:

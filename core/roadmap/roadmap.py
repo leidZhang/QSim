@@ -26,7 +26,7 @@ class ACCRoadMap(RoadMap):
         node_positions: list = NODE_POSES_RIGHT_COMMON + NODE_POSES_RIGHT_LARGE_MAP
         edges: list = EDGE_CONFIGS_RIGHT_COMMON + EDGE_CONFIGS_RIGHT_LARGE_MAP
         # add scaled nodes to acc map
-        for position in node_positions:
+        for position in node_positions: # [1134, 1454, -HALF_PI]
             position[0] = ACC_SCALE * (position[0] - X_OFFSET)
             position[1] = ACC_SCALE * (Y_OFFSET - position[1])
             self.add_node(position)

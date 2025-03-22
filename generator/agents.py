@@ -50,9 +50,12 @@ class CarAgent(PhysicalCar):
         self.preporcessor: WaypointProcessor = WaypointProcessor(auto_stop=True)
         self.observation: Dict[str, np.ndarray] = {"action": np.zeros(2), "hazard_coeff": 1}
         self.restricted_area: Dict[str, float] = None
+        self.cross_road_area: Dict[str, float] = None
+        self.normal: bool = True
 
-    def set_restricted_area(self, area: Dict[str, float]) -> None:
+    def set_restricted_area(self, area: Dict[str, float], cross_road_area: Dict[str, float]) -> None:
         self.restricted_area = area
+        self.cross_road_area = cross_road_area
 
     def _get_ego_state(self, agent_states: List[np.ndarray], agent_ranks: List[int] = [0, 1, 2, 3]) -> None:
         ego_state: np.ndarray = agent_states[self.actor_id]
@@ -79,7 +82,7 @@ class CarAgent(PhysicalCar):
         self.observation["global_waypoints"] = waypionts[
             start_waypoint_index:end_waypoint_index
         ]
-        self.observation["progress"] = current_wayppint_index / len(waypionts)
+        self.observation["progress"] = current_wayppint_index # / len(waypionts)
         # self.observation["progress"] = np.linalg.norm(self.state[:2] - waypionts[-1])
 
     def _handle_preprocess(self) -> None:
@@ -113,15 +116,24 @@ class EgoAgent(CarAgent): # ego vehicle, can be controlled by the user
     def __init__(self, actor_id: int = 0) -> None:
         super().__init__(actor_id)
         self.cameras: List[CSICamera] = [CSICamera(i) for i in range(4)]
-        self.expert_policy: KeyboardPolicy = KeyboardPolicy()
+        # self.expert_policy: KeyboardPolicy = KeyboardPolicy()
+        self.detector: HazardDetector = HazardDetector()
 
     def _handle_preprocess(self) -> None:
         super()._handle_preprocess()
         current_wayppint_index: int = self.preporcessor.current_waypoint_index
-        end_waypoint_index: int = min(len(self.preporcessor.waypoints) - 1, current_wayppint_index + 50)
+        start_waypoint_index: int = max(0, current_wayppint_index - 30)
+
+        # is_in_restricted_area: bool = is_in_area_aabb(self.state, self.restricted_area) or is_in_area_aabb(self.state, self.cross_road_area)
+        # print(f"Agent {self.actor_id} in cross road area", is_in_restricted_area)
+
+        hazard_dist: int = 45 if not is_in_area_aabb(self.state, CROSS_ROAD_AREA) else max(45, self.look_ahead - int(current_wayppint_index * 0.15)) 
+        # hazard_dist: int = 40 if not is_in_restricted_area else max(40, self.look_ahead - int(current_wayppint_index * 0.15)) 
+        end_waypoint_index: int = min(len(self.preporcessor.waypoints) - 1, current_wayppint_index + hazard_dist)
         self.observation["global_waypoints"] = self.preporcessor.waypoints[
-            current_wayppint_index:end_waypoint_index
+            start_waypoint_index:end_waypoint_index
         ]
+        self.observation["progress"] = current_wayppint_index / len(self.preporcessor.waypoints)
 
     def __get_image_data(self) -> None:
         images: List[np.ndarray] = [None, None, None, None]
@@ -132,26 +144,52 @@ class EgoAgent(CarAgent): # ego vehicle, can be controlled by the user
 
     def __handle_policy(self) -> Tuple[np.ndarray, np.ndarray]:
         action, _ = self.policy.execute(self.observation)
-        print(action)
-        intervention = self.expert_policy.execute()
-        self.observation["intervention"] = np.array(list(intervention))
+        intervention = (0, 0) # self.expert_policy.execute()
+        # self.observation["intervention"] = np.array(list(intervention))
         return action, intervention
+    
+    def handle_avoid_collide(self, agent_trajs: np.ndarray, agent_progresses: np.ndarray, priorities: list) -> None:
+        decision: int = 1
+        for i, traj in enumerate(agent_trajs):
+            if i == self.actor_id:
+                continue
+            if decision == 0:
+                break
+            
+            ego_state: np.ndarray = self.observation["state_info"]
+            ego_traj: np.ndarray = self.observation["global_waypoints"]
+            ego_priority, hazard_priority = priorities[self.actor_id], priorities[i]
+            decision = self.detector.evaluate(
+                ego_state, 
+                ego_traj, traj, 
+                ego_priority, hazard_priority,
+                agent_progresses[self.actor_id], agent_progresses[i]
+            )
+        self.observation["hazard_coeff"] = decision
 
     def handle_action(self, action: np.ndarray, intervention: np.ndarray) -> None:
         intervention_coeff: float = 0 if intervention[1] == 1 else (intervention[0] * 0.2 + 1)
-        throttle: float = action[0] * self.throttle_coeff * intervention_coeff
+        throttle: float = action[0] * self.throttle_coeff * self.observation["hazard_coeff"]
         steering: float = action[1] * self.steering_coeff
         self.running_gear.read_write_std(throttle, steering)
         self.observation["action"] = action
+        print(f"Agent {self.actor_id} decision:", self.observation['hazard_coeff'], f"action: {action}")
 
     def reset(self, waypoints: np.ndarray, agent_states: List[np.ndarray]) -> None:
         self.__get_image_data()
         self.observation["intervention"] = (0, 0)
         super().reset(waypoints, agent_states)
 
-    def step(self, agent_states: List[np.ndarray], *args) -> None:
-        self.__get_image_data()
+    def step(
+        self, 
+        agent_states: List[np.ndarray], 
+        agent_trajs: np.ndarray,
+        agent_progresses: np.ndarray,
+        priorities: list
+    ) -> None:
+        # self.__get_image_data()
         self._get_ego_state(agent_states)
+        self.handle_avoid_collide(agent_trajs, agent_progresses, priorities)
         self._handle_preprocess()
         action, intervention = self.__handle_policy()
         self.handle_action(action, intervention)
@@ -168,7 +206,12 @@ class HazardAgent(CarAgent): # auto stop when detect hazard, will not respond to
         super()._handle_preprocess()
         current_wayppint_index: int = self.preporcessor.current_waypoint_index
         start_waypoint_index: int = max(0, current_wayppint_index - 30)
-        hazard_dist: int = 40 if not is_in_area_aabb(self.state, CROSS_ROAD_AREA) else max(40, self.look_ahead - int(current_wayppint_index * 0.15)) 
+
+        # is_in_restricted_area: bool = is_in_area_aabb(self.state, self.restricted_area) or is_in_area_aabb(self.state, self.cross_road_area)
+        # print(f"Agent {self.actor_id} in cross road area", is_in_restricted_area)
+
+        hazard_dist: int = 45 if not is_in_area_aabb(self.state, CROSS_ROAD_AREA) else max(45, self.look_ahead - int(current_wayppint_index * 0.15)) 
+        # hazard_dist: int = 40 if not is_in_restricted_area else max(40, self.look_ahead - int(current_wayppint_index * 0.15)) 
         end_waypoint_index: int = min(len(self.preporcessor.waypoints) - 1, current_wayppint_index + hazard_dist)
         self.observation["global_waypoints"] = self.preporcessor.waypoints[
             start_waypoint_index:end_waypoint_index
@@ -182,20 +225,25 @@ class HazardAgent(CarAgent): # auto stop when detect hazard, will not respond to
     def handle_avoid_collide(self, agent_trajs: np.ndarray, agent_progresses: np.ndarray, priorities: list) -> None:
         decision: int = 1
         for i, traj in enumerate(agent_trajs):
-            if i == 0 or i == self.actor_id:
+            if i == self.actor_id:
                 continue
-            if decision == 0:
-                break
-            
+
             ego_state: np.ndarray = self.observation["state_info"]
             ego_traj: np.ndarray = self.observation["global_waypoints"]
             ego_priority, hazard_priority = priorities[self.actor_id], priorities[i]
+            
+            # print(f"actor {self.actor_id} traj", ego_traj is None, f"actor {i} traj", traj)
+            
             decision = self.detector.evaluate(
                 ego_state, 
                 ego_traj, traj, 
                 ego_priority, hazard_priority,
                 agent_progresses[self.actor_id], agent_progresses[i]
             )
+
+            if decision == 0:
+                break
+
         self.observation["hazard_coeff"] = decision
         # print(f"Agent {self.actor_id} decision: {decision}")
 
@@ -203,8 +251,9 @@ class HazardAgent(CarAgent): # auto stop when detect hazard, will not respond to
         # self.leds[0], self.leds[3] = not self.leds[0], not self.leds[3]
         throttle: float = action[0] * self.throttle_coeff * self.observation["hazard_coeff"]
         steering: float = action[1] * self.steering_coeff
-        self.running_gear.read_write_std(self.qlabs, throttle, steering, self.leds)
+        self.normal, _, _, _, _ = self.running_gear.read_write_std(self.qlabs, throttle, steering, self.leds)
         self.observation["action"] = action
+        print(f"Agent {self.actor_id} decision:", self.observation['hazard_coeff'], f"action: {action}")
 
     def step(
         self,

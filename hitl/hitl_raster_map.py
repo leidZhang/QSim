@@ -7,9 +7,9 @@ from core.roadmap.constants import *
 from core.roadmap.raster_map import *
 
 
-CROSS_ROARD_RATIAL: float = 384 * 0.24
+CROSS_ROARD_RATIAL: float = 768 * 0.24
 OFFSET: tuple = (1.55, 0.75)
-CR_MAP_SIZE: tuple = (384, 384, 3)
+CR_MAP_SIZE: tuple = (768, 768, 3)
 CR_MAP_PARAMS: dict = {
     "lanes": ((255, 255, 255), 1),
     "hazards": ((255, 0, 255), 2),
@@ -57,8 +57,8 @@ class HITLRasterMap(RasterMapRenderer):
         pose: np.ndarray = state[:3] # we do not need velocity and acceleration for rendering
         raster_map, segmentation_target, map_info = super().draw_map() # draw base map
 
-        # self._draw_hazard_layer(pose, hazards, map_info)
-        # self._draw_ego_layer(pose, map_info)
+        self._draw_hazard_layer(pose, hazards, map_info)
+        self._draw_ego_layer(pose, map_info)
         self._draw_waypoints_layer(pose, waypoint_lists, map_info)
 
         # render raster map

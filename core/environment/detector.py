@@ -59,9 +59,9 @@ class EpisodeMonitor:
         if self.queue.full() and self.accumulator == 0:
             raise AnomalousEpisodeException("Error happened in the episode!")
 
-REAR_LENGTH: float = 0.065
-FORWARD_LENGTH: float = 0.380
-HALF_WIDTH: float = 0.20 / 2
+REAR_LENGTH: float = 0.06
+FORWARD_LENGTH: float = 0.370
+HALF_WIDTH: float = 0.095
 
 
 class EnvQCarRef:

@@ -11,7 +11,7 @@ ACTION_PROIORITY = {
     "right": 2
 }
 CROSS_ROAD_AREA: Dict[str, float] = {
-    "min_x": -1.1, "max_x": 1.21, "min_y": -0.3, "max_y": 1.8
+    "min_x": -1.1, "max_x": 1.30, "min_y": -0.3, "max_y": 2.15
 }
 
 
@@ -52,9 +52,10 @@ class MapQCar:
     
 
 class PriorityNode:
-    def __init__(self) -> None:
+    def __init__(self, id: int) -> None:
         self.left: PriorityNode = None
         self.right: PriorityNode = None
+        self.id: int = id
         self.action: str = None
 
     def set_left(self, left: 'PriorityNode') -> None:
@@ -66,6 +67,7 @@ class PriorityNode:
     def set_action(self, action: str) -> None:
         self.action = action 
 
+    # TODO: Modify this funtion 
     def has_higher_priority(self, other: 'PriorityNode' = None) -> bool:
         if other is None or type(other) != PriorityNode:
             raise ValueError("Invalid other node, other node should be a PriorityNode object")
@@ -81,6 +83,9 @@ class PriorityNode:
 
         if ACTION_PROIORITY[self.action] > ACTION_PROIORITY[other.action]:
             return True
+        if ACTION_PROIORITY[self.action] == ACTION_PROIORITY[other.action]:
+            return self.id < other.id
+
         return False
 
 
@@ -112,9 +117,11 @@ class HazardDetector: # Rule is fixed, so no decision making is needed
             masks.append(mask)
         return np.logical_and.reduce(masks)
 
+    # TODO: Two sides
     def _is_waypoint_intersected(self, ego_waypoints: np.ndarray, hazard_waypoint: np.ndarray) -> bool:
         ego_polyline: np.ndarray = to_pixel(ego_waypoints, REFERENCE_POSE[:3])
         hazard_polyline: np.ndarray = to_pixel(hazard_waypoint, REFERENCE_POSE[:3])
+
         set1: set = set(map(tuple, ego_polyline))
         set2: set = set(map(tuple, hazard_polyline))
         common_points: set = set1.intersection(set2)

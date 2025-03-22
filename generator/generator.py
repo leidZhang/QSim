@@ -36,8 +36,8 @@ def prepare_cross_road_env() -> CrossRoadEnvironment:
 
     print("Starting the environment...")
     env: OnlineQLabEnv = CrossRoadEnvironment(sim, roadmap, privileged=True, dt=0.02)
-    # env.set_ego_policy(PurePursuiteAdaptor(max_lookahead_distance=0.68))
-    env.set_ego_policy(CompositeDQNPolicy())
+    env.set_ego_policy(PurePursuiteAdaptor(max_lookahead_distance=0.68))
+    # env.set_ego_policy(CompositeDQNPolicy())
     env.set_hazard_policy(PurePursuiteAdaptor())
 
     return env
@@ -58,7 +58,7 @@ def run_episode(env: CrossRoadEnvironment, i: int, raster_queue: Queue) -> List[
     episode_reward, episode_observation = 0, []
     # use this to set the agents to their initial positions
     observation, reward, done, _ = env.reset(raster_queue)
-    for _ in range(200):
+    for _ in range(150):
         start: float = time.time()
         observation, reward, done, _ = env.step(raster_queue)
         observation["reward"] = reward
@@ -102,7 +102,7 @@ def run_generator(raster_queue: Queue, data_queue: Queue) -> None:
         try:
             ego_episode_observation: List[Dict[str, Any]] = run_episode(env, i, raster_queue)
             episode_data: Dict[str, List[Any]] = transform_observation(ego_episode_observation)
-            save_to_npz(episode_data, i)
+            # save_to_npz(episode_data, i)
             # log_data(episode_data, i)
             data_queue.put(episode_data)
 
