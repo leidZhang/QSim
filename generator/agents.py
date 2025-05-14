@@ -53,6 +53,9 @@ class CarAgent(PhysicalCar):
         self.cross_road_area: Dict[str, float] = None
         self.normal: bool = True
 
+    def is_in_region(self, state) -> bool:
+        return is_in_area_aabb(state, self.restricted_area) or is_in_area_aabb(state, self.cross_road_area)
+
     def set_restricted_area(self, area: Dict[str, float], cross_road_area: Dict[str, float]) -> None:
         self.restricted_area = area
         self.cross_road_area = cross_road_area
@@ -96,6 +99,11 @@ class CarAgent(PhysicalCar):
     def step(self, *args) -> None:
         ...
 
+    def set_task(self, task: List[int]) -> None:
+        if len(task) < 9:
+            task += [0] * (9 - len(task))
+        self.task = task
+
     def set_policy(self, policy: Union[BasePolicy, PolicyAdapter]) -> None:
         self.policy = policy
 
@@ -133,6 +141,7 @@ class EgoAgent(CarAgent): # ego vehicle, can be controlled by the user
         self.observation["global_waypoints"] = self.preporcessor.waypoints[
             start_waypoint_index:end_waypoint_index
         ]
+        self.observation['task'] = self.task
         self.observation["progress"] = current_wayppint_index / len(self.preporcessor.waypoints)
 
     def __get_image_data(self) -> None:
@@ -144,6 +153,7 @@ class EgoAgent(CarAgent): # ego vehicle, can be controlled by the user
 
     def __handle_policy(self) -> Tuple[np.ndarray, np.ndarray]:
         action, _ = self.policy.execute(self.observation)
+        print("action", action)
         intervention = (0, 0) # self.expert_policy.execute()
         # self.observation["intervention"] = np.array(list(intervention))
         return action, intervention
@@ -173,10 +183,11 @@ class EgoAgent(CarAgent): # ego vehicle, can be controlled by the user
         steering: float = action[1] * self.steering_coeff
         self.running_gear.read_write_std(throttle, steering)
         self.observation["action"] = action
-        print(f"Agent {self.actor_id} decision:", self.observation['hazard_coeff'], f"action: {action}")
+        # print(f"Agent {self.actor_id} decision:", self.observation['hazard_coeff'], f"action: {action}")
 
     def reset(self, waypoints: np.ndarray, agent_states: List[np.ndarray]) -> None:
         self.__get_image_data()
+        self.policy.reset()
         self.observation["intervention"] = (0, 0)
         super().reset(waypoints, agent_states)
 
@@ -253,7 +264,7 @@ class HazardAgent(CarAgent): # auto stop when detect hazard, will not respond to
         steering: float = action[1] * self.steering_coeff
         self.normal, _, _, _, _ = self.running_gear.read_write_std(self.qlabs, throttle, steering, self.leds)
         self.observation["action"] = action
-        print(f"Agent {self.actor_id} decision:", self.observation['hazard_coeff'], f"action: {action}")
+        # print(f"Agent {self.actor_id} decision:", self.observation['hazard_coeff'], f"action: {action}")
 
     def step(
         self,

@@ -86,6 +86,9 @@ class PurePursuitPolicy:
 class PurePursuiteAdaptor(PolicyAdapter):
     def __init__(self, max_lookahead_distance=0.5) -> None:
         self.policy = PurePursuitPolicy(max_lookahead_distance)
+    
+    def reset(self) -> None:
+        ...
 
     def execute(self, obs) -> Tuple[dict, dict]:
         if "done" in obs.keys() and obs["done"]:

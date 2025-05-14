@@ -68,6 +68,11 @@ class PriorityNode:
         self.action = action 
 
     # TODO: Modify this funtion 
+    # ACTION_PROIORITY = {
+    #     "left": 0,
+    #     "straight": 1,
+    #     "right": 2
+    # }
     def has_higher_priority(self, other: 'PriorityNode' = None) -> bool:
         if other is None or type(other) != PriorityNode:
             raise ValueError("Invalid other node, other node should be a PriorityNode object")
@@ -119,8 +124,8 @@ class HazardDetector: # Rule is fixed, so no decision making is needed
 
     # TODO: Two sides
     def _is_waypoint_intersected(self, ego_waypoints: np.ndarray, hazard_waypoint: np.ndarray) -> bool:
-        ego_polyline: np.ndarray = to_pixel(ego_waypoints, REFERENCE_POSE[:3])
-        hazard_polyline: np.ndarray = to_pixel(hazard_waypoint, REFERENCE_POSE[:3])
+        ego_polyline: np.ndarray = to_pixel(ego_waypoints, REFERENCE_POSE[:3], fixed=True)
+        hazard_polyline: np.ndarray = to_pixel(hazard_waypoint, REFERENCE_POSE[:3], fixed=True)
 
         set1: set = set(map(tuple, ego_polyline))
         set2: set = set(map(tuple, hazard_polyline))

@@ -129,6 +129,7 @@ class WaypointProcessor:
         Returns:
         - observation(Dict[str, np.ndarray]): the observation of the ego car with the waypoints info
         """
+        observation['current_index'] = self.current_waypoint_index
         observation['waypoints'] = self.local_waypoints.copy()
         observation['state_info'] = ego_state.copy()
         observation['done'] = (len(self.waypoints) - self.current_waypoint_index) <= 20 if self.auto_stop else False

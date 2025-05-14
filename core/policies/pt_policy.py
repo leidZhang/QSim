@@ -16,6 +16,6 @@ class PTPolicy(BasePolicy):
             model_checkpoint: dict = torch.load(weight_path)
             self.model.load_state_dict(model_checkpoint['model_state_dict'])
 
-    @abstractmethod
     def execute(self, *args) -> Tuple[ndarray, dict]:
         ...
+

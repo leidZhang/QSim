@@ -27,21 +27,28 @@ def to_pixel(
     pose: np.ndarray,
     state: np.ndarray,
     offsets: float = (1.0, 0.4),
-    ratial: float = PIXEL_PER_METER
+    ratial: float = PIXEL_PER_METER,
+    map_size: int = 192,
+    fixed: bool = False
 ) -> np.ndarray:
     x, y, yaw = state
     yaw -= np.pi / 2
-    top_left_px: np.ndarray = np.array([
-        x - offsets[0], -y - (2.0 - (offsets[1] / 2))
-    ], dtype=np.float32) * ratial
-    rot: np.ndarray = np.array([
-        [np.cos(yaw), -np.sin(yaw)],
-        [np.sin(yaw), np.cos(yaw)],
-    ])
+ 
+    if not fixed:
+        rot: np.ndarray = np.array([
+            [np.cos(yaw), -np.sin(yaw)],
+            [np.sin(yaw), np.cos(yaw)],
+        ])        
 
-    pose = pose - np.array([x, y])
-    pose = np.matmul(pose, rot)
-    pose = pose + np.array([x, y])
+        pose = pose - np.array([x, y])
+        pose = np.matmul(pose, rot)
+        # pose = pose + np.array([x, y])
+
+        top_left_px: np.ndarray = np.array([-map_size / 2, -map_size / 2])  
+    else:
+        top_left_px: np.ndarray = np.array([
+            -offsets[0] - 0.45, -2.5 - offsets[1]
+        ], dtype=np.float32) * ratial 
 
     pose = pose * PIXEL_PER_METER
     pose[..., 0] = pose[..., 0] - top_left_px[0]
@@ -104,17 +111,17 @@ class RasterMapRenderer(ABC):
     ) -> None:
         # create polylines for rendering
         self.agent_length: float = 0.4
-        self.agent_width: float = 0.18
+        self.agent_width: float = 0.19
         self.road_width: float = 0.27
         self.map_size: tuple = map_size
         self.map_params: Dict[str, tuple] = map_params
         self.map_polylines: List[np.ndarray] = []
         self.__add_map_polylines(road_map)
         self.bounding_box: np.ndarray = np.array([
-            [-(self.agent_length / 2 - 0.15), -(self.agent_width / 2)],
-            [+(self.agent_length / 2 + 0.15), -(self.agent_width / 2)],
-            [+(self.agent_length / 2 + 0.15), +(self.agent_width / 2)],
-            [-(self.agent_length / 2 - 0.15), +(self.agent_width / 2)],
+            [-(self.agent_length / 2), -(self.agent_width / 2)],
+            [+(self.agent_length / 2), -(self.agent_width / 2)],
+            [+(self.agent_length / 2), +(self.agent_width / 2)],
+            [-(self.agent_length / 2), +(self.agent_width / 2)],
         ])
 
     def __add_map_polylines(self, road_map: RoadMap) -> None:

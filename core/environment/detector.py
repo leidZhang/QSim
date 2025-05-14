@@ -60,7 +60,7 @@ class EpisodeMonitor:
             raise AnomalousEpisodeException("Error happened in the episode!")
 
 REAR_LENGTH: float = 0.06
-FORWARD_LENGTH: float = 0.370
+FORWARD_LENGTH: float = 0.365
 HALF_WIDTH: float = 0.095
 
 
