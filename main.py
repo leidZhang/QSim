@@ -7,14 +7,4 @@ from generator.generator import run_generator
 
 
 if __name__ == "__main__":
-    raster_info_queue, data_queue = Queue(), Queue()
-
-    pool: List[Process] = []
-    pool.append(Process(target=render_raster_map, args=(raster_info_queue, data_queue)))
-    for process in pool:
-        process.start()
-
-    time.sleep(5)
-    run_generator(raster_info_queue, data_queue)
-    for process in pool:
-        process.join()
+    run_generator()

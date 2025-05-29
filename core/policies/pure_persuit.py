@@ -46,7 +46,7 @@ class PurePursuitPolicy:
         alpha: float = np.arctan2(ty - y, tx - x) - yaw
         l: float = np.sqrt((x - tx)**2 + (y - ty)**2)
         theta: float = np.arctan2(2 * 0.256 * np.sin(alpha), l)
-        action[1] = theta / 0.5
+        action[1] = theta
 
         return action, metrics
 
@@ -94,6 +94,8 @@ class PurePursuiteAdaptor(PolicyAdapter):
         if "done" in obs.keys() and obs["done"]:
             return np.zeros(2), {}
         return self.policy(obs)
+    
+    step = execute
 
 
 class PurePursuitNetworkPolicy(NetworkPolicy):

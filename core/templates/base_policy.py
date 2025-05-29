@@ -35,6 +35,7 @@ class BasePolicy(ABC):
         """
         ...
 
+    step = execute
 
 class PolicyAdapter(ABC):
     """
@@ -69,3 +70,5 @@ class PolicyAdapter(ABC):
         - Tuple[dict, dict]: The action and metrics to be taken by the agent
         """
         ...
+
+    step = execute

@@ -1,13 +1,13 @@
-import time
-from copy import deepcopy
-from typing import *
-from multiprocessing import Queue
-from datetime import datetime
-
 import cv2
-import csv
 import wandb
 import numpy as np
+
+import csv
+import time
+from copy import deepcopy
+from queue import Queue
+from datetime import datetime
+from typing import Dict, List, Tuple, Any
 
 from qvl.qlabs import QuanserInteractiveLabs
 from core.roadmap import ACCRoadMap
@@ -18,9 +18,8 @@ from core.environment.constants import FULL_CONFIG
 from core.environment.simulator import QLabSimulator
 from core.policies import PurePursuiteAdaptor
 from settings import *
-from dqn import CompositeDQNPolicy
 from reinformer import ReinformerPolicy, ReinFormer
-from .environment import CrossRoadEnvironment, OnlineQLabEnv
+from environment import CrossRoadEnvironment, OnlineQLabEnv
 
 def prepare_reinformer_policy() -> ReinformerPolicy:
     model: ReinFormer = ReinFormer(
@@ -54,8 +53,8 @@ def prepare_cross_road_env() -> CrossRoadEnvironment:
     sim.render_map(director, config)
 
     print("Starting the environment...")
-    env: OnlineQLabEnv = CrossRoadEnvironment(sim, roadmap, privileged=True, dt=0.05)
-    policy: ReinformerPolicy = prepare_reinformer_policy()
+    env: OnlineQLabEnv = CrossRoadEnvironment(sim, roadmap, privileged=True, dt=0.1)
+    # policy: ReinformerPolicy = prepare_reinformer_policy()
     # env.set_ego_policy(policy)
     env.set_ego_policy(PurePursuiteAdaptor(max_lookahead_distance=0.68))
     # env.set_ego_policy(CompositeDQNPolicy())
@@ -65,33 +64,29 @@ def prepare_cross_road_env() -> CrossRoadEnvironment:
 
 
 # TODO: Transform data
-def transform_observation(episode_observation: Dict[str, Any]) -> Dict[str, list]:
+def transform_observation(episode_observation: List[Dict[str, Any]]) -> Dict[str, list]:
     data: Dict[str, dict] = {
-        0: {'state_info': [], 'raster_map': []}, 
-        1: {'state_info': [], 'raster_map': []}, 
-        2: {'state_info': [], 'raster_map': []}, 
-        3: {'state_info': [], 'raster_map': []}, 
+        'state_info': [], 
+        'waypoints': [],
+        'violation': []
     }
 
     for step_observation in episode_observation:
-        keys: set = step_observation['state_info'].keys()
-        for i in list(keys):
-            state_info: np.ndarray = step_observation['state_info'][i]
-            state_info = np.delete(state_info, 4, axis=0)
-            data[i]['state_info'].append(state_info)
-            data[i]['raster_map'].append(step_observation['raster_map'][i])
+        data['state_info'].append(step_observation['state_info'])
+        data['waypoints'].append(step_observation['waypoints'])
+        data['violation'].append(step_observation['violation'])
 
     return data
 
 
-def run_episode(env: CrossRoadEnvironment, i: int, raster_info_queue: Queue, raster_data_queue: Queue) -> Tuple[list, dict]:
+def run_episode(env: CrossRoadEnvironment, i: int) -> Tuple[list, dict]:
     # print(f"Starting episode {i}...")
     episode_reward, episode_observation, info = 0, [], {}
     # use this to set the agents to their initial positions
-    observation, reward, done, _ = env.reset(raster_info_queue, raster_data_queue)
+    observation, reward, done, _ = env.reset()
     for i in range(150):
         start: float = time.perf_counter()
-        observation, reward, done, info = env.step(raster_info_queue, raster_data_queue)
+        observation, reward, done, info = env.step()
         info["step"] = i
         episode_observation.append(observation)
         episode_reward += reward
@@ -100,15 +95,14 @@ def run_episode(env: CrossRoadEnvironment, i: int, raster_info_queue: Queue, ras
         elapsed_time: float = time.perf_counter() - start
         time.sleep(max(0, env.dt - elapsed_time))
         # print("Step time elapsed: ", elapsed_time)
-    print(f"Episode {i + 1} complete with reward {episode_reward} and {len(episode_observation)} steps")
-    env.stop_all_agents()
+    # print(f"Episode {i + 1} complete with reward {episode_reward} and {len(episode_observation)} steps")
+
     return episode_observation, info
 
 
 def save_to_npz(data: Dict[str, List[Any]], i: int) -> None:
-    episode_length: int = len(data["reward"])
-    episode_reward: float = sum(data["reward"])
-    file_name: str = f"episode_{i}_{episode_length}_{episode_reward}.npz"
+    timestamp: str = datetime.now().strftime("%Y%m%d")
+    file_name: str = f"episode_{i}_{timestamp}.npz"
 
     rand_int: int = np.random.randint(0, 10)
     if rand_int != 1 and rand_int != 2:
@@ -149,23 +143,22 @@ def log_data(data: Dict[str, List[Any]], i: int) -> None:
     }, step=i)
 
 
-def run_generator(raster_queue: Queue, data_queue: Queue) -> None:
+def run_generator() -> None:
     env: OnlineQLabEnv = prepare_cross_road_env()
-    for i in range(1000):
+    for i in range(10000):
         try:
-            episode_observation, info = run_episode(env, i, raster_queue, data_queue)
-            if not info["collide"] and info["step"] < 149:
-                episode_data: Dict[str, List[Any]] = transform_observation(episode_observation)
-                save_data(episode_data)                
-                print(f"Saved the episode {i} with steps", info['step'])
+            print(f"Starting episode {i}")
+            episode_observation, info = run_episode(env, i)
+            episode_data: Dict[str, List[Any]] = transform_observation(episode_observation)
+            save_to_npz(episode_data, i)                
+            print(f"Saved the episode {i} with steps", info['step'])
 
-                # save_to_npz(episode_data, i)
-                # log_data(episode_data, i)
-                # data_queue.put(episode_data)
-
-            if data_queue.qsize() > 100: # Remove this code segment when the trainer is ready
-                raise NotImplementedError("Please implement a method to get the data from the queue in the trainer")
+            # save_to_npz(episode_data, i)
+            # log_data(episode_data, i)
+            # data_queue.put(episode_data)
         except AnomalousEpisodeException:
             print("Anomalous episode detected, skipping...")
+            i -= 1
         finally:
-            time.sleep(2)
+            env.stop_all_agents()
+            time.sleep(1)

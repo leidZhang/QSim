@@ -7,6 +7,8 @@ import numpy as np
 
 from qvl.qlabs import QuanserInteractiveLabs
 from qvl.actor import QLabsActor
+from qvl.real_time import QLabsRealTime
+import pal.resources.rtmodels as rtmodels
 
 from .director import GeneralDirector
 
