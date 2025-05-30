@@ -84,7 +84,7 @@ def run_episode(env: CrossRoadEnvironment, i: int) -> Tuple[list, dict]:
     episode_reward, episode_observation, info = 0, [], {}
     # use this to set the agents to their initial positions
     observation, reward, done, _ = env.reset()
-    for i in range(150):
+    for i in range(300):
         start: float = time.perf_counter()
         observation, reward, done, info = env.step()
         info["step"] = i
@@ -133,7 +133,6 @@ def save_data(data: Dict[int, dict]) -> None:
             writer.writerow(headers)
             writer.writerows(state_info)
 
-
 def log_data(data: Dict[str, List[Any]], i: int) -> None:
     episode_length: int = len(data["reward"])
     episode_reward: float = sum(data["reward"])
@@ -142,7 +141,6 @@ def log_data(data: Dict[str, List[Any]], i: int) -> None:
         "length": episode_length
     }, step=i)
 
-
 def run_generator() -> None:
     env: OnlineQLabEnv = prepare_cross_road_env()
     for i in range(10000):
@@ -150,7 +148,7 @@ def run_generator() -> None:
             print(f"Starting episode {i}")
             episode_observation, info = run_episode(env, i)
             episode_data: Dict[str, List[Any]] = transform_observation(episode_observation)
-            save_to_npz(episode_data, i)                
+            # save_to_npz(episode_data, i)                
             print(f"Saved the episode {i} with steps", info['step'])
 
             # save_to_npz(episode_data, i)

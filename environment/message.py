@@ -6,7 +6,7 @@ from qvl.qlabs import QuanserInteractiveLabs
 from core.qcar import PhysicalCar, VirtualOptitrack
 from core.qcar import QCAR_ACTOR_ID
 
-class StateDataBus: # get all the state information of the car agents
+class StateMessageBus: # get all the state information of the car agents
     def __init__(
         self,
         qlabs: QuanserInteractiveLabs,

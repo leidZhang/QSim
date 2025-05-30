@@ -2,10 +2,10 @@ import sys
 sys.path.insert(0, sys.path[0] + "/..")
 from typing import List, Dict
 
-from environment.decision_graph import (
+from environment.decision import (
     PriorityNode,
-    init_nodes
 )
+from environment.utils import init_nodes
 
 MOVE_ID, STOP_ID = 0, 1
 

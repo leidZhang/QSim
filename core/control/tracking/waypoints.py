@@ -152,3 +152,6 @@ class WaypointProcessor:
             orig, _, rot = self.cal_vehicle_state(ego_state)
             self.cal_local_waypoints(orig, rot)
             return self.handle_observation(ego_state, observation)
+        
+    reset = setup
+    step = execute

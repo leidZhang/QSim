@@ -1,5 +1,7 @@
 from typing import Dict
 
+import numpy as np
+
 ACTION_PROIORITY: Dict[str, int] = {
     "left": 0,
     "straight": 2,
@@ -42,6 +44,3 @@ class PriorityNode:
     
     def __str__(self):
         return f"PriorityNode(id={self.id}, action={self.action})"
-
-
-
