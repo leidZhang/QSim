@@ -111,3 +111,5 @@ def check_process(processes: List[Process]) -> None:
 ```
 ## Hardware Compatability
 This project refactored the hardware API to support the asynchonous architecture of the system. By default, the ego agent uses the customed sensor API and therefore it can be transferred to the hardware QCar with little modification (replace the VirtualOptitrack with the UDPClient to get the ego state data from the Optitrack).
+## LICENSE
+This project is licensed under the Apache-2.0 license - see the LICENSE file for details.
