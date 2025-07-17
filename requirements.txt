@@ -1,0 +1,7 @@
+gym
+numpy
+matplotlib
+keyboard
+shapely
+torch
+cv2
