@@ -113,3 +113,4 @@ def check_process(processes: List[Process]) -> None:
 This project refactored the hardware API to support the asynchonous architecture of the system. By default, the ego agent uses the customed sensor API and therefore it can be transferred to the hardware QCar with little modification (replace the VirtualOptitrack with the UDPClient to get the ego state data from the Optitrack).
 ## LICENSE
 This project is licensed under the Apache-2.0 license - see the LICENSE file for details.
+This project includes or is derived from [quanser_sdk_win64](https://github.com/quanser/quanser_sdk_win64), licensed under BSD‑3-Clause.
